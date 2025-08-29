@@ -67,3 +67,6 @@ const systemSettingsSchema = new Schema<ISystemSettings>(
   },
   { timestamps: true }
 );
+
+const Setting = mongoose.model("Setting", systemSettingsSchema);
+export default Setting;

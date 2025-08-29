@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import morgan from "morgan";
 import cors from "cors";
 import connect from "./config/db";
+import UserRoutes from "./routes/user.routes";
+import AdminRoutes from "./routes/admin.routes";
 
 dotenv.config();
 connect();
@@ -16,6 +18,9 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");
 });
+
+app.use("/api/User", UserRoutes);
+app.use("/api/Admin", AdminRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
