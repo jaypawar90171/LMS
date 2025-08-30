@@ -19,8 +19,8 @@ app.get("/", (req: Request, res: Response) => {
   res.send("hello");
 });
 
-app.use("/api/User", UserRoutes);
-app.use("/api/Admin", AdminRoutes);
+app.use("/api/user", UserRoutes);
+app.use("/api/admin", AdminRoutes);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 

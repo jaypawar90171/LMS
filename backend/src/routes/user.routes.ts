@@ -1,22 +1,13 @@
 import { Router } from "express";
-import User from "../models/user.model";
+import { registerUserController } from "../controllers/user.controller";
+import { loginUserController } from "../controllers/user.controller";
 
 const router = Router();
 
-router.post("/register", async (req, res) => {});
+router.post("/auth/register", registerUserController);
 
-router.post("/login", async (req, res) => {
-  const { email, password } = req.body();
-  if (!email || !password) {
-    return res.status(400).json({ msg: "Email and Passowrd are required" });
-  }
+router.post("/auth/login", loginUserController);
 
-  const result = await User.find({ email: email, password: password });
-  if (!result) {
-    return res.status(400).json({ msg: "Invalid Credentials" });
-  }
-
-  return res.status(201).json(result);
-});
+router.post("/login", async (req, res) => {});
 
 export default router;
