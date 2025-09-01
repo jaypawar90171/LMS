@@ -3,6 +3,8 @@ import Role from "../models/role.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import { JwtPayload } from "jsonwebtoken";
+import { throwDeprecation } from "process";
 
 interface RegisterDTO {
   fullName: string;
@@ -94,7 +96,7 @@ export const loginUserService = async (data: loginDTO) => {
 
   const payload = {
     id: user._id,
-    role: user.roles,
+    email: user.email,
     username: user.username,
   };
 
@@ -112,4 +114,83 @@ export const loginUserService = async (data: loginDTO) => {
     },
     token: token,
   };
+};
+
+export const forgotPasswordService = async (email: any) => {
+  console.log(email);
+  if (!email) {
+    const err: any = new Error("Email is required");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const oldUser = await User.findOne({ email: email })
+    .select("+password")
+    .exec();
+
+  if (!oldUser) {
+    const err: any = new Error("Email does not exists");
+    err.statusCode = 403;
+    throw err;
+  }
+
+  const secret = process.env.SECRET_KEY + oldUser.password;
+  const payload = {
+    id: oldUser._id,
+    email: oldUser.email,
+    username: oldUser.username,
+  };
+  const token = jwt.sign(payload, secret, { expiresIn: "1h" });
+
+  const link = `http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}`;
+  return link;
+};
+
+export const verifyResetPasswordService = async (data: any) => {
+  const { id, token } = data;
+
+  const oldUser = await User.findOne({ _id: id }).select("+password").exec();
+  if (!oldUser) {
+    const err: any = new Error("User does not exists");
+    err.statusCode = 403;
+    throw err;
+  }
+  const secret = process.env.SECRET_KEY + oldUser.password;
+  try {
+    const verify = jwt.verify(token, secret);
+    if (typeof verify === "object" && "email" in verify) {
+      console.log("email:", verify.email);
+    } else {
+      throw new Error("Invalid token payload or missing email.");
+    }
+    return verify;
+  } catch (error: any) {
+    return "not verified";
+  }
+};
+
+export const resetPasswordService = async (data: any) => {
+  const { id, token, newPassword, confirmPassword } = data;
+  try {
+    const oldUser = await User.findOne({ _id: id }).select("+password").exec();
+    if (!oldUser) {
+      const err: any = new Error("User does not exists");
+      err.statusCode = 403;
+      throw err;
+    }
+    const secret = process.env.SECRET_KEY + oldUser.password;
+    const verify = jwt.verify(token, secret);
+
+    const salt = await bcrypt.genSalt(10);
+    const encryptedPassword = await bcrypt.hash(newPassword, salt);
+    await User.updateOne(
+      {
+        _id: id,
+      },
+      {
+        $set: { password: encryptedPassword },
+      }
+    );
+    return verify;
+  } catch (error) {}
 };

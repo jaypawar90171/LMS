@@ -14,6 +14,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: true }));
+app.set("view engine", "ejs");
 
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");
