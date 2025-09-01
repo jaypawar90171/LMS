@@ -3,8 +3,7 @@ import Role from "../models/role.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
-import { JwtPayload } from "jsonwebtoken";
-import { throwDeprecation } from "process";
+
 
 interface RegisterDTO {
   fullName: string;

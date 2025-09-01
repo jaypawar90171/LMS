@@ -11,7 +11,7 @@ export interface IUser extends Document {
   username: string;
   password: string;
   roles: Types.ObjectId[]; // references "Roles"
-  status: "Active" | "Inactive" | "Locked";
+  status?: "Active" | "Inactive" | "Locked";
 
   employeeId?: string;
   associatedEmployeeId?: Types.ObjectId; // references "Users"
@@ -23,14 +23,14 @@ export interface IUser extends Document {
   accountLockedUntil?: Date;
   profile?: string;
 
-  passwordResetRequired: boolean;
+  passwordResetRequired?: boolean;
   passwordResetToken?: string;
   passwordResetExpires?: Date;
 
-  notificationPreference: INotificationPreference;
+  notificationPreference?: INotificationPreference;
 
-  rememberMe: boolean;
+  rememberMe?: boolean;
 
-  createdAt: Date;
-  updatedAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
 }

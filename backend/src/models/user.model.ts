@@ -1,6 +1,7 @@
-import mongoose, { Types, Schema } from "mongoose";
+import mongoose, { Types, Schema, ObjectId } from "mongoose";
 import bcrypt from "bcrypt";
 import { IUser, INotificationPreference } from "../interfaces/user.interface";
+import Role from "./role.model";
 
 const userSchema = new mongoose.Schema<IUser>(
   {
@@ -75,12 +76,28 @@ const userSchema = new mongoose.Schema<IUser>(
 
 //hash the password before saving it the database
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("password")) return next();
+  try {
+    if (this.isModified("password")) {
+      const salt = await bcrypt.genSalt(10);
+      this.password = await bcrypt.hash(this.password, salt);
+    }
 
-  const salt = await bcrypt.genSalt(10);
-  this.password = await bcrypt.hash(this.password, salt);
+    if (this.roles && this.roles.length > 0) {
+      const roles = await Role.find({ _id: { $in: this.roles } });
 
-  next();
+      const alwaysActiveRoles = ["Admin", "Librarian", "SuperAdmin"];
+      const hasAlwaysActiveRole = roles.some((role) =>
+        alwaysActiveRoles.includes(role.roleName)
+      );
+
+      if (hasAlwaysActiveRole) {
+        this.status = "Active";
+      }
+    }
+    next();
+  } catch (error) {
+    next(error as any);
+  }
 });
 
 //compare the password with the password that is already in the database
@@ -88,13 +105,16 @@ userSchema.methods.comparePassword = async function (userPassword: string) {
   return await bcrypt.compare(userPassword, this.password);
 };
 
-//check if the roles is employee it should also include the empoyeeId
-// userSchema.pre("validate", function (next) {
-//   if (this.roles && this.roles.includes() && !this.employeeId) {
-//     return next(new Error("employeeId is required for Employee role"));
-//   }
-//   next();
-// });
+// check if the roles is employee it should also include the empoyeeId
+const EMPLOYEE_ROLE_ID = new mongoose.Types.ObjectId(
+  "68b5a390c3a9af30dbdf3be8"
+);
+userSchema.pre("validate", function (next) {
+  if (this.roles && this.roles.includes(EMPLOYEE_ROLE_ID) && !this.employeeId) {
+    return next(new Error("employeeId is required for Employee role"));
+  }
+  next();
+});
 
 const User = mongoose.model<IUser>("User", userSchema);
 export default User;
