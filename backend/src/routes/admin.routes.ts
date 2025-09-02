@@ -13,6 +13,10 @@ import { getUserDetailsController } from "../controllers/admin.controller";
 import { updateUserController } from "../controllers/admin.controller";
 import { authUser } from "../middleware/auth.middleware";
 import { forcePasswordResetController } from "../controllers/admin.controller";
+import { fetchRolesController } from "../controllers/admin.controller";
+import { createRoleController } from "../controllers/admin.controller";
+import { updateRoleController } from "../controllers/admin.controller";
+import { deleteRoleController } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -28,7 +32,7 @@ router.get("/auth/logout", authUser, logoutController);
 
 router.post("/users/:userId/status", authUser, updateUserStatusController);
 
-router.get('/dashboard/summary', authUser, getDashboardSummaryController);
+router.get("/dashboard/summary", authUser, getDashboardSummaryController);
 
 router.get("/users", authUser, getAllUsersController);
 
@@ -38,6 +42,18 @@ router.get("/users/:userId", authUser, getUserDetailsController);
 
 router.put("/users/:userId", authUser, updateUserController);
 
-router.put("/users/:userId/reset-password", authUser, forcePasswordResetController);
+router.put(
+  "/users/:userId/reset-password",
+  authUser,
+  forcePasswordResetController
+);
+
+router.get("/roles", authUser, fetchRolesController);
+
+router.post("/roles", authUser, createRoleController);
+
+router.put("/roles/:roleId", authUser, updateRoleController);
+
+router.delete("/roles/:roleId", authUser, deleteRoleController);
 
 export default router;

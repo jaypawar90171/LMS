@@ -19,8 +19,6 @@ const rolesSchema = new mongoose.Schema<Irole>(
       {
         type: Schema.Types.ObjectId,
         ref: "Permission",
-        required: true,
-        trim: true,
       },
     ],
     immutable: {

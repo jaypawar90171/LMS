@@ -1,3 +1,5 @@
+import { Types } from "mongoose";
+import { permission } from "process";
 import { z } from "zod";
 
 export const registrationSchema = z
@@ -39,4 +41,10 @@ export const createUserSchema = z.object({
   role: z.string().trim(),
   emp_id: z.string().trim(),
   ass_emp_id: z.string().trim().optional(),
+});
+
+export const RoleSchema = z.object({
+  roleName: z.string().trim().min(2, "at least 2 characters"),
+  description: z.string().trim().min(5, "at least 5 characters of description"),
+  permissions: z.array(z.string().min(1, "Permission ID required")),
 });

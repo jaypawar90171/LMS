@@ -1,6 +1,6 @@
 import User from "../models/user.model";
 import { Types } from "mongoose";
-import { loginSchema } from "../validations/auth.validation";
+import { RoleSchema, loginSchema } from "../validations/auth.validation";
 import { loginService } from "../services/admin.service";
 import { Request, Response } from "express";
 import { forgotPasswordService } from "../services/admin.service";
@@ -13,6 +13,10 @@ import { createUserService } from "../services/admin.service";
 import { createUserSchema } from "../validations/auth.validation";
 import { getUserDetailsService } from "../services/admin.service";
 import { forcePasswordResetService } from "../services/admin.service";
+import { fetchRolesService } from "../services/admin.service";
+import { createRoleService } from "../services/admin.service";
+import { updateRoleService } from "../services/admin.service";
+import { deleteRoleService } from "../services/admin.service";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -283,6 +287,96 @@ export const forcePasswordResetController = async (
     return res.status(200).json({ message: "chnages made", user: updatedUser });
   } catch (error: any) {
     console.log("Error in updating user");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const fetchRolesController = async (req: Request, res: Response) => {
+  try {
+    const rolesWithPermissions = await fetchRolesService();
+
+    return res
+      .status(200)
+      .json({ message: "Roles Fetched", roles: rolesWithPermissions });
+  } catch (error: any) {
+    console.log("Error in fetching roles");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const createRoleController = async (req: Request, res: Response) => {
+  try {
+    const validatedData = RoleSchema.parse(req.body);
+    const { roleName, description, permissions } = validatedData;
+
+    if (!roleName || !description || !permissions) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+
+    const newRole = await createRoleService({
+      roleName,
+      description,
+      permissions,
+    });
+
+    return res.status(200).json({ message: "Role created", role: newRole });
+  } catch (error: any) {
+    console.log("Error in creating roles");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const updateRoleController = async (req: Request, res: Response) => {
+  try {
+    const { roleId } = req.params;
+
+    if (!Types.ObjectId.isValid(roleId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const validatedData = req.body;
+
+    const updatedRole = await updateRoleService({ roleId, ...validatedData });
+
+    if (!updatedRole) {
+      return res.status(404).json({ error: "Role not found." });
+    }
+
+    return res.status(200).json({
+      message: "Role updated successfully",
+      data: updatedRole,
+    });
+  } catch (error: any) {
+    console.log("Error in updating role");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const deleteRoleController = async (req: Request, res: Response) => {
+  try {
+    const { roleId } = req.params;
+
+    if (!Types.ObjectId.isValid(roleId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const { message, data } = await deleteRoleService(roleId);
+
+    return res.status(200).json({ message: message, data: data });
+  } catch (error: any) {
+    console.log("Error in updating role");
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",

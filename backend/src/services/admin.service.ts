@@ -10,6 +10,7 @@ import Category from "../models/category.model";
 import Activity from "../models/activity.model";
 import { IUser } from "../interfaces/user.interface";
 import Role from "../models/role.model";
+import { Permission } from "../models/permission.model";
 
 interface loginDTO {
   email: string;
@@ -263,3 +264,125 @@ export const forcePasswordResetService = async (userId: any) => {
 
   return user;
 };
+
+export const fetchRolesService = async () => {
+  const rolesWithPermissions = await Role.aggregate([
+    {
+      $lookup: {
+        from: "permissions",
+        localField: "permissions",
+        foreignField: "_id",
+        as: "permissions",
+      },
+    },
+    {
+      $project: {
+        roleName: 1,
+        description: 1,
+        "permissions.permissionKey": 1,
+        "permissions.description": 1,
+      },
+    },
+  ]);
+
+  if (!rolesWithPermissions?.length) {
+    throw Object.assign(new Error("No roles found."), { statusCode: 404 });
+  }
+
+  return rolesWithPermissions;
+};
+
+export const createRoleService = async ({
+  roleName,
+  description,
+  permissions,
+}: {
+  roleName: string;
+  description?: string;
+  permissions: string[];
+}) => {
+  const foundPermissions = await Permission.find({
+    permissionKey: { $in: permissions },
+  }).select("_id");
+
+  if (!foundPermissions.length) {
+    const err: any = new Error("One or more permissions not found.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const permissionIds = foundPermissions.map((p) => p._id);
+
+  const newRole = new Role({
+    roleName,
+    description,
+    permissions: permissionIds,
+  });
+
+  newRole.save();
+  return newRole;
+};
+
+export const updateRoleService = async ({
+  roleId,
+  roleName,
+  description,
+  permissions,
+}: {
+  roleId: string;
+  roleName?: string;
+  description?: string;
+  permissions?: string[];
+}) => {
+  const updateData: any = {};
+
+  if (roleName) {
+    updateData.roleName = roleName;
+  }
+
+  if (description) {
+    updateData.description = description;
+  }
+
+  if (permissions && permissions.length > 0) {
+    const foundPermissions = await Permission.find({
+      permissionKey: { $in: permissions },
+    }).select("_id");
+
+    if (foundPermissions.length !== permissions.length) {
+      const err: any = new Error("One or more permissions not found.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    updateData.permissions = foundPermissions.map((p) => p._id);
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    const err: any = new Error("No valid fields provided for update.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const updatedRole = await Role.findByIdAndUpdate(roleId, updateData, {
+    new: true,
+    runValidators: true,
+  }).populate("permissions", "permissionKey description _id");
+
+  return updatedRole;
+};
+
+export const deleteRoleService = async(roleId: string) => {
+  const deletedRole  = await Role.findByIdAndDelete(roleId)
+
+  if (!deletedRole) {
+    const err: any = new Error("Role not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return {
+    message: "Role deleted successfully",
+    data: deletedRole,
+  };
+}
