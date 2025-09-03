@@ -3,6 +3,7 @@ import Role from "../models/role.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import InventoryItem from "../models/item.model";
 
 
 interface RegisterDTO {
@@ -193,3 +194,5 @@ export const resetPasswordService = async (data: any) => {
     return verify;
   } catch (error) {}
 };
+
+

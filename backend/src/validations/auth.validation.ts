@@ -48,3 +48,41 @@ export const RoleSchema = z.object({
   description: z.string().trim().min(5, "at least 5 characters of description"),
   permissions: z.array(z.string().min(1, "Permission ID required")),
 });
+
+export const InventoryItemsSchema = z.object({
+  title: z.string().trim().min(2, "At least 2 characters required"),
+  authorOrCreator: z.string().trim().optional(),
+  isbnOrIdentifier: z.string().trim().min(1, "ISBN/Identifier is required"),
+  description: z.string().trim().optional(),
+  publisherOrManufacturer: z.string().trim().optional(),
+  publicationYear: z.number().int().min(0, "Invalid year").optional(),
+  price: z.number().nonnegative("Price must be non-negative"),
+  quantity: z.number().int().nonnegative("Quantity must be non-negative"),
+  availableCopies: z
+    .number()
+    .int()
+    .nonnegative("Available copies must be non-negative"),
+
+  categoryId: z.string().min(1, "CategoryId is required"),
+  subcategoryId: z.string().optional(),
+  barcode: z.string().trim().min(1, "Barcode is required"),
+  defaultReturnPeriod: z.number().int().optional(),
+  mediaUrl: z.string().url("Invalid URL").optional(),
+  status: z
+    .enum(["Available", "Issued", "Lost", "Damaged"])
+    .default("Available"),
+});
+
+export const InventoryItemsUpdateSchema = InventoryItemsSchema.partial();
+
+export const CategorySchema = z.object({
+  name: z.string().trim().min(2, "atleast 2 character"),
+  description: z.string().trim(),
+  defaultReturnPeriod: z
+    .number()
+    .int()
+    .nonnegative("return period must be non-negative")
+    .optional(),
+});
+
+export const CategoryUpdateSchema = CategorySchema.partial();

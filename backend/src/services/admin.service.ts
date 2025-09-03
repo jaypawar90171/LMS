@@ -372,8 +372,8 @@ export const updateRoleService = async ({
   return updatedRole;
 };
 
-export const deleteRoleService = async(roleId: string) => {
-  const deletedRole  = await Role.findByIdAndDelete(roleId)
+export const deleteRoleService = async (roleId: string) => {
+  const deletedRole = await Role.findByIdAndDelete(roleId);
 
   if (!deletedRole) {
     const err: any = new Error("Role not found.");
@@ -385,4 +385,128 @@ export const deleteRoleService = async(roleId: string) => {
     message: "Role deleted successfully",
     data: deletedRole,
   };
-}
+};
+
+export const fetchInventoryIetmsService = async () => {
+  const items = await InventoryItem.find();
+
+  if (items.length === 0) {
+    const err: any = new Error("No inventory items found");
+    err.statusCode = 404;
+    throw err;
+  }
+  return items;
+};
+
+export const createInventoryItemsService = async (data: any) => {
+  const newItem = new InventoryItem(data);
+  if (!newItem) {
+    const err: any = new Error("No inventory items found");
+    err.statusCode = 11000;
+    throw err;
+  }
+  return await newItem.save();
+};
+
+export const fetchSpecificItemServive = async (itemId: any) => {
+  const item = await InventoryItem.findById(itemId);
+
+  if (!item) {
+    const err: any = new Error("No inventory items found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return item;
+};
+
+export const updateItemService = async ({ itemId, data }: any) => {
+  const existingItem = await InventoryItem.findById(itemId);
+
+  if (!existingItem) {
+    const err: any = new Error("No such item exits");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const updatedData = await InventoryItem.findByIdAndUpdate(itemId, data, {
+    new: true,
+    runValidators: true,
+  });
+
+  return updatedData;
+};
+
+export const deleteItemService = async (itemId: any) => {
+  const deletedItem = await InventoryItem.findByIdAndDelete(itemId);
+
+  if (!deletedItem) {
+    const err: any = new Error("No such item exists");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return deletedItem;
+};
+
+export const getCategoriesService = async () => {
+  const categories = await Category.find({}, "name description").lean();
+
+  if (!categories || categories.length === 0) {
+    const err: any = new Error("No categories found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return categories;
+};
+
+export const createCategoryService = async (data: any) => {
+  const { name, description, defaultReturnPeriod } = data;
+
+  const isExisting = await Category.findOne({ name });
+  if (isExisting) {
+    const err: any = new Error("Category already exists");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const category = new Category({
+    name,
+    description: description || "",
+    defaultReturnPeriod: defaultReturnPeriod ?? null,
+  });
+
+  await category.save();
+  return category;
+};
+
+export const updateCategoryService = async ({ categoryId, data }: any) => {
+  const isCategoryExists = await Category.findById(categoryId);
+  if (!isCategoryExists) {
+    const err: any = new Error("No such category exits");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const updatedCatgory = await Category.findByIdAndUpdate(
+    categoryId,
+    { $set: data },
+    { new: true, runValidators: true }
+  );
+
+  return updatedCatgory;
+};
+
+export const deleteCategoryService = async (categoryId: string) => {
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    const err: any = new Error("No such category exists");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await Category.findByIdAndDelete(categoryId);
+
+  return { message: "Category deleted successfully" };
+};

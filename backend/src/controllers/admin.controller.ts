@@ -1,6 +1,13 @@
 import User from "../models/user.model";
 import { Types } from "mongoose";
-import { RoleSchema, loginSchema } from "../validations/auth.validation";
+import {
+  CategorySchema,
+  CategoryUpdateSchema,
+  InventoryItemsSchema,
+  InventoryItemsUpdateSchema,
+  RoleSchema,
+  loginSchema,
+} from "../validations/auth.validation";
 import { loginService } from "../services/admin.service";
 import { Request, Response } from "express";
 import { forgotPasswordService } from "../services/admin.service";
@@ -17,6 +24,15 @@ import { fetchRolesService } from "../services/admin.service";
 import { createRoleService } from "../services/admin.service";
 import { updateRoleService } from "../services/admin.service";
 import { deleteRoleService } from "../services/admin.service";
+import { fetchInventoryIetmsService } from "../services/admin.service";
+import { createInventoryItemsService } from "../services/admin.service";
+import { fetchSpecificItemServive } from "../services/admin.service";
+import { updateItemService } from "../services/admin.service";
+import { deleteItemService } from "../services/admin.service";
+import { getCategoriesService } from "../services/admin.service";
+import { createCategoryService } from "../services/admin.service";
+import { updateCategoryService } from "../services/admin.service";
+import { deleteCategoryService } from "../services/admin.service";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -380,6 +396,255 @@ export const deleteRoleController = async (req: Request, res: Response) => {
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const fetchInventoryItemsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const inventoryItems = await fetchInventoryIetmsService();
+    return res.status(200).json({ inventoryItems: inventoryItems });
+  } catch (error: any) {
+    console.log("Error in updating role");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const createInventoryItemsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const validatedData = InventoryItemsSchema.parse(req.body);
+    const newItem = await createInventoryItemsService(validatedData);
+
+    return res.status(201).json({
+      message: "Inventory item created successfully",
+      data: newItem,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Duplicate entry: ISBN/Barcode must be unique",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const fetchSpecificItemController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { itemId } = req.params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    const item = await fetchSpecificItemServive(itemId);
+    return res.status(200).json({ item: item });
+  } catch (error: any) {
+    if (error.code === 404) {
+      return res.status(409).json({
+        message: "item not found",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const updateItemController = async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    const validatedData = InventoryItemsUpdateSchema.parse(req.body);
+
+    const updatedItem = await updateItemService({ itemId, validatedData });
+
+    return res.status(200).json({
+      message: "Inventory item updated successfully",
+      data: updatedItem,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.code === 404) {
+      return res.status(409).json({
+        message: "No such item exits",
+      });
+    }
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        message: "Duplicate entry: ISBN/Barcode must be unique",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const deleteItemController = async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    const deletedItem = await deleteItemService(itemId);
+    return res.status(200).json({
+      message: "Inventory item deleted successfully",
+      data: deletedItem,
+    });
+  } catch (error: any) {
+    if (error.code === 404) {
+      return res.status(409).json({
+        message: "No such item exits",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getCategoriesController = async (req: Request, res: Response) => {
+  try {
+    const categories = await getCategoriesService();
+
+    return res.status(200).json({
+      message: "Categories fetched successfully",
+      data: categories,
+    });
+  } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({ message: "No categories found" });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const createCatgoryController = async (req: Request, res: Response) => {
+  try {
+    const validatedData = CategorySchema.parse(req.body);
+
+    const category = await createCategoryService(validatedData);
+    return res
+      .status(200)
+      .json({ message: "Category created", category: category });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.code === 404) {
+      return res.status(409).json({
+        message: "Category already exists",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const updateCategoryController = async (req: Request, res: Response) => {
+  try {
+    const { categoryId } = req.params;
+
+    if (!Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ error: "Invalid categoryId" });
+    }
+    const validatedData = CategoryUpdateSchema.parse(req.body);
+    const updatedCatgory = await updateCategoryService({
+      categoryId,
+      data:validatedData,
+    });
+
+    return res.status(200).json({
+      message: "Category updated succesfully",
+      category: updatedCatgory,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.code === 404) {
+      return res.status(409).json({
+        message: "No such category exits",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const deleteCategoryController = async (req: Request, res: Response) => {
+  try {
+    const { categoryId } = req.params;
+
+    // Validate ObjectId
+    if (!Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ error: "Invalid categoryId" });
+    }
+
+    const result = await deleteCategoryService(categoryId);
+
+    return res.status(200).json(result);
+  } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
     });
   }
 };

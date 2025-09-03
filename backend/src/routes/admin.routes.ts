@@ -17,6 +17,15 @@ import { fetchRolesController } from "../controllers/admin.controller";
 import { createRoleController } from "../controllers/admin.controller";
 import { updateRoleController } from "../controllers/admin.controller";
 import { deleteRoleController } from "../controllers/admin.controller";
+import { fetchInventoryItemsController } from "../controllers/admin.controller";
+import { createInventoryItemsController } from "../controllers/admin.controller";
+import { fetchSpecificItemController } from "../controllers/admin.controller";
+import { updateItemController } from "../controllers/admin.controller";
+import { deleteItemController } from "../controllers/admin.controller";
+import { getCategoriesController } from "../controllers/admin.controller";
+import { createCatgoryController } from "../controllers/admin.controller";
+import { updateCategoryController } from "../controllers/admin.controller";
+import { deleteCategoryController } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -55,5 +64,23 @@ router.post("/roles", authUser, createRoleController);
 router.put("/roles/:roleId", authUser, updateRoleController);
 
 router.delete("/roles/:roleId", authUser, deleteRoleController);
+
+router.get("/inventory/items", fetchInventoryItemsController);
+
+router.post("/inventory/items", createInventoryItemsController);
+
+router.get("/inventory/items/:itemId", fetchSpecificItemController);
+
+router.put("/inventory/items/:itemId", updateItemController);
+
+router.delete("/inventory/items/:itemId", deleteItemController);
+
+router.get("/inventory/categories", getCategoriesController);
+
+router.post("/inventory/categories", createCatgoryController);
+
+router.put("/inventory/categories/:categoryId", updateCategoryController);
+
+router.delete("/inventory/categories/:categoryId", deleteCategoryController);
 
 export default router;
