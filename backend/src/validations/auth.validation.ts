@@ -86,3 +86,33 @@ export const CategorySchema = z.object({
 });
 
 export const CategoryUpdateSchema = CategorySchema.partial();
+
+export const FineSchema = z.object({
+  userId: z.string().min(1, "userId is required"),
+  itemId: z.string().min(1, "itemId is required"),
+  reason: z.enum(["Overdue", "Damaged"], {
+    message: "reason must be either 'Overdue' or 'Damaged'",
+  }),
+  amountIncurred: z.number().positive("amountIncurred must be greater than 0"),
+  amountPaid: z
+    .number()
+    .min(0, "amountPaid cannot be negative")
+    .optional()
+    .default(0),
+  outstandingAmount: z
+    .number()
+    .min(0, "outstandingAmount cannot be negative")
+    .optional(),
+  paymentDetails: z
+    .object({
+      paymentMethod: z.enum(["Cash", "Card"]).optional(),
+      transactionId: z.string().trim().optional(),
+    })
+    .optional(),
+  dateIncurred: z.date().optional(),
+  dateSettled: z.date().nullable().optional(),
+  status: z.enum(["Outstanding", "Paid"]).optional(),
+  managedByAdminId: z.string().min(1, "managedByAdminId is required"),
+});
+
+export const FineUpdateSchema = FineSchema.partial();

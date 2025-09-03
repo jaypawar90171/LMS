@@ -5,7 +5,7 @@ import Category from "./models/category.model";
 import Donation from "./models/donation.model";
 import Fine from "./models/fine.model";
 import ItemRequest from "./models/itemRequest.model";
-import Permission from "./models/permission.model";
+import { Permission } from "./models/permission.model";
 import Setting from "./models/setting.model";
 import Queue from "./models/queue.model";
 import IssuedIetm from "./models/issuedItem.model";
@@ -53,52 +53,52 @@ const permissionKeys = [
 
 async function seedDatabase() {
   //1. Inserting a user
-  const roles = await Role.find({
-    roleName: { $in: ["superAdmin", "Admin", "librarian", "user"] },
-  });
+  // const roles = await Role.find({
+  //   roleName: { $in: ["superAdmin", "Admin", "librarian", "user"] },
+  // });
 
-  const roleMap = roles.reduce((acc: any, role: any) => {
-    acc[role.roleName] = role._id;
-    return acc;
-  }, {});
+  // const roleMap = roles.reduce((acc: any, role: any) => {
+  //   acc[role.roleName] = role._id;
+  //   return acc;
+  // }, {});
 
-  const users = [
-    {
-      fullName: "Super Admin",
-      email: "superadmin@example.com",
-      username: "superadmin",
-      password: "securePassword123",
-      roles: [roleMap["superAdmin"]],
-    },
-    {
-      fullName: "Admin",
-      email: "admin@example.com",
-      username: "admin",
-      password: "securePassword123",
-      roles: [roleMap["Admin"]],
-    },
-    {
-      fullName: "Librarian",
-      email: "librarian@example.com",
-      username: "librarian",
-      password: "securePassword123",
-      roles: [roleMap["librarian"]],
-    },
-    {
-      fullName: "Jane Doe",
-      email: "jane.doe@example.com",
-      username: "janedoe",
-      password: "securePassword123",
-      roles: [roleMap["user"]],
-    },
-  ];
+  // const users = [
+  //   {
+  //     fullName: "Super Admin",
+  //     email: "superadmin@example.com",
+  //     username: "superadmin",
+  //     password: "securePassword123",
+  //     roles: [roleMap["superAdmin"]],
+  //   },
+  //   {
+  //     fullName: "Admin",
+  //     email: "admin@example.com",
+  //     username: "admin",
+  //     password: "securePassword123",
+  //     roles: [roleMap["Admin"]],
+  //   },
+  //   {
+  //     fullName: "Librarian",
+  //     email: "librarian@example.com",
+  //     username: "librarian",
+  //     password: "securePassword123",
+  //     roles: [roleMap["librarian"]],
+  //   },
+  //   {
+  //     fullName: "Jane Doe",
+  //     email: "jane.doe@example.com",
+  //     username: "janedoe",
+  //     password: "securePassword123",
+  //     roles: [roleMap["user"]],
+  //   },
+  // ];
 
-  for (const userData of users) {
-    const user = new User(userData);
-    await user.save();
-  }
+  // for (const userData of users) {
+  //   const user = new User(userData);
+  //   await user.save();
+  // }
 
-  console.log("Initial users inserted successfully.");
+  // console.log("Initial users inserted successfully.");
 
   // 2. Inserting a Role
   // const permissions = await Permission.find({
@@ -584,6 +584,42 @@ async function seedDatabase() {
   // });
 
   // console.log("System settings entry created successfully.");
+
+  //7. Inserting Fines
+  const fines = [
+    {
+      userId: "68b5a4c91ebb4f744fbc1509",
+      itemId: "68b1af1a8197b70dde91af3b",
+      reason: "Overdue",
+      amountIncurred: 100,
+      amountPaid: 50,
+      outstandingAmount: 50,
+      paymentDetails: {
+        paymentMethod: "Cash",
+        transactionId: "TXN1001",
+      },
+      status: "Outstanding",
+      managedByAdminId: "68b5a3dbb2499c66843c1469",
+    },
+    {
+      userId: "68b5ea2b3bc30eb130e8bb17",
+      itemId: "68b1af1a8197b70dde91af37",
+      reason: "Damaged",
+      amountIncurred: 250,
+      amountPaid: 250,
+      outstandingAmount: 0,
+      paymentDetails: {
+        paymentMethod: "Card",
+        transactionId: "TXN1002",
+      },
+      status: "Paid",
+      managedByAdminId: "68b5a3dbb2499c66843c1469",
+      dateSettled: new Date(),
+    },
+  ];
+
+  await Fine.insertMany(fines);
+  console.log("Fines seeded successfully!");
 }
 
 (async () => {

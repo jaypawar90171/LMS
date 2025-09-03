@@ -1,6 +1,9 @@
 import { Router } from "express";
 import User from "../models/user.model";
-import { loginController } from "../controllers/admin.controller";
+import {
+  loginController,
+  updateFineController,
+} from "../controllers/admin.controller";
 import { forgotPassswordController } from "../controllers/admin.controller";
 import { verifyResetPasswordController } from "../controllers/admin.controller";
 import { resetPasswordController } from "../controllers/admin.controller";
@@ -26,6 +29,9 @@ import { getCategoriesController } from "../controllers/admin.controller";
 import { createCatgoryController } from "../controllers/admin.controller";
 import { updateCategoryController } from "../controllers/admin.controller";
 import { deleteCategoryController } from "../controllers/admin.controller";
+import { getAllFinesController } from "../controllers/admin.controller";
+import { createFinesController } from "../controllers/admin.controller";
+import { fetchUserFinesController } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -82,5 +88,13 @@ router.post("/inventory/categories", createCatgoryController);
 router.put("/inventory/categories/:categoryId", updateCategoryController);
 
 router.delete("/inventory/categories/:categoryId", deleteCategoryController);
+
+router.get("/fines", getAllFinesController);
+
+router.get("/fines/:userId", fetchUserFinesController);
+
+router.post("/fines", createFinesController);
+
+router.put("/fines/:fineId", updateFineController);
 
 export default router;

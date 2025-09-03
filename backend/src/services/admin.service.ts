@@ -11,6 +11,7 @@ import Activity from "../models/activity.model";
 import { IUser } from "../interfaces/user.interface";
 import Role from "../models/role.model";
 import { Permission } from "../models/permission.model";
+import Fine from "../models/fine.model";
 
 interface loginDTO {
   email: string;
@@ -509,4 +510,87 @@ export const deleteCategoryService = async (categoryId: string) => {
   await Category.findByIdAndDelete(categoryId);
 
   return { message: "Category deleted successfully" };
+};
+
+export const getAllFinesService = async () => {
+  const fines = await Fine.find();
+
+  if (!fines || fines.length === 0) {
+    const err: any = new Error("No fines found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return fines;
+};
+
+export const fetchUserFinesService = async (userId: any) => {
+  const isUserExists = await User.findById(userId);
+  if (!userId) {
+    const err: any = new Error("No user found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const fines = await Fine.find({ userId: userId });
+  if (fines.length === 0) {
+    const err: any = new Error("No Fines found");
+    err.statusCode = 404;
+    throw err;
+  }
+  return fines;
+};
+
+export const createFineService = async (data: any) => {
+  const {
+    userId,
+    itemId,
+    reason,
+    amountIncurred,
+    amountPaid = 0,
+    paymentDetails,
+    managedByAdminId,
+  } = data;
+  const outstandingAmount = amountIncurred - amountPaid;
+
+  const fine = await Fine.create({
+    userId,
+    itemId,
+    reason,
+    amountIncurred,
+    amountPaid,
+    outstandingAmount,
+    paymentDetails,
+    status: outstandingAmount > 0 ? "Outstanding" : "Paid",
+    managedByAdminId,
+    dateSettled: outstandingAmount === 0 ? new Date() : null,
+  });
+
+  return fine;
+};
+
+export const updateFineService = async ({ fineId, data }: any) => {
+  const isFineExists = await Fine.findById(fineId);
+  if (!isFineExists) {
+    const err: any = new Error("No such fine exists");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (data.amountPaid !== undefined) {
+    const newOutstanding =
+      (data.amountIncurred ?? isFineExists.amountIncurred) - data.amountPaid;
+
+    data.outstandingAmount = newOutstanding;
+    data.status = newOutstanding > 0 ? "Outstanding" : "Paid";
+    data.dateSettled = newOutstanding === 0 ? new Date() : null;
+  }
+
+  const updatedFine = await Fine.findByIdAndUpdate(
+    fineId,
+    { $set: data },
+    { new: true, runValidators: true }
+  );
+
+  return updatedFine;
 };

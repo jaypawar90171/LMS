@@ -3,12 +3,14 @@ import { Types } from "mongoose";
 import {
   CategorySchema,
   CategoryUpdateSchema,
+  FineSchema,
+  FineUpdateSchema,
   InventoryItemsSchema,
   InventoryItemsUpdateSchema,
   RoleSchema,
   loginSchema,
 } from "../validations/auth.validation";
-import { loginService } from "../services/admin.service";
+import { loginService, updateFineService } from "../services/admin.service";
 import { Request, Response } from "express";
 import { forgotPasswordService } from "../services/admin.service";
 import { verifyResetPasswordService } from "../services/admin.service";
@@ -33,6 +35,9 @@ import { getCategoriesService } from "../services/admin.service";
 import { createCategoryService } from "../services/admin.service";
 import { updateCategoryService } from "../services/admin.service";
 import { deleteCategoryService } from "../services/admin.service";
+import { getAllFinesService } from "../services/admin.service";
+import { createFineService } from "../services/admin.service";
+import { fetchUserFinesService } from "../services/admin.service";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -599,7 +604,7 @@ export const updateCategoryController = async (req: Request, res: Response) => {
     const validatedData = CategoryUpdateSchema.parse(req.body);
     const updatedCatgory = await updateCategoryService({
       categoryId,
-      data:validatedData,
+      data: validatedData,
     });
 
     return res.status(200).json({
@@ -630,7 +635,6 @@ export const deleteCategoryController = async (req: Request, res: Response) => {
   try {
     const { categoryId } = req.params;
 
-    // Validate ObjectId
     if (!Types.ObjectId.isValid(categoryId)) {
       return res.status(400).json({ error: "Invalid categoryId" });
     }
@@ -641,6 +645,129 @@ export const deleteCategoryController = async (req: Request, res: Response) => {
   } catch (error: any) {
     if (error.statusCode === 404) {
       return res.status(404).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getAllFinesController = async (req: Request, res: Response) => {
+  try {
+    const fines = await getAllFinesService();
+
+    return res.status(200).json({
+      message: "Fines fetched successfully",
+      fines,
+    });
+  } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({ message: error.message });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const fetchUserFinesController = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    if (!Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const fines = await fetchUserFinesService(userId);
+    return res.status(200).json({ fines: fines });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const createFinesController = async (req: Request, res: Response) => {
+  try {
+    const validatedData = FineSchema.parse(req.body);
+    const {
+      userId,
+      itemId,
+      reason,
+      amountIncurred,
+      amountPaid,
+      paymentDetails,
+      managedByAdminId,
+    } = validatedData;
+
+    if (!Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    const fine = await createFineService({
+      userId,
+      itemId,
+      reason,
+      amountIncurred,
+      amountPaid,
+      paymentDetails,
+      managedByAdminId,
+    });
+
+    return res.status(201).json({
+      message: "Fine created successfully",
+      fine,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const updateFineController = async (req: Request, res: Response) => {
+  try {
+    const { fineId } = req.params;
+
+    if (!Types.ObjectId.isValid(fineId)) {
+      return res.status(400).json({ error: "Invalid fineId" });
+    }
+
+    const validatedData = FineUpdateSchema.parse(req.body);
+
+    const updatedFine = await updateFineService({
+      fineId,
+      data: validatedData,
+    });
+
+    return res.status(200).json({
+      message: "Fine updated successfully",
+      fine: updatedFine,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: "No such fine exists",
+      });
     }
 
     return res.status(500).json({
