@@ -9,15 +9,21 @@ import {
   InventoryItemsSchema,
   InventoryItemsUpdateSchema,
   RoleSchema,
+  SystemRestrictionsUpdateSchema,
   loginSchema,
 } from "../validations/auth.validation";
 import {
   generateIssuedItemsReportPDF,
+  getAdminProfileService,
   getFinesReportService,
   getInventoryReportService,
   getIssuedReportService,
+  getNotificationTemplatesService,
+  getSystemRestrictionsService,
   loginService,
   updateFineService,
+  updateNotificationTemplateService,
+  updateSystemRestrictionsService,
 } from "../services/admin.service";
 import { forgotPasswordService } from "../services/admin.service";
 import { verifyResetPasswordService } from "../services/admin.service";
@@ -874,4 +880,186 @@ export const getIssuedReportController = async (
       .status(500)
       .json({ message: "Failed to fetch issued report", error: error.message });
   }
+};
+
+export const getSystemRestrictionsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const restrictions = await getSystemRestrictionsService();
+    res.status(200).json({
+      message: "System restrictions fetched successfully",
+      data: restrictions,
+    });
+  } catch (error: any) {
+    res.status(error.statusCode || 500).json({
+      message: error.message || "Failed to fetch system restrictions",
+    });
+  }
+};
+
+export const updateSystemRestrictionsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const updateData = SystemRestrictionsUpdateSchema.parse(req.body);
+
+    if (!updateData || Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No fields provided for update",
+      });
+    }
+
+    const updatedSettings = await updateSystemRestrictionsService(updateData);
+
+    res.status(200).json({
+      success: true,
+      message: "System restrictions updated successfully",
+      data: updatedSettings,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update system restrictions",
+    });
+  }
+};
+
+export const getNotificationTemplatesController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const templates = await getNotificationTemplatesService();
+
+    if (!templates) {
+      return res.status(404).json({
+        success: false,
+        message: "No notification templates found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Notification templates fetched successfully",
+      data: templates,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching notification templates",
+      error: error.message,
+    });
+  }
+};
+
+export const updateNotificationTemplateController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { templateKey } = req.params;
+    const updateData = req.body;
+
+    if (!templateKey) {
+      return res.status(400).json({ message: "Template key is required" });
+    }
+
+    const updatedTemplate = await updateNotificationTemplateService({
+      templateKey,
+      data: updateData,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification template updated successfully",
+      template: updatedTemplate,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to update notification template",
+    });
+  }
+};
+
+export const getAdminProfileController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ message: "Unauthorized: Admin not logged in" });
+    }
+
+    const adminProfile = await getAdminProfileService(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin profile fetched successfully",
+      data: adminProfile,
+    });
+  } catch (error: any) {
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Failed to fetch profile",
+    });
+  }
+};
+
+export const updateAdminController = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+
+    if (!Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if ("password" in req.body) {
+      return res
+        .status(400)
+        .json({ message: "password cannot be chnaged from here" });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userObj = updatedUser.toObject();
+    res.status(200).json(userObj);
+  } catch (error: any) {
+    console.log("Error in updating user");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const updateAdminAvatarController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+  } catch (error) {}
 };

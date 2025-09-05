@@ -14,6 +14,9 @@ import { Permission } from "../models/permission.model";
 import { Response } from "express";
 import PDFDocument from "pdfkit";
 import Item from "../models/item.model";
+import Setting from "../models/setting.model";
+import Notification from "../models/notofication.modal";
+import { UpdateTemplateData } from "../interfaces/updateTemplate";
 
 interface loginDTO {
   email: string;
@@ -801,4 +804,83 @@ export const getIssuedReportService = async () => {
       : "-",
     status: record.status || "Issued",
   }));
+};
+
+export const getSystemRestrictionsService = async () => {
+  const settings = await Setting.findOne().lean();
+
+  if (!settings) {
+    const error: any = new Error("System settings not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return {
+    libraryName: settings.libraryName,
+    operationalHours: settings.operationalHours,
+    borrowingLimits: settings.borrowingLimits,
+    fineRates: settings.fineRates,
+  };
+};
+
+export const updateSystemRestrictionsService = async (updateData: any) => {
+  try {
+    const updatedSettings = await Setting.findOneAndUpdate(
+      {},
+      { $set: updateData },
+      { new: true, runValidators: false, upsert: true }
+    ).lean();
+
+    return updatedSettings;
+  } catch (error: any) {
+    throw new Error(error.message || "Failed to update system settings");
+  }
+};
+
+export const getNotificationTemplatesService = async () => {
+  const templates = await Setting.findOne().select(
+    "notificationTemplates -_id"
+  );
+  return templates;
+};
+
+export const updateNotificationTemplateService = async ({
+  templateKey,
+  data,
+}: UpdateTemplateData) => {
+  const setting = await Setting.findOne();
+  if (!setting) {
+    throw new Error("System settings not found");
+  }
+
+  const updateFields: Record<string, any> = {};
+  if (data.emailSubject !== undefined)
+    updateFields[`notificationTemplates.${templateKey}.emailSubject`] =
+      data.emailSubject;
+  if (data.emailBody !== undefined)
+    updateFields[`notificationTemplates.${templateKey}.emailBody`] =
+      data.emailBody;
+  if (data.whatsappMessage !== undefined)
+    updateFields[`notificationTemplates.${templateKey}.whatsappMessage`] =
+      data.whatsappMessage;
+
+  const updatedSetting = await Setting.findOneAndUpdate(
+    {},
+    { $set: updateFields },
+    { new: true, lean: true }
+  );
+
+  return updatedSetting?.notificationTemplates?.[templateKey];
+};
+
+export const getAdminProfileService = async (userId: any) => {
+  const admin = await User.findById(userId).lean();
+
+  if (!admin) {
+    const err: any = new Error("Admin profile not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return admin;
 };

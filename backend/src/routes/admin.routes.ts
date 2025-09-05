@@ -1,13 +1,20 @@
 import { Router } from "express";
 import User from "../models/user.model";
 import {
+  getAdminProfileController,
   getFinesReportController,
   getFinesReportPDF,
   getInventoryReportController,
   getInventoryReportPDF,
   getIssuedItemsReportPDF,
+  getNotificationTemplatesController,
+  getSystemRestrictionsController,
   loginController,
+  updateAdminAvatarController,
+  updateAdminController,
   updateFineController,
+  updateNotificationTemplateController,
+  updateSystemRestrictionsController,
 } from "../controllers/admin.controller";
 import { forgotPassswordController } from "../controllers/admin.controller";
 import { verifyResetPasswordController } from "../controllers/admin.controller";
@@ -114,5 +121,25 @@ router.get("/reports/inventory/pdf", getInventoryReportPDF);
 router.get("/reports/fines/pdf", getFinesReportPDF);
 
 router.get("/reports/issued/pdf", getIssuedItemsReportPDF);
+
+router.get("/settings/system-restrictions", getSystemRestrictionsController);
+
+router.put("/settings/system-restrictions", updateSystemRestrictionsController);
+
+router.get(
+  "/settings/notification-templates",
+  getNotificationTemplatesController
+);
+
+router.put(
+  "/settings/notification-templates/:templateKey",
+  updateNotificationTemplateController
+);
+
+router.get("/settings/profile/:userId", getAdminProfileController);
+
+router.put("/settings/profile/:userId", updateAdminController);
+
+router.put("/settings/profile/avtar", updateAdminAvatarController);
 
 export default router;

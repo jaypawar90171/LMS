@@ -116,3 +116,22 @@ export const FineSchema = z.object({
 });
 
 export const FineUpdateSchema = FineSchema.partial();
+
+export const SystemRestrictionsSchema = z.object({
+  libraryName: z.string().min(2, "Library name must be at least 2 characters"),
+  operationalHours: z.string().min(2, "Operational hours are required"),
+  borrowingLimits: z.object({
+    maxConcurrentIssuedItems: z.number().int().nonnegative().optional(),
+    maxConcurrentQueues: z.number().int().nonnegative().optional(),
+    maxPeriodExtensions: z.number().int().nonnegative().optional(),
+    extensionPeriodDays: z.number().int().nonnegative().optional(),
+  }).optional(),
+  fineRates: z.object({
+    overdueFineRatePerDay: z.number().nonnegative().optional(),
+    lostItemBaseFine: z.number().nonnegative().optional(),
+    damagedItemBaseFine: z.number().nonnegative().optional(),
+    fineGracePeriodDays: z.number().nonnegative().optional(),
+  }).optional(),
+});
+
+export const SystemRestrictionsUpdateSchema = SystemRestrictionsSchema.partial();

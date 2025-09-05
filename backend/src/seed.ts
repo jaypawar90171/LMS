@@ -586,40 +586,104 @@ async function seedDatabase() {
   // console.log("System settings entry created successfully.");
 
   //7. Inserting Fines
-  const fines = [
-    {
-      userId: "68b5a4c91ebb4f744fbc1509",
-      itemId: "68b1af1a8197b70dde91af3b",
-      reason: "Overdue",
-      amountIncurred: 100,
-      amountPaid: 50,
-      outstandingAmount: 50,
-      paymentDetails: {
-        paymentMethod: "Cash",
-        transactionId: "TXN1001",
-      },
-      status: "Outstanding",
-      managedByAdminId: "68b5a3dbb2499c66843c1469",
-    },
-    {
-      userId: "68b5ea2b3bc30eb130e8bb17",
-      itemId: "68b1af1a8197b70dde91af37",
-      reason: "Damaged",
-      amountIncurred: 250,
-      amountPaid: 250,
-      outstandingAmount: 0,
-      paymentDetails: {
-        paymentMethod: "Card",
-        transactionId: "TXN1002",
-      },
-      status: "Paid",
-      managedByAdminId: "68b5a3dbb2499c66843c1469",
-      dateSettled: new Date(),
-    },
-  ];
+  // const fines = [
+  //   {
+  //     userId: "68b5a4c91ebb4f744fbc1509",
+  //     itemId: "68b1af1a8197b70dde91af3b",
+  //     reason: "Overdue",
+  //     amountIncurred: 100,
+  //     amountPaid: 50,
+  //     outstandingAmount: 50,
+  //     paymentDetails: {
+  //       paymentMethod: "Cash",
+  //       transactionId: "TXN1001",
+  //     },
+  //     status: "Outstanding",
+  //     managedByAdminId: "68b5a3dbb2499c66843c1469",
+  //   },
+  //   {
+  //     userId: "68b5ea2b3bc30eb130e8bb17",
+  //     itemId: "68b1af1a8197b70dde91af37",
+  //     reason: "Damaged",
+  //     amountIncurred: 250,
+  //     amountPaid: 250,
+  //     outstandingAmount: 0,
+  //     paymentDetails: {
+  //       paymentMethod: "Card",
+  //       transactionId: "TXN1002",
+  //     },
+  //     status: "Paid",
+  //     managedByAdminId: "68b5a3dbb2499c66843c1469",
+  //     dateSettled: new Date(),
+  //   },
+  // ];
 
-  await Fine.insertMany(fines);
-  console.log("Fines seeded successfully!");
+  // await Fine.insertMany(fines);
+  // console.log("Fines seeded successfully!");
+
+  //8. System Restrictions
+  const settings = [
+      {
+        libraryName: "Central City Library",
+        contactEmail: "info@centrallibrary.org",
+        phoneNumber: "+91-9876543210",
+        address: "123 Library Street, Pune, India",
+        operationalHours: "Mon-Sat: 9 AM - 7 PM",
+
+        borrowingLimits: {
+          maxConcurrentIssuedItems: 5,
+          maxConcurrentQueues: 3,
+          maxPeriodExtensions: 2,
+          extensionPeriodDays: 7,
+        },
+
+        fineRates: {
+          overdueFineRatePerDay: 5,
+          lostItemBaseFine: 500,
+          damagedItemBaseFine: 300,
+          fineGracePeriodDays: 2,
+        },
+
+        notificationChannels: {
+          email: {
+            enabled: true,
+            smtpServer: "smtp.gmail.com",
+            port: 587,
+            username: "noreply@centrallibrary.org",
+            password: "securepassword123",
+          },
+          whatsapp: {
+            enabled: true,
+            provider: "Twilio",
+            apiKey: "whatsapp-api-key-123",
+            phoneNumber: "+919876543210",
+          },
+        },
+
+        notificationTemplates: {
+          bookIssued: {
+            emailSubject: "Book Issued Successfully",
+            emailBody: "Hello {{user}}, you have issued {{bookTitle}}. Return it by {{dueDate}}.",
+            whatsappMessage: "Book '{{bookTitle}}' issued. Return by {{dueDate}}.",
+          },
+          bookOverdue: {
+            emailSubject: "Overdue Book Reminder",
+            emailBody: "Dear {{user}}, your book '{{bookTitle}}' is overdue. Fine applies: ₹{{fine}}.",
+            whatsappMessage: "'{{bookTitle}}' is overdue. Please return ASAP.",
+          },
+          bookReturned: {
+            emailSubject: "Book Returned Successfully",
+            emailBody: "Hello {{user}}, you have returned '{{bookTitle}}'. Thank you!",
+            whatsappMessage: "'{{bookTitle}}' returned successfully.",
+          },
+        },
+      },
+    ];
+
+    await Setting.deleteMany(); 
+    await Setting.insertMany(settings);
+
+    console.log("Settings added successfully!");
 }
 
 (async () => {
