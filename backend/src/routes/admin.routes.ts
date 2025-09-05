@@ -1,6 +1,11 @@
 import { Router } from "express";
 import User from "../models/user.model";
 import {
+  getFinesReportController,
+  getFinesReportPDF,
+  getInventoryReportController,
+  getInventoryReportPDF,
+  getIssuedItemsReportPDF,
   loginController,
   updateFineController,
 } from "../controllers/admin.controller";
@@ -32,6 +37,7 @@ import { deleteCategoryController } from "../controllers/admin.controller";
 import { getAllFinesController } from "../controllers/admin.controller";
 import { createFinesController } from "../controllers/admin.controller";
 import { fetchUserFinesController } from "../controllers/admin.controller";
+import { getIssuedReportController } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -96,5 +102,17 @@ router.get("/fines/:userId", fetchUserFinesController);
 router.post("/fines", createFinesController);
 
 router.put("/fines/:fineId", updateFineController);
+
+router.get("/reports/inventory", getInventoryReportController);
+
+router.get("/reports/fines", getFinesReportController);
+
+router.get("/reports/issued", getIssuedReportController);
+
+router.get("/reports/inventory/pdf", getInventoryReportPDF);
+
+router.get("/reports/fines/pdf", getFinesReportPDF);
+
+router.get("/reports/issued/pdf", getIssuedItemsReportPDF);
 
 export default router;

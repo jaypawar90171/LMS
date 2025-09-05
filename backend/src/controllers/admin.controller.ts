@@ -1,5 +1,6 @@
 import User from "../models/user.model";
 import { Types } from "mongoose";
+import { Request, Response } from "express";
 import {
   CategorySchema,
   CategoryUpdateSchema,
@@ -10,8 +11,14 @@ import {
   RoleSchema,
   loginSchema,
 } from "../validations/auth.validation";
-import { loginService, updateFineService } from "../services/admin.service";
-import { Request, Response } from "express";
+import {
+  generateIssuedItemsReportPDF,
+  getFinesReportService,
+  getInventoryReportService,
+  getIssuedReportService,
+  loginService,
+  updateFineService,
+} from "../services/admin.service";
 import { forgotPasswordService } from "../services/admin.service";
 import { verifyResetPasswordService } from "../services/admin.service";
 import { resetPasswordService } from "../services/admin.service";
@@ -38,6 +45,8 @@ import { deleteCategoryService } from "../services/admin.service";
 import { getAllFinesService } from "../services/admin.service";
 import { createFineService } from "../services/admin.service";
 import { fetchUserFinesService } from "../services/admin.service";
+import { generateInventoryReportPDF } from "../services/admin.service";
+import { generateFinesReportPDF } from "../services/admin.service";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -773,5 +782,96 @@ export const updateFineController = async (req: Request, res: Response) => {
     return res.status(500).json({
       message: error.message || "Internal Server Error",
     });
+  }
+};
+
+export const getInventoryReportPDF = async (req: Request, res: Response) => {
+  try {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=inventory-report.pdf"
+    );
+
+    await generateInventoryReportPDF(res);
+  } catch (error: any) {
+    console.error("Error generating PDF:", error.message);
+    res
+      .status(500)
+      .json({ message: "Failed to generate PDF", error: error.message });
+  }
+};
+
+export const getFinesReportPDF = async (req: Request, res: Response) => {
+  try {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=fines-report.pdf"
+    );
+
+    await generateFinesReportPDF(res);
+  } catch (error: any) {
+    console.error("Error generating PDF:", error.message);
+    res
+      .status(500)
+      .json({ message: "Failed to generate PDF", error: error.message });
+  }
+};
+
+export const getIssuedItemsReportPDF = async (req: Request, res: Response) => {
+  try {
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=issuedItems-report.pdf"
+    );
+
+    await generateIssuedItemsReportPDF(res);
+  } catch (error: any) {
+    console.error("Error generating PDF:", error.message);
+    res
+      .status(500)
+      .json({ message: "Failed to generate PDF", error: error.message });
+  }
+};
+
+export const getInventoryReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const report = await getInventoryReportService();
+    res.status(200).json({ report });
+  } catch (error: any) {
+    res.status(500).json({
+      message: "Failed to fetch inventory report",
+      error: error.message,
+    });
+  }
+};
+
+export const getFinesReportController = async (req: Request, res: Response) => {
+  try {
+    const report = await getFinesReportService();
+    res.status(200).json(report);
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch fines report", error: error.message });
+  }
+};
+
+export const getIssuedReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const report = await getIssuedReportService();
+    res.status(200).json({ report });
+  } catch (error: any) {
+    res
+      .status(500)
+      .json({ message: "Failed to fetch issued report", error: error.message });
   }
 };

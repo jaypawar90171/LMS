@@ -2,8 +2,8 @@ import User from "../models/user.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import Fine from "../models/fine.model";
 import { Types } from "mongoose";
-import { promise } from "zod";
 import InventoryItem from "../models/item.model";
 import IssuedIetm from "../models/issuedItem.model";
 import Category from "../models/category.model";
@@ -11,7 +11,9 @@ import Activity from "../models/activity.model";
 import { IUser } from "../interfaces/user.interface";
 import Role from "../models/role.model";
 import { Permission } from "../models/permission.model";
-import Fine from "../models/fine.model";
+import { Response } from "express";
+import PDFDocument from "pdfkit";
+import Item from "../models/item.model";
 
 interface loginDTO {
   email: string;
@@ -593,4 +595,210 @@ export const updateFineService = async ({ fineId, data }: any) => {
   );
 
   return updatedFine;
+};
+
+export const generateInventoryReportPDF = async (res: Response) => {
+  const items = await Item.find().populate("categoryId", "name"); // populate category name
+
+  const doc = new PDFDocument({ margin: 30, size: "A4" });
+
+  doc.pipe(res);
+
+  // Title
+  doc.fontSize(20).text("Inventory Report", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text("Comprehensive overview of the library's collection", {
+    align: "center",
+  });
+  doc.moveDown(2);
+
+  // Table header
+  const tableTop = 120;
+  const itemSpacing = 25;
+  let y = tableTop;
+
+  doc.fontSize(10).text("Item ID", 30, y);
+  doc.text("Title", 120, y);
+  doc.text("Category", 250, y);
+  doc.text("Publisher", 350, y);
+  doc.text("Status", 450, y);
+  doc.text("Added On", 520, y);
+
+  y += itemSpacing;
+
+  // Table rows
+  items.forEach((item) => {
+    doc.text(item._id.toString(), 30, y, { width: 80 });
+    doc.text(item.title || "-", 120, y, { width: 120 });
+    doc.text((item.categoryId as any)?.name || "-", 250, y, { width: 90 });
+    doc.text(item.publisherOrManufacturer || "-", 350, y, { width: 90 });
+    doc.text(item.status || "-", 450, y, { width: 60 });
+    doc.text(
+      item.createdAt ? new Date(item.createdAt).toLocaleDateString() : "-",
+      520,
+      y,
+      { width: 80 }
+    );
+    y += itemSpacing;
+  });
+
+  doc.end();
+};
+
+export const generateFinesReportPDF = async (res: Response) => {
+  const fines = await Fine.find().lean();
+
+  const doc = new PDFDocument({ margin: 30, size: "A4" });
+
+  doc.pipe(res);
+
+  // Title
+  doc.fontSize(20).text("Fines Report", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text("Comprehensive overview of the library's collection", {
+    align: "center",
+  });
+  doc.moveDown(2);
+
+  // Table header
+  const tableTop = 120;
+  const itemSpacing = 25;
+  let y = tableTop;
+
+  doc.fontSize(10).text("User ID", 30, y);
+  doc.text("Item ID", 120, y);
+  doc.text("Reason", 250, y);
+  doc.text("amount Incurred", 350, y);
+  doc.text("amount Paid", 450, y);
+  doc.text("outstanding", 520, y);
+
+  y += itemSpacing;
+
+  // Table rows
+  fines.forEach((fine) => {
+    doc.text(fine.userId.toString(), 30, y, { width: 80 });
+    doc.text(fine.itemId.toString() || "-", 120, y, { width: 120 });
+    doc.text((fine.reason as any) || "-", 250, y, { width: 90 });
+    doc.text(fine.amountIncurred.toString() || "-", 350, y, { width: 90 });
+    doc.text(fine.amountPaid.toString() || "-", 450, y, { width: 60 });
+    doc.text(fine.outstandingAmount.toString() || "-", 520, y, { width: 80 });
+    y += itemSpacing;
+  });
+
+  doc.end();
+};
+
+export const generateIssuedItemsReportPDF = async (res: Response) => {
+  const items = await IssuedIetm.find().lean();
+
+  const doc = new PDFDocument({ margin: 30, size: "A4" });
+
+  doc.pipe(res);
+
+  // Title
+  doc.fontSize(20).text("issued-items Report", { align: "center" });
+  doc.moveDown();
+  doc.fontSize(12).text("Comprehensive overview of the library's collection", {
+    align: "center",
+  });
+  doc.moveDown(2);
+
+  // Table header
+  const tableTop = 120;
+  const itemSpacing = 25;
+  let y = tableTop;
+
+  doc.fontSize(10).text("Item ID", 30, y);
+  doc.text("Item ID", 120, y);
+  doc.text("Issued Date", 250, y);
+  doc.text("Due date", 350, y);
+  doc.text("Status", 450, y);
+  doc.text("Fine ID", 520, y);
+
+  y += itemSpacing;
+
+  // Table rows
+  items.forEach((item) => {
+    doc.text(item.userId.toString(), 30, y, { width: 80 });
+    doc.text(item.itemId.toString() || "-", 120, y, { width: 120 });
+    doc.text((item.issuedDate as any) || "-", 250, y, { width: 90 });
+    doc.text((item.dueDate as any) || "-", 350, y, { width: 90 });
+    doc.text(item.status.toString() || "-", 450, y, { width: 60 });
+    doc.text((item.fineId as any) || "-", 520, y, { width: 80 });
+    y += itemSpacing;
+  });
+
+  doc.end();
+};
+
+export const getInventoryReportService = async () => {
+  const items = await InventoryItem.find()
+    .populate("categoryId", "name")
+    .lean();
+
+  return items.map((item: any) => ({
+    id: item._id,
+    title: item.title,
+    category: item.categoryId?.name || "N/A",
+    author: item.authorOrCreator || "-",
+    availability: item.status || "N/A",
+    acquisitionDate: item.createdAt
+      ? new Date(item.createdAt).toISOString().split("T")[0]
+      : "-",
+  }));
+};
+
+export const getFinesReportService = async () => {
+  const fines = await Fine.find()
+    .populate("userId", "fullName")
+    .populate("itemId", "title")
+    .lean();
+
+  let total = 0,
+    paid = 0,
+    outstanding = 0;
+
+  const fineDetails = fines.map((fine: any) => {
+    total += fine.amount;
+    if (fine.status === "Paid") paid += fine.amount;
+    else outstanding += fine.amount;
+
+    return {
+      user: fine.userId?.fullName || "Unknown",
+      item: fine.itemId?.title || "-",
+      fineAmount: `$${fine.amount}`,
+      status: fine.status,
+      date: fine.createdAt
+        ? new Date(fine.createdAt).toISOString().split("T")[0]
+        : "-",
+    };
+  });
+
+  return {
+    summary: {
+      totalFines: total,
+      paidFines: paid,
+      outstandingFines: outstanding,
+    },
+    details: fineDetails,
+  };
+};
+
+export const getIssuedReportService = async () => {
+  const records = await IssuedIetm.find()
+    .populate("userId", "fullName")
+    .populate("itemId", "title")
+    .lean();
+
+  return records.map((record: any) => ({
+    user: record.userId?.fullName || "Unknown",
+    item: record.itemId?.title || "-",
+    issueDate: record.issueDate
+      ? new Date(record.issueDate).toISOString().split("T")[0]
+      : "-",
+    returnDate: record.returnDate
+      ? new Date(record.returnDate).toISOString().split("T")[0]
+      : "-",
+    status: record.status || "Issued",
+  }));
 };

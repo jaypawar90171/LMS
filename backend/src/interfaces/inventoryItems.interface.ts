@@ -14,6 +14,8 @@ export interface IInventoryItem extends Document {
   subcategoryId?: mongoose.Types.ObjectId;
   barcode: string;
   defaultReturnPeriod?: number;
-  mediaUrl: string,
-  status: "Available" | "Issued" | "Lost" | "Damaged"
+  mediaUrl: string;
+  status: "Available" | "Issued" | "Lost" | "Damaged";
+  createdAt?: Date;
+  updatedAt?: Date;
 }
