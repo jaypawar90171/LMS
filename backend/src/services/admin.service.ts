@@ -19,6 +19,7 @@ import Notification from "../models/notofication.modal";
 import { UpdateTemplateData } from "../interfaces/updateTemplate";
 import { v4 as uuidv4 } from "uuid";
 import bwipjs from "bwip-js";
+import Donation from "../models/donation.model";
 
 interface loginDTO {
   email: string;
@@ -958,17 +959,15 @@ export const generateBarcodePDF = async (itemId: string, res: Response) => {
 
     const barcodeValue = isItemExisting.barcode;
 
-    // 1. Generate barcode image (PNG buffer)
     const pngBuffer = await bwipjs.toBuffer({
-      bcid: "code128", // Barcode type
-      text: barcodeValue, // String to encode
-      scale: 3, // 3x scaling factor
-      height: 10, // Bar height in millimeters
-      includetext: true, // Show text below barcode
-      textxalign: "center", // Align text to center
+      bcid: "code128",
+      text: barcodeValue,
+      scale: 3,
+      height: 10,
+      includetext: true,
+      textxalign: "center",
     });
 
-    // 2. Prepare PDF
     const doc = new PDFDocument();
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
@@ -976,10 +975,8 @@ export const generateBarcodePDF = async (itemId: string, res: Response) => {
       `attachment; filename=barcode-${barcodeValue}.pdf`
     );
 
-    // 3. Pipe PDF stream to response
     doc.pipe(res);
 
-    // 4. Add title and barcode image
     doc.fontSize(18).text("Item Barcode", { align: "center" });
     doc.moveDown(1);
 
@@ -992,9 +989,42 @@ export const generateBarcodePDF = async (itemId: string, res: Response) => {
     doc.moveDown(1);
     doc.fontSize(14).text(`Code: ${barcodeValue}`, { align: "center" });
 
-    // 5. Finalize PDF
     doc.end();
   } catch (err) {
     throw new Error("Failed to generate barcode PDF");
   }
+};
+
+export const getAllDonationService = async () => {
+  const donations = await Donation.find()
+    .populate({ path: "userId", select: "fullName email" })
+    .populate({ path: "itemType", select: "name description" });
+  if (!donations || donations.length === 0) {
+    const err: any = new Error("donations not available");
+    err.statusCode = 404;
+    throw err;
+  }
+  return donations;
+};
+
+export const updateDonationStatusService = async (
+  donationId: string,
+  status: "Accepted" | "Rejected"
+) => {
+  const donation = await Donation.findById(donationId)
+    .populate({ path: "userId", select: "fullName email" })
+    .populate({ path: "itemType", select: "name description" });
+
+  if (!donation) {
+    throw new Error("Donation not found");
+  }
+
+  if (donation.status !== "Pending") {
+    throw new Error(`Donation is already ${donation.status}`);
+  }
+
+  donation.status = status;
+  await donation.save();
+
+  return donation;
 };

@@ -4,6 +4,7 @@ import {
   downloadBarcodeController,
   generateBarcodeController,
   getAdminProfileController,
+  getAllDonationsController,
   getFinesReportController,
   getFinesReportPDF,
   getInventoryReportController,
@@ -15,6 +16,7 @@ import {
   resetPasswordAdminController,
   updateAdminController,
   updateAdminPasswordController,
+  updateDonationStatusController,
   updateFineController,
   updateNotificationTemplateController,
   updateSystemRestrictionsController,
@@ -152,5 +154,9 @@ router.put("/settings/profile/password/:userId", updateAdminPasswordController);
 router.get("/barcode/generate", generateBarcodeController);
 
 router.get("/barcode/download/:itemId", downloadBarcodeController);
+
+router.get("/donations", getAllDonationsController);
+
+router.put("/donations/:donationId/status", updateDonationStatusController);
 
 export default router;

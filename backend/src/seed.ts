@@ -13,6 +13,7 @@ import InventoryItem from "./models/item.model";
 import Notification from "./models/notofication.modal";
 import mongoose from "mongoose";
 import connect from "./config/db";
+import IssuedItem from "./models/issuedItem.model";
 
 // A list of the permission keys we need to find.
 const permissionKeys = [
@@ -622,68 +623,186 @@ async function seedDatabase() {
   // console.log("Fines seeded successfully!");
 
   //8. System Restrictions
-  const settings = [
-      {
-        libraryName: "Central City Library",
-        contactEmail: "info@centrallibrary.org",
-        phoneNumber: "+91-9876543210",
-        address: "123 Library Street, Pune, India",
-        operationalHours: "Mon-Sat: 9 AM - 7 PM",
+  // const settings = [
+  //   {
+  //     libraryName: "Central City Library",
+  //     contactEmail: "info@centrallibrary.org",
+  //     phoneNumber: "+91-9876543210",
+  //     address: "123 Library Street, Pune, India",
+  //     operationalHours: "Mon-Sat: 9 AM - 7 PM",
 
-        borrowingLimits: {
-          maxConcurrentIssuedItems: 5,
-          maxConcurrentQueues: 3,
-          maxPeriodExtensions: 2,
-          extensionPeriodDays: 7,
+  //     borrowingLimits: {
+  //       maxConcurrentIssuedItems: 5,
+  //       maxConcurrentQueues: 3,
+  //       maxPeriodExtensions: 2,
+  //       extensionPeriodDays: 7,
+  //     },
+
+  //     fineRates: {
+  //       overdueFineRatePerDay: 5,
+  //       lostItemBaseFine: 500,
+  //       damagedItemBaseFine: 300,
+  //       fineGracePeriodDays: 2,
+  //     },
+
+  //     notificationChannels: {
+  //       email: {
+  //         enabled: true,
+  //         smtpServer: "smtp.gmail.com",
+  //         port: 587,
+  //         username: "noreply@centrallibrary.org",
+  //         password: "securepassword123",
+  //       },
+  //       whatsapp: {
+  //         enabled: true,
+  //         provider: "Twilio",
+  //         apiKey: "whatsapp-api-key-123",
+  //         phoneNumber: "+919876543210",
+  //       },
+  //     },
+
+  //     notificationTemplates: {
+  //       bookIssued: {
+  //         emailSubject: "Book Issued Successfully",
+  //         emailBody:
+  //           "Hello {{user}}, you have issued {{bookTitle}}. Return it by {{dueDate}}.",
+  //         whatsappMessage:
+  //           "Book '{{bookTitle}}' issued. Return by {{dueDate}}.",
+  //       },
+  //       bookOverdue: {
+  //         emailSubject: "Overdue Book Reminder",
+  //         emailBody:
+  //           "Dear {{user}}, your book '{{bookTitle}}' is overdue. Fine applies: ₹{{fine}}.",
+  //         whatsappMessage: "'{{bookTitle}}' is overdue. Please return ASAP.",
+  //       },
+  //       bookReturned: {
+  //         emailSubject: "Book Returned Successfully",
+  //         emailBody:
+  //           "Hello {{user}}, you have returned '{{bookTitle}}'. Thank you!",
+  //         whatsappMessage: "'{{bookTitle}}' returned successfully.",
+  //       },
+  //     },
+  //   },
+  // ];
+
+  // await Setting.deleteMany();
+  // await Setting.insertMany(settings);
+
+  // console.log("Settings added successfully!");
+
+  //9. Donations
+  //   await Donation.insertMany([
+  //   {
+  //     userId: new mongoose.Types.ObjectId("64f8c0a4f1a2b1c3d4567890"),
+  //     itemType: new mongoose.Types.ObjectId("64f8c1b9f1a2b1c3d4567891"),
+  //     title: "Warm Winter Jacket",
+  //     description: "A slightly used winter jacket, size L.",
+  //     photos: "https://example.com/uploads/jacket.jpg",
+  //     preferredContactMethod: "whatsApp",
+  //     status: "Pending",
+  //   },
+  //   {
+  //     userId: new mongoose.Types.ObjectId("64f8c0a4f1a2b1c3d4567892"),
+  //     itemType: new mongoose.Types.ObjectId("64f8c1b9f1a2b1c3d4567893"),
+  //     title: "Children's Story Books",
+  //     description: "A collection of 20 illustrated children's books.",
+  //     photos: "https://example.com/uploads/books.jpg",
+  //     preferredContactMethod: "Email",
+  //     status: "Accepted",
+  //   },
+  // ]);
+
+  // console.log("Donations seeded");
+
+  //10. Issued Items
+  // const issuedItemsSeed = [
+  //   {
+  //     itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af39"),
+  //     userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //     issuedDate: new Date("2025-09-01"),
+  //     dueDate: new Date("2025-09-15"),
+  //     issuedBy: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"), // Admin/Staff User ID
+  //     returnedTo: null,
+  //     returnDate: null,
+  //     status: "Issued",
+  //     extensionCount: 0,
+  //     maxExtensionAllowed: 2,
+  //     fineId: null,
+  //   },
+  //   {
+  //     itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af3e"),
+  //     userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //     issuedDate: new Date("2025-08-15"),
+  //     dueDate: new Date("2025-08-30"),
+  //     issuedBy: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //     returnedTo: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //     returnDate: new Date("2025-08-29"),
+  //     status: "Returned",
+  //     extensionCount: 1,
+  //     maxExtensionAllowed: 2,
+  //     fineId: null,
+  //   },
+  // ];
+
+  // await IssuedItem.deleteMany({});
+  // await IssuedItem.insertMany(issuedItemsSeed);
+  // console.log("Issued items seeded successfully");
+
+  // //11. requested items
+  // const seedData = [
+  //     {
+  //       userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //       title: "Clean Code",
+  //       authorOrCreator: "Robert C. Martin",
+  //       itemType: new mongoose.Types.ObjectId("68b1ac31789a0550e05d7866"),
+  //       reasonForRequest: "Important for learning software craftsmanship",
+  //       status: "Pending",
+  //     },
+  //     {
+  //       userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //       title: "Arduino Kit",
+  //       authorOrCreator: "Arduino Team",
+  //       itemType: new mongoose.Types.ObjectId("68b1ac31789a0550e05d7866"),
+  //       reasonForRequest: "Required for IoT workshop project",
+  //       status: "Approved",
+  //     }
+  //   ];
+
+  //   await ItemRequest.deleteMany();
+  //   await ItemRequest.insertMany(seedData);
+  //   console.log("ItemRequests seeded successfully!");
+
+  //12. queue
+  const queues = [
+    {
+      itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af3e"), 
+      queueMembers: [
+        {
+          userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"), // User ID
+          position: 1,
+          dateJoined: new Date("2025-09-01"),
         },
-
-        fineRates: {
-          overdueFineRatePerDay: 5,
-          lostItemBaseFine: 500,
-          damagedItemBaseFine: 300,
-          fineGracePeriodDays: 2,
+        {
+          userId: new mongoose.Types.ObjectId("68b5ea2b3bc30eb130e8bb17"),
+          position: 2,
+          dateJoined: new Date("2025-09-02"),
         },
-
-        notificationChannels: {
-          email: {
-            enabled: true,
-            smtpServer: "smtp.gmail.com",
-            port: 587,
-            username: "noreply@centrallibrary.org",
-            password: "securepassword123",
-          },
-          whatsapp: {
-            enabled: true,
-            provider: "Twilio",
-            apiKey: "whatsapp-api-key-123",
-            phoneNumber: "+919876543210",
-          },
+      ],
+    },
+    {
+      itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af39"),
+      queueMembers: [
+        {
+          userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+          position: 1,
+          dateJoined: new Date("2025-09-03"),
         },
+      ],
+    },
+  ];
 
-        notificationTemplates: {
-          bookIssued: {
-            emailSubject: "Book Issued Successfully",
-            emailBody: "Hello {{user}}, you have issued {{bookTitle}}. Return it by {{dueDate}}.",
-            whatsappMessage: "Book '{{bookTitle}}' issued. Return by {{dueDate}}.",
-          },
-          bookOverdue: {
-            emailSubject: "Overdue Book Reminder",
-            emailBody: "Dear {{user}}, your book '{{bookTitle}}' is overdue. Fine applies: ₹{{fine}}.",
-            whatsappMessage: "'{{bookTitle}}' is overdue. Please return ASAP.",
-          },
-          bookReturned: {
-            emailSubject: "Book Returned Successfully",
-            emailBody: "Hello {{user}}, you have returned '{{bookTitle}}'. Thank you!",
-            whatsappMessage: "'{{bookTitle}}' returned successfully.",
-          },
-        },
-      },
-    ];
-
-    await Setting.deleteMany(); 
-    await Setting.insertMany(settings);
-
-    console.log("Settings added successfully!");
+  await Queue.insertMany(queues);
+  console.log("Queue data seeded successfully!");
 }
 
 (async () => {

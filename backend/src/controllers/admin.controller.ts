@@ -18,6 +18,7 @@ import {
   generateBarcodeString,
   generateIssuedItemsReportPDF,
   getAdminProfileService,
+  getAllDonationService,
   getFinesReportService,
   getInventoryReportService,
   getIssuedReportService,
@@ -26,6 +27,7 @@ import {
   loginService,
   resetPasswordAdminService,
   updateAdminPasswordServive,
+  updateDonationStatusService,
   updateFineService,
   updateNotificationTemplateService,
   updateSystemRestrictionsService,
@@ -58,6 +60,7 @@ import { createFineService } from "../services/admin.service";
 import { fetchUserFinesService } from "../services/admin.service";
 import { generateInventoryReportPDF } from "../services/admin.service";
 import { generateFinesReportPDF } from "../services/admin.service";
+import { success } from "zod";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -1176,6 +1179,9 @@ export const downloadBarcodeController = async (
 ) => {
   try {
     const { itemId } = req.params;
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
     if (!itemId) {
       return res.status(400).json({ message: "Barcode value is required" });
     }
@@ -1187,5 +1193,52 @@ export const downloadBarcodeController = async (
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",
     });
+  }
+};
+
+export const getAllDonationsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const donations = await getAllDonationService();
+    return res.status(200).json({
+      success: true,
+      message: "Donations fetched successfully",
+      data: donations,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const updateDonationStatusController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { donationId } = req.params;
+    const { status } = req.body;
+
+    if (!["Accepted", "Rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
+    }
+
+    const updatedDonation = await updateDonationStatusService(
+      donationId,
+      status as "Accepted" | "Rejected"
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: `Donation ${status} successfully`,
+      donation: updatedDonation,
+    });
+  } catch (error: any) {
+    return res
+      .status(500)
+      .json({ message: error.message || "Error updating donation status" });
   }
 };

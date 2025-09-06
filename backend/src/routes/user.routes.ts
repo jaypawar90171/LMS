@@ -1,10 +1,22 @@
 import { Router } from "express";
-import { registerUserController } from "../controllers/user.controller";
+import {
+  dashboardSummaryController,
+  extendIssuedItemController,
+  getCategoriesController,
+  getCategoryItemsController,
+  getIssuedItemsController,
+  getItemController,
+  getQueuedItemsController,
+  getRequestedItemsController,
+  registerUserController,
+  requestItemController,
+} from "../controllers/user.controller";
 import { loginUserController } from "../controllers/user.controller";
 import { forgotPassswordController } from "../controllers/user.controller";
 import { resetPasswordController } from "../controllers/user.controller";
 import { verifyResetPasswordController } from "../controllers/user.controller";
 import { logoutController } from "../controllers/user.controller";
+import { authUser } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -20,23 +32,25 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 
 router.get("/logout", logoutController);
 
-// router.get("/dashboard");
+router.get("/dashboard/:userId", dashboardSummaryController);
 
-// router.get("/items/issued");
+router.get("/items/issued/:userId", getIssuedItemsController);
 
-// router.get("/items/queud");
+router.get("/inventory/categories", getCategoriesController);
 
-// router.get("/items/new-arrivals");
+router.get("/inventory/categories/:categoryId/items/",getCategoryItemsController);
 
-// router.get("/items/categories");
+router.get("/inventory/categories/items/:itemId", getItemController);
 
-// router.post("/items/:itemId/request-issue");
+router.get("/:userId/requests", getRequestedItemsController);
+
+router.post("/:userId/requests", requestItemController);
+
+router.get("/items/queud/:userId", getQueuedItemsController);
+
+router.get("/items/:itemId/extend-period", authUser, extendIssuedItemController);
 
 // router.post("/items/:itemId/join-queue");
-
-// router.post("/items/:itemId/extend-period");
-
-// router.post("/items/request/new-item");
 
 // router.post("/items/donations/express-interest");
 

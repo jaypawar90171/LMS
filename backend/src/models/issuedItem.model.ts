@@ -58,5 +58,5 @@ const issuedItemSchema = new mongoose.Schema<IIssuedItem>(
   { timestamps: true }
 );
 
-const IssuedIetm = mongoose.model<IIssuedItem>("IssuedItem", issuedItemSchema);
-export default IssuedIetm;
+const IssuedItem = mongoose.model<IIssuedItem>("IssuedItem", issuedItemSchema);
+export default IssuedItem;

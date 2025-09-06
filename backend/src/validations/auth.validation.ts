@@ -140,5 +140,17 @@ export const SystemRestrictionsSchema = z.object({
     .optional(),
 });
 
-export const SystemRestrictionsUpdateSchema =
-  SystemRestrictionsSchema.partial();
+export const SystemRestrictionsUpdateSchema = SystemRestrictionsSchema.partial();
+
+export const itemRequestSchema = z.object({
+  userId: z.string().min(1, "User ID is required"), 
+  title: z.string().min(1, "Title is required").trim(),
+  authorOrCreator: z.string().trim().optional(),
+  itemType: z.string().min(1, "Item type (Category ID) is required"), // ObjectId as string
+  reasonForRequest: z.string().min(1, "Reason is required").trim(),
+  status: z.enum(["Pending", "Approved", "Rejected"]).default("Pending"),
+  createdAt: z.date().optional(),
+  updatedAt: z.date().optional(),
+});
+
+export const itemRequestUpdateSchema = itemRequestSchema.partial();
