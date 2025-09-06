@@ -11,8 +11,11 @@ import {
   RoleSchema,
   SystemRestrictionsUpdateSchema,
   loginSchema,
+  updateUserSchema,
 } from "../validations/auth.validation";
 import {
+  generateBarcodePDF,
+  generateBarcodeString,
   generateIssuedItemsReportPDF,
   getAdminProfileService,
   getFinesReportService,
@@ -21,6 +24,8 @@ import {
   getNotificationTemplatesService,
   getSystemRestrictionsService,
   loginService,
+  resetPasswordAdminService,
+  updateAdminPasswordServive,
   updateFineService,
   updateNotificationTemplateService,
   updateSystemRestrictionsService,
@@ -1056,10 +1061,131 @@ export const updateAdminController = async (req: Request, res: Response) => {
   }
 };
 
-export const updateAdminAvatarController = async (
+// export const updateAdminAvatarController = async (req: Request, res: Response) => {
+//   try {
+//     const { adminId } = req.params;
+//     const { avatarUrl } = req.body();
+
+//     if (!Types.ObjectId.isValid(adminId)) {
+//       return res.status(400).json({ error: "Invalid adminId" });
+//     }
+
+//     if (!avatarUrl) {
+//       return res.status(400).json({ message: "url not found" });
+//     }
+//     const result = await updateAdminAvatarService({ adminId, avatarUrl });
+
+//     return res?.status(200).json({
+//       success: true,
+//       message: "Admin avatar updated successfully",
+//       data: result,
+//     });
+//   } catch (error: any) {
+//     console.log("Error in uploading avtar");
+//     const statusCode = error.statusCode || 500;
+//     return res.status(statusCode).json({
+//       error: error.message || "Internal server error.",
+//     });
+//   }
+// };
+
+export const resetPasswordAdminController = async (
   req: Request,
   res: Response
 ) => {
   try {
-  } catch (error) {}
+    const { userId } = req.params;
+    if (!Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const user = await resetPasswordAdminService(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin avatar updated successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    console.log("Error in reset password request");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const updateAdminPasswordController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { userId } = req.params;
+    if (!Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    const validatedData = updateUserSchema.parse(req.body);
+    if (!validatedData) {
+      return res.status(400).json({ message: "new password is required" });
+    }
+
+    const user = await updateAdminPasswordServive({
+      userId,
+      password: validatedData.password,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Admin password updated successfully",
+      data: user,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const generateBarcodeController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const barcodeString = await generateBarcodeString();
+    return res.status(200).json({ barcode: barcodeString });
+  } catch (error: any) {
+    console.log("Error in barcode generation");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const downloadBarcodeController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { itemId } = req.params;
+    if (!itemId) {
+      return res.status(400).json({ message: "Barcode value is required" });
+    }
+
+    await generateBarcodePDF(itemId, res);
+  } catch (error: any) {
+    console.log("Error in barcode generation");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
 };

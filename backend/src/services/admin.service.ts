@@ -17,6 +17,8 @@ import Item from "../models/item.model";
 import Setting from "../models/setting.model";
 import Notification from "../models/notofication.modal";
 import { UpdateTemplateData } from "../interfaces/updateTemplate";
+import { v4 as uuidv4 } from "uuid";
+import bwipjs from "bwip-js";
 
 interface loginDTO {
   email: string;
@@ -883,4 +885,116 @@ export const getAdminProfileService = async (userId: any) => {
   }
 
   return admin;
+};
+
+// export const updateAdminAvatarService = async ({ adminId, avatarUrl }: any) => {
+//   const isExistingAdmin = await User.findById(adminId);
+
+//   if (!isExistingAdmin) {
+//     const err: any = new Error("no admin found with this amdinId");
+//     err.statusCode = 404;
+//     throw err;
+//   }
+
+//   const res = await User.findByIdAndUpdate(
+//     adminId,
+//     { $set: avatarUrl },
+//     { new: true, runValidators: false }
+//   );
+
+//   return res;
+// };
+
+export const resetPasswordAdminService = async (userId: string) => {
+  const isExistingAdmin = await User.findById(userId);
+
+  if (!isExistingAdmin) {
+    const err: any = new Error("no admin found with this amdinId");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { passwordResetRequired: true } },
+    { new: true, runValidators: false }
+  );
+
+  return user;
+};
+
+export const updateAdminPasswordServive = async (data: any) => {
+  const { userId, password } = data;
+  const isExistingAdmin = await User.findById(userId);
+  if (!isExistingAdmin) {
+    const err: any = new Error("no admin found with this amdinId");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const salt = await bcrypt.genSalt(10);
+  const hashPassword = await bcrypt.hash(password, salt);
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { password: hashPassword } },
+    { new: true, runValidators: false }
+  ).select("+password");
+
+  return user;
+};
+
+export const generateBarcodeString = async (): Promise<string> => {
+  return `ITEM-${uuidv4()}`;
+};
+
+export const generateBarcodePDF = async (itemId: string, res: Response) => {
+  try {
+    const isItemExisting = await InventoryItem.findById(itemId);
+    if (!isItemExisting) {
+      const err: any = new Error("no admin found with this amdinId");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const barcodeValue = isItemExisting.barcode;
+
+    // 1. Generate barcode image (PNG buffer)
+    const pngBuffer = await bwipjs.toBuffer({
+      bcid: "code128", // Barcode type
+      text: barcodeValue, // String to encode
+      scale: 3, // 3x scaling factor
+      height: 10, // Bar height in millimeters
+      includetext: true, // Show text below barcode
+      textxalign: "center", // Align text to center
+    });
+
+    // 2. Prepare PDF
+    const doc = new PDFDocument();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=barcode-${barcodeValue}.pdf`
+    );
+
+    // 3. Pipe PDF stream to response
+    doc.pipe(res);
+
+    // 4. Add title and barcode image
+    doc.fontSize(18).text("Item Barcode", { align: "center" });
+    doc.moveDown(1);
+
+    doc.image(pngBuffer, {
+      fit: [250, 100],
+      align: "center",
+      valign: "center",
+    });
+
+    doc.moveDown(1);
+    doc.fontSize(14).text(`Code: ${barcodeValue}`, { align: "center" });
+
+    // 5. Finalize PDF
+    doc.end();
+  } catch (err) {
+    throw new Error("Failed to generate barcode PDF");
+  }
 };

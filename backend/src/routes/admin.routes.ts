@@ -1,6 +1,8 @@
 import { Router } from "express";
 import User from "../models/user.model";
 import {
+  downloadBarcodeController,
+  generateBarcodeController,
   getAdminProfileController,
   getFinesReportController,
   getFinesReportPDF,
@@ -10,8 +12,9 @@ import {
   getNotificationTemplatesController,
   getSystemRestrictionsController,
   loginController,
-  updateAdminAvatarController,
+  resetPasswordAdminController,
   updateAdminController,
+  updateAdminPasswordController,
   updateFineController,
   updateNotificationTemplateController,
   updateSystemRestrictionsController,
@@ -140,6 +143,14 @@ router.get("/settings/profile/:userId", getAdminProfileController);
 
 router.put("/settings/profile/:userId", updateAdminController);
 
-router.put("/settings/profile/avtar", updateAdminAvatarController);
+// router.put("/settings/profile/avatar/:userId", updateAdminAvatarController);
+
+router.put("/settings/profile/password-reset/:userId", resetPasswordAdminController);
+
+router.put("/settings/profile/password/:userId", updateAdminPasswordController);
+
+router.get("/barcode/generate", generateBarcodeController);
+
+router.get("/barcode/download/:itemId", downloadBarcodeController);
 
 export default router;

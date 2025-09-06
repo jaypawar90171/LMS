@@ -43,6 +43,8 @@ export const createUserSchema = z.object({
   ass_emp_id: z.string().trim().optional(),
 });
 
+export const updateUserSchema = createUserSchema.partial();
+
 export const RoleSchema = z.object({
   roleName: z.string().trim().min(2, "at least 2 characters"),
   description: z.string().trim().min(5, "at least 5 characters of description"),
@@ -120,18 +122,23 @@ export const FineUpdateSchema = FineSchema.partial();
 export const SystemRestrictionsSchema = z.object({
   libraryName: z.string().min(2, "Library name must be at least 2 characters"),
   operationalHours: z.string().min(2, "Operational hours are required"),
-  borrowingLimits: z.object({
-    maxConcurrentIssuedItems: z.number().int().nonnegative().optional(),
-    maxConcurrentQueues: z.number().int().nonnegative().optional(),
-    maxPeriodExtensions: z.number().int().nonnegative().optional(),
-    extensionPeriodDays: z.number().int().nonnegative().optional(),
-  }).optional(),
-  fineRates: z.object({
-    overdueFineRatePerDay: z.number().nonnegative().optional(),
-    lostItemBaseFine: z.number().nonnegative().optional(),
-    damagedItemBaseFine: z.number().nonnegative().optional(),
-    fineGracePeriodDays: z.number().nonnegative().optional(),
-  }).optional(),
+  borrowingLimits: z
+    .object({
+      maxConcurrentIssuedItems: z.number().int().nonnegative().optional(),
+      maxConcurrentQueues: z.number().int().nonnegative().optional(),
+      maxPeriodExtensions: z.number().int().nonnegative().optional(),
+      extensionPeriodDays: z.number().int().nonnegative().optional(),
+    })
+    .optional(),
+  fineRates: z
+    .object({
+      overdueFineRatePerDay: z.number().nonnegative().optional(),
+      lostItemBaseFine: z.number().nonnegative().optional(),
+      damagedItemBaseFine: z.number().nonnegative().optional(),
+      fineGracePeriodDays: z.number().nonnegative().optional(),
+    })
+    .optional(),
 });
 
-export const SystemRestrictionsUpdateSchema = SystemRestrictionsSchema.partial();
+export const SystemRestrictionsUpdateSchema =
+  SystemRestrictionsSchema.partial();
