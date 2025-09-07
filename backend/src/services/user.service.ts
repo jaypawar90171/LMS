@@ -9,6 +9,12 @@ import Queue from "../models/queue.model";
 import Category from "../models/category.model";
 import ItemRequest from "../models/itemRequest.model";
 import Setting from "../models/setting.model";
+import { boolean } from "zod";
+import Fine from "../models/fine.model";
+import { Types } from "mongoose";
+import { IIssuedItem } from "../interfaces/issuedItems.interface";
+import { IFine } from "../interfaces/fine.interface";
+import Donation from "../models/donation.model";
 
 interface RegisterDTO {
   fullName: string;
@@ -344,8 +350,15 @@ export const getQueuedItemsService = async (userId: any) => {
   return queueItems || [];
 };
 
-export const extendIssuedItemService = async (itemId: string, userId: string) => {
-   const issuedItem = await IssuedItem.findOne({ itemId, userId, status: "Issued" });
+export const extendIssuedItemService = async (
+  itemId: string,
+  userId: string
+) => {
+  const issuedItem = await IssuedItem.findOne({
+    itemId,
+    userId,
+    status: "Issued",
+  });
   if (!issuedItem) {
     const err: any = new Error("No active issued item found for this user");
     err.statusCode = 404;
@@ -361,7 +374,10 @@ export const extendIssuedItemService = async (itemId: string, userId: string) =>
 
   const { maxPeriodExtensions, extensionPeriodDays } = settings.borrowingLimits;
 
-  if (issuedItem.extensionCount >= maxPeriodExtensions || issuedItem.extensionCount + 1 > issuedItem.maxExtensionAllowed) {
+  if (
+    issuedItem.extensionCount >= maxPeriodExtensions ||
+    issuedItem.extensionCount + 1 > issuedItem.maxExtensionAllowed
+  ) {
     const err: any = new Error("Maximum extension limit reached");
     err.statusCode = 400;
     throw err;
@@ -376,4 +392,396 @@ export const extendIssuedItemService = async (itemId: string, userId: string) =>
   await issuedItem.save();
 
   return issuedItem;
+};
+
+export const returnItemRequestService = async (
+  itemId: string,
+  userId: string,
+  status: "Returned" | "Damaged" | "Lost"
+) => {
+  const issuedItem = await IssuedItem.findOne({
+    _id: itemId,
+    userId: userId,
+    status: "Issued",
+  });
+
+  if (!issuedItem) {
+    const err: any = new Error("No active issued item found for this user");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const setting = await Setting.findOne({});
+  if (!setting) {
+    const err: any = new Error("System settings not configured");
+    err.statusCode = 500;
+    throw err;
+  }
+
+  const {
+    overdueFineRatePerDay,
+    lostItemBaseFine,
+    damagedItemBaseFine,
+    fineGracePeriodDays,
+  } = setting.fineRates;
+
+  const now = new Date();
+  let fineAmount = 0;
+  let fineReason: string | null = null;
+
+  if (status === "Returned") {
+    if (issuedItem.dueDate && now > issuedItem.dueDate) {
+      const diffDays = Math.ceil(
+        (now.getTime() - issuedItem.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays > fineGracePeriodDays) {
+        fineAmount = (diffDays - fineGracePeriodDays) * overdueFineRatePerDay;
+        fineReason = "Overdue";
+      }
+    }
+  }
+
+  if (status === "Damaged") {
+    fineAmount = damagedItemBaseFine;
+    fineReason = "Damaged";
+  }
+
+  if (status === "Lost") {
+    fineAmount = lostItemBaseFine;
+    fineReason = "Lost";
+  }
+
+  issuedItem.returnDate = now;
+  issuedItem.status = "Returned";
+  await issuedItem.save();
+
+  const inventoryItem = await InventoryItem.findById(issuedItem.itemId);
+  if (!inventoryItem) {
+    const err: any = new Error("Inventory item not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (status === "Returned") {
+    inventoryItem.availableCopies += 1;
+    inventoryItem.status = "Available";
+  } else if (status === "Damaged") {
+    inventoryItem.status = "Damaged";
+  } else if (status === "Lost") {
+    inventoryItem.status = "Lost";
+  }
+  await inventoryItem.save();
+
+  let fineRecord = null;
+  if (fineAmount > 0 && fineReason) {
+    fineRecord = await Fine.create({
+      userId: issuedItem.userId,
+      itemId: issuedItem.itemId,
+      reason: fineReason,
+      amountIncurred: fineAmount,
+      amountPaid: 0,
+      outstandingAmount: fineAmount,
+      status: "Outstanding",
+      dateIncurred: now,
+    });
+
+    issuedItem.fineId = fineRecord._id as Types.ObjectId;
+    await issuedItem.save();
+  }
+
+  return {
+    issuedItem,
+    fine: fineRecord,
+  };
+};
+
+export const requestNewItemService = async (
+  userId: string,
+  validatedData: any
+) => {
+  const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
+
+  const category = await Category.findOne({ name: itemType });
+
+  if (!category) {
+    const err: any = new Error(`Category '${itemType}' not found`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const item = new ItemRequest({
+    userId: new Types.ObjectId(userId),
+    title: title,
+    authorOrCreator: authorOrCreator,
+    itemType: category._id,
+    reasonForRequest: reasonForRequest,
+  });
+
+  await item.save();
+
+  return item;
+};
+
+export const getNewArrivalsService = async () => {
+  const newArrivals = await InventoryItem.find()
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .exec();
+
+  return newArrivals || [];
+};
+
+export const issueOrQueueService = async (userId: string, itemId: string) => {
+  const item = await InventoryItem.findById(itemId);
+  if (!item) {
+    const err: any = new Error("Item not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // CASE: 1
+  if (item.status === "Available" && item.availableCopies > 0) {
+    const issueRequest = await IssuedItem.create({
+      itemId: item._id,
+      userId: new Types.ObjectId(userId),
+      issueDate: null,
+      dueDate: null,
+    });
+
+    return {
+      message: "Issue request created successfully. Pending admin approval.",
+      data: issueRequest,
+    };
+  }
+
+  // CASE: 2
+  if (item.status === "Issued" || item.availableCopies === 0) {
+    let queue = await Queue.findOne({ itemId: item._id });
+
+    if (!queue) {
+      queue = new Queue({
+        itemId: item._id,
+        queueMembers: [],
+      });
+    }
+
+    const alreadyInQueue = queue.queueMembers.some(
+      (m: any) => m.userId.toString() === userId
+    );
+    if (alreadyInQueue) {
+      const err: any = new Error("User already in queue for this item");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    queue.queueMembers.push({
+      userId: new Types.ObjectId(userId),
+      position: queue.queueMembers.length + 1,
+      dateJoined: new Date(),
+    });
+
+    await queue.save();
+
+    return {
+      message: "User added to queue for this item",
+      data: queue,
+    };
+  }
+
+  const err: any = new Error("Unsupported item status");
+  err.statusCode = 400;
+  throw err;
+};
+
+export const getHistoryService = async (userId: string) => {
+  const issuedItems = await IssuedItem.find({ userId })
+    .populate("itemId", "title authorOrCreator type")
+    .populate("fineId", "reason amountIncurred outstandingAmount status")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const currentlyBorrowed = issuedItems.filter((i) => i.status === "Issued");
+  const returnedItems = issuedItems.filter((i) => i.status === "Returned");
+
+  const fines = await Fine.find({ userId }).sort({ createdAt: -1 }).lean();
+
+  return {
+    recentlyBorrowed: currentlyBorrowed.map((i) => ({
+      id: i._id,
+      title: (i.itemId as any)?.title,
+      author: (i.itemId as any)?.authorOrCreator,
+      issueDate: i.issuedDate,
+      dueDate: i.dueDate,
+      status: i.status,
+      fine: i.fineId || null,
+    })),
+    returnedItems: returnedItems.map((i) => ({
+      id: i._id,
+      title: (i.itemId as any)?.title,
+      author: (i.itemId as any)?.authorOrCreator,
+      issueDate: i.issuedDate,
+      returnDate: i.returnDate,
+      status: i.status,
+      fine: i.fineId || null,
+    })),
+    fines: fines.map((f) => ({
+      id: f._id,
+      reason: f.reason,
+      amount: f.amountIncurred,
+      outstanding: f.outstandingAmount,
+      status: f.status,
+      dateIncurred: f.dateIncurred,
+    })),
+  };
+};
+
+export const getAllFinesService = async (userId: string) => {
+  const fines = await Fine.find({ userId }).sort({ createdAt: -1 }).lean();
+
+  return {
+    fines:
+      fines.map((f) => ({
+        id: f._id,
+        reason: f.reason,
+        amount: f.amountIncurred,
+        outstanding: f.outstandingAmount,
+        status: f.status,
+        dateIncurred: f.dateIncurred,
+      })) || [],
+  };
+};
+
+export const getProfileDetailsService = async (userId: string) => {
+  const user = await User.findById(userId)
+    .select("-passwordResetToken -passwordResetExpires -__v")
+    .populate("roles", "roleName description")
+    .lean();
+
+  if (!user) {
+    const err: any = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return {
+    id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    username: user.username,
+    phoneNumber: user.phoneNumber,
+    dateOfBirth: user.dateOfBirth,
+    address: user.address,
+    profile: user.profile,
+    status: user.status,
+    roles: user.roles,
+    lastLogin: user.lastLogin,
+    createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+  };
+};
+
+export const updateProfileService = async (
+  userId: string,
+  profileData: any
+) => {
+  const allowedUpdates = [
+    "fullName",
+    "phoneNumber",
+    "dateOfBirth",
+    "address",
+    "username",
+  ];
+
+  const updates: any = {};
+  for (const key of allowedUpdates) {
+    if (profileData[key] !== undefined) {
+      updates[key] = profileData[key];
+    }
+  }
+
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: updates },
+    { new: true, runValidators: true }
+  );
+
+  if (!user) {
+    const err: any = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return user;
+};
+
+export const updateNotificationPreferenceService = async (
+  userId: string,
+  preferences: any
+) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { $set: { notificationPreference: preferences } },
+    { new: true, runValidators: true }
+  );
+
+  if (!user) {
+    const err: any = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  return user;
+};
+
+export const updatePasswordService = async (
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) => {
+  const user = await User.findById(userId).select("+password");
+  if (!user) {
+    const err: any = new Error("User not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const isMatch = await bcrypt.compare(currentPassword, user.password);
+  if (!isMatch) {
+    const err: any = new Error("Current password is incorrect");
+    err.statusCode = 401;
+    throw err;
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  return true;
+};
+
+export const expressDonationInterestService = async (
+  userId: string,
+  data: any
+) => {
+  const { itemType, title, description, photos, preferredContactMethod } = data;
+
+  const category = await Category.findOne({ name: itemType });
+  if (!category) {
+    const err: any = new Error("Invalid category");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const donation = new Donation({
+    userId: new Types.ObjectId(userId),
+    itemType: category._id,
+    title,
+    description,
+    photos,
+    preferredContactMethod,
+    status: "Pending",
+  });
+
+  await donation.save();
+
+  return donation;
 };

@@ -1,17 +1,29 @@
 import { Request, Response } from "express";
 import {
   dashboardSummaryService,
+  expressDonationInterestService,
   extendIssuedItemService,
+  getAllFinesService,
   getCategoriesService,
   getCategoryItemsService,
+  getHistoryService,
   getIssueddItemsSerive,
   getItemService,
+  getNewArrivalsService,
+  getProfileDetailsService,
   getQueuedItemsService,
   getRequestedItemsSerice,
+  issueOrQueueService,
   registerUserService,
   requestItemService,
+  requestNewItemService,
+  returnItemRequestService,
+  updateNotificationPreferenceService,
+  updatePasswordService,
+  updateProfileService,
 } from "../services/user.service";
 import {
+  InventoryItemsUpdateSchema,
   itemRequestUpdateSchema,
   registrationSchema,
 } from "../validations/auth.validation";
@@ -337,6 +349,274 @@ export const extendIssuedItemController = async (
     });
   } catch (error: any) {
     console.error("Error extending issued item:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const returnItemRequestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { itemId } = req.params;
+    const userId = req.user.id;
+    const { status } = req.body;
+
+    if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid itemId or userId" });
+    }
+
+    const { issuedItem, fine } = await returnItemRequestService(
+      itemId,
+      userId,
+      status
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Item return processed successfully",
+      item: issuedItem,
+      fine: fine,
+    });
+  } catch (error: any) {
+    console.error("Error in returning an item:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const requestNewItemController = async (req: Request, res: Response) => {
+  try {
+    const validatedData = itemRequestUpdateSchema.parse(req.body);
+    const userId = req.user.id;
+
+    const item = await requestNewItemService(userId, validatedData);
+    return res.status(200).json({
+      success: true,
+      message: "Item request processed successfully",
+      item: item,
+    });
+  } catch (error: any) {
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        message: "Validation error",
+        errors: error.errors,
+      });
+    }
+    console.error("Error in requesting new item:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const getNewArrivalsController = async (req: Request, res: Response) => {
+  try {
+    const newArrivals = await getNewArrivalsService();
+    return res.status(200).json({
+      success: true,
+      message: "New Arrivals fetched succesfully",
+      items: newArrivals,
+    });
+  } catch (error: any) {
+    console.error("Error in fetching an item:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const issueOrQueueController = async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    const userId = req.user.id;
+
+    if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ message: "invalid user ir item ID" });
+    }
+
+    const result = await issueOrQueueService(userId, itemId);
+
+    return res.status(200).json({
+      success: true,
+      message: result?.message,
+      data: result?.data,
+    });
+  } catch (error: any) {
+    console.error("Error in issueOrQueueController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const getHistoryController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const history = await getHistoryService(userId);
+    return res.status(200).json({
+      success: true,
+      message: "User history fetched successfully",
+      data: history,
+    });
+  } catch (error: any) {
+    console.error("Error in getHistoryController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const getAllFinesController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const fines = await getAllFinesService(userId);
+    return res.status(200).json({
+      success: true,
+      message: "User fines fetched successfully",
+      data: fines,
+    });
+  } catch (error: any) {
+    console.error("Error in getAllFinesController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const getProfileDetailsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const profile = await getProfileDetailsService(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile details fetched successfully",
+      data: profile,
+    });
+  } catch (error: any) {
+    console.error("Error in getProfileDetailsController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const updateProfileController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const updatedProfile = await updateProfileService(userId, req.body);
+
+    return res.status(200).json({
+      success: true,
+      message: "Profile updated successfully",
+      data: updatedProfile,
+    });
+  } catch (error: any) {
+    console.error("Error in updateProfileController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const updateNotificationPreferenceController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const updatedUser = await updateNotificationPreferenceService(
+      userId,
+      req.body
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification preferences updated successfully",
+      data: updatedUser.notificationPreference,
+    });
+  } catch (error: any) {
+    console.error("Error in updateNotificationPreferenceController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const updatePasswordController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res
+        .status(400)
+        .json({ message: "Both currentPassword and newPassword are required" });
+    }
+
+    await updatePasswordService(userId, currentPassword, newPassword);
+
+    return res.status(200).json({
+      success: true,
+      message: "Password updated successfully",
+    });
+  } catch (error: any) {
+    console.error("Error in updatePasswordController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const expressDonationInterestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const donation = await expressDonationInterestService(userId, req.body);
+
+    return res.status(201).json({
+      success: true,
+      message: "Donation interest submitted successfully",
+      data: donation,
+    });
+  } catch (error: any) {
+    console.error("Error in expressDonationInterestController:", error);
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error" });

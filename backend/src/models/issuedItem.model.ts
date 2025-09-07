@@ -1,4 +1,4 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Types } from "mongoose";
 import { IIssuedItem } from "../interfaces/issuedItems.interface";
 
 const issuedItemSchema = new mongoose.Schema<IIssuedItem>(
@@ -20,17 +20,17 @@ const issuedItemSchema = new mongoose.Schema<IIssuedItem>(
     },
     dueDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     issuedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: new Types.ObjectId("68b5a390c3a9af30dbdf3be7"),
     },
     returnedTo: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      default: null,
+      default: null, //default will be the librarians ID
     },
     returnDate: {
       type: Date,

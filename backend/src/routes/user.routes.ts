@@ -1,15 +1,26 @@
 import { Router } from "express";
 import {
   dashboardSummaryController,
+  expressDonationInterestController,
   extendIssuedItemController,
+  getAllFinesController,
   getCategoriesController,
   getCategoryItemsController,
+  getHistoryController,
   getIssuedItemsController,
   getItemController,
+  getNewArrivalsController,
+  getProfileDetailsController,
   getQueuedItemsController,
   getRequestedItemsController,
+  issueOrQueueController,
   registerUserController,
   requestItemController,
+  requestNewItemController,
+  returnItemRequestController,
+  updateNotificationPreferenceController,
+  updatePasswordController,
+  updateProfileController,
 } from "../controllers/user.controller";
 import { loginUserController } from "../controllers/user.controller";
 import { forgotPassswordController } from "../controllers/user.controller";
@@ -38,7 +49,10 @@ router.get("/items/issued/:userId", getIssuedItemsController);
 
 router.get("/inventory/categories", getCategoriesController);
 
-router.get("/inventory/categories/:categoryId/items/",getCategoryItemsController);
+router.get(
+  "/inventory/categories/:categoryId/items/",
+  getCategoryItemsController
+);
 
 router.get("/inventory/categories/items/:itemId", getItemController);
 
@@ -48,20 +62,36 @@ router.post("/:userId/requests", requestItemController);
 
 router.get("/items/queud/:userId", getQueuedItemsController);
 
-router.get("/items/:itemId/extend-period", authUser, extendIssuedItemController);
+router.get(
+  "/items/:itemId/extend-period",
+  authUser,
+  extendIssuedItemController
+);
 
-// router.post("/items/:itemId/join-queue");
+router.post(
+  "/items/:itemId/return-item",
+  authUser,
+  returnItemRequestController
+);
 
-// router.post("/items/donations/express-interest");
+router.post("/items/request-item", authUser, requestNewItemController);
 
-// router.post("/fines/:userId");
+router.get("/items/new-arrivals", authUser, getNewArrivalsController);
 
-// router.get("/account/profile/");
+router.post("/items/:itemId/issue-or-queue", authUser, issueOrQueueController);
 
-// router.put("/account/profile");
+router.get("/history", authUser, getHistoryController);
 
-// router.put("/account/password");
+router.get("/account/fines", authUser, getAllFinesController);
 
-// router.put("/account/notifications");
+router.get("/account/profile", authUser, getProfileDetailsController);
+
+router.put("/account/profile", authUser, updateProfileController);
+
+router.put("/account/password", authUser, updatePasswordController);
+
+router.put("/account/notifications", authUser, updateNotificationPreferenceController);
+
+router.post("/items/donations/express-interest", authUser, expressDonationInterestController);
 
 export default router;

@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema<IUser>(
     roles: [
       {
         type: Schema.Types.ObjectId,
-        ref: "Roles",
+        ref: "Role",
       },
     ],
     status: {
