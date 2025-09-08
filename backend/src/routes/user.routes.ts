@@ -31,6 +31,7 @@ import { authUser } from "../middleware/auth.middleware";
 
 const router = Router();
 
+/* ========================= AUTH ========================= */
 router.post("/auth/register", registerUserController);
 
 router.post("/auth/login", loginUserController);
@@ -43,24 +44,29 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 
 router.get("/logout", logoutController);
 
-router.get("/dashboard/:userId", dashboardSummaryController);
 
-router.get("/items/issued/:userId", getIssuedItemsController);
+/* ========================= DASHBOARD ========================= */
+router.get("/dashboard/:userId", authUser, dashboardSummaryController);
 
-router.get("/inventory/categories", getCategoriesController);
+
+/* ========================= INVENTORY ========================= */
+router.get("/items/issued/:userId", authUser, getIssuedItemsController);
+
+router.get("/inventory/categories", authUser, getCategoriesController);
 
 router.get(
   "/inventory/categories/:categoryId/items/",
+  authUser,
   getCategoryItemsController
 );
 
-router.get("/inventory/categories/items/:itemId", getItemController);
+router.get("/inventory/categories/items/:itemId", authUser, getItemController);
 
-router.get("/:userId/requests", getRequestedItemsController);
+router.get("/:userId/requests", authUser, getRequestedItemsController);
 
-router.post("/:userId/requests", requestItemController);
+router.post("/:userId/requests", authUser, requestItemController);
 
-router.get("/items/queud/:userId", getQueuedItemsController);
+router.get("/items/queud/:userId", authUser, getQueuedItemsController);
 
 router.get(
   "/items/:itemId/extend-period",
@@ -82,6 +88,8 @@ router.post("/items/:itemId/issue-or-queue", authUser, issueOrQueueController);
 
 router.get("/history", authUser, getHistoryController);
 
+
+/* ========================= SETTINGS ========================= */
 router.get("/account/fines", authUser, getAllFinesController);
 
 router.get("/account/profile", authUser, getProfileDetailsController);
@@ -90,8 +98,18 @@ router.put("/account/profile", authUser, updateProfileController);
 
 router.put("/account/password", authUser, updatePasswordController);
 
-router.put("/account/notifications", authUser, updateNotificationPreferenceController);
+router.put(
+  "/account/notifications",
+  authUser,
+  updateNotificationPreferenceController
+);
 
-router.post("/items/donations/express-interest", authUser, expressDonationInterestController);
+
+/* ========================= DONATION ========================= */
+router.post(
+  "/items/donations/express-interest",
+  authUser,
+  expressDonationInterestController
+);
 
 export default router;

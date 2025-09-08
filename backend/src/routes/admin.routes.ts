@@ -1,5 +1,4 @@
 import { Router } from "express";
-import User from "../models/user.model";
 import {
   downloadBarcodeController,
   generateBarcodeController,
@@ -20,39 +19,43 @@ import {
   updateFineController,
   updateNotificationTemplateController,
   updateSystemRestrictionsController,
+  forgotPassswordController,
+  verifyResetPasswordController,
+  resetPasswordController,
+  logoutController,
+  updateUserStatusController,
+  getDashboardSummaryController,
+  getAllUsersController,
+  createUserController,
+  getUserDetailsController,
+  updateUserController,
+  forcePasswordResetController,
+  fetchRolesController,
+  createRoleController,
+  updateRoleController,
+  deleteRoleController,
+  fetchInventoryItemsController,
+  createInventoryItemsController,
+  fetchSpecificItemController,
+  updateItemController,
+  deleteItemController,
+  getCategoriesController,
+  createCatgoryController,
+  updateCategoryController,
+  deleteCategoryController,
+  getAllFinesController,
+  createFinesController,
+  fetchUserFinesController,
+  getIssuedReportController,
+  viewQueueController,
+  issueItemFromQueueController,
 } from "../controllers/admin.controller";
-import { forgotPassswordController } from "../controllers/admin.controller";
-import { verifyResetPasswordController } from "../controllers/admin.controller";
-import { resetPasswordController } from "../controllers/admin.controller";
-import { logoutController } from "../controllers/admin.controller";
-import { updateUserStatusController } from "../controllers/admin.controller";
-import { getDashboardSummaryController } from "../controllers/admin.controller";
-import { getAllUsersController } from "../controllers/admin.controller";
-import { createUserController } from "../controllers/admin.controller";
-import { getUserDetailsController } from "../controllers/admin.controller";
-import { updateUserController } from "../controllers/admin.controller";
+import { authorize } from "./authorize";
 import { authUser } from "../middleware/auth.middleware";
-import { forcePasswordResetController } from "../controllers/admin.controller";
-import { fetchRolesController } from "../controllers/admin.controller";
-import { createRoleController } from "../controllers/admin.controller";
-import { updateRoleController } from "../controllers/admin.controller";
-import { deleteRoleController } from "../controllers/admin.controller";
-import { fetchInventoryItemsController } from "../controllers/admin.controller";
-import { createInventoryItemsController } from "../controllers/admin.controller";
-import { fetchSpecificItemController } from "../controllers/admin.controller";
-import { updateItemController } from "../controllers/admin.controller";
-import { deleteItemController } from "../controllers/admin.controller";
-import { getCategoriesController } from "../controllers/admin.controller";
-import { createCatgoryController } from "../controllers/admin.controller";
-import { updateCategoryController } from "../controllers/admin.controller";
-import { deleteCategoryController } from "../controllers/admin.controller";
-import { getAllFinesController } from "../controllers/admin.controller";
-import { createFinesController } from "../controllers/admin.controller";
-import { fetchUserFinesController } from "../controllers/admin.controller";
-import { getIssuedReportController } from "../controllers/admin.controller";
 
 const router = Router();
 
+/* ========================= AUTH ========================= */
 router.post("/auth/login", loginController);
 
 router.post("/auth/forgot-password", forgotPassswordController);
@@ -63,100 +66,318 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 
 router.get("/auth/logout", authUser, logoutController);
 
-router.post("/users/:userId/status", authUser, updateUserStatusController);
+/* ========================= USERS ========================= */
+router.post(
+  "/users/:userId/status",
+  authUser,
+  authorize(["admin:manageUsers", "admin:approveUser"]),
+  updateUserStatusController
+);
 
-router.get("/dashboard/summary", authUser, getDashboardSummaryController);
+router.get(
+  "/users",
+  authUser,
+  authorize(["admin:viewAllUsers"]),
+  getAllUsersController
+);
 
-router.get("/users", authUser, getAllUsersController);
+router.post(
+  "/users",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  createUserController
+);
 
-router.post("/users", authUser, createUserController);
+router.get(
+  "/users/:userId",
+  authUser,
+  authorize(["admin:viewAllUsers"]),
+  getUserDetailsController
+);
 
-router.get("/users/:userId", authUser, getUserDetailsController);
-
-router.put("/users/:userId", authUser, updateUserController);
+router.put(
+  "/users/:userId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  updateUserController
+);
 
 router.put(
   "/users/:userId/reset-password",
   authUser,
+  authorize(["admin:manageUsers"]),
   forcePasswordResetController
 );
 
-router.get("/roles", authUser, fetchRolesController);
+/* ========================= ROLES ========================= */
+router.get(
+  "/roles",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  fetchRolesController
+);
 
-router.post("/roles", authUser, createRoleController);
+router.post(
+  "/roles",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  createRoleController
+);
 
-router.put("/roles/:roleId", authUser, updateRoleController);
+router.put(
+  "/roles/:roleId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  updateRoleController
+);
 
-router.delete("/roles/:roleId", authUser, deleteRoleController);
+router.delete(
+  "/roles/:roleId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  deleteRoleController
+);
 
-router.get("/inventory/items", fetchInventoryItemsController);
+/* ========================= DASHBOARD ========================= */
+router.get(
+  "/dashboard/summary",
+  authUser,
+  authorize([
+    "admin:viewAllUsers",
+    "admin:viewAllItems",
+    "admin:viewAllRentals",
+  ]),
+  getDashboardSummaryController
+);
 
-router.post("/inventory/items", createInventoryItemsController);
+/* ========================= INVENTORY ========================= */
+router.get(
+  "/inventory/items",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  fetchInventoryItemsController
+);
 
-router.get("/inventory/items/:itemId", fetchSpecificItemController);
+router.post(
+  "/inventory/items",
+  authUser,
+  authorize(["admin:manageItems"]),
+  createInventoryItemsController
+);
 
-router.put("/inventory/items/:itemId", updateItemController);
+router.get(
+  "/inventory/items/:itemId",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  fetchSpecificItemController
+);
 
-router.delete("/inventory/items/:itemId", deleteItemController);
+router.put(
+  "/inventory/items/:itemId",
+  authUser,
+  authorize(["admin:manageItems"]),
+  updateItemController
+);
 
-router.get("/inventory/categories", getCategoriesController);
+router.delete(
+  "/inventory/items/:itemId",
+  authUser,
+  authorize(["admin:removeItem"]),
+  deleteItemController
+);
 
-router.post("/inventory/categories", createCatgoryController);
+/* ========================= CATEGORIES ========================= */
+router.get(
+  "/inventory/categories",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  getCategoriesController
+);
 
-router.put("/inventory/categories/:categoryId", updateCategoryController);
+router.post(
+  "/inventory/categories",
+  authUser,
+  authorize(["admin:addCategory"]),
+  createCatgoryController
+);
 
-router.delete("/inventory/categories/:categoryId", deleteCategoryController);
+router.put(
+  "/inventory/categories/:categoryId",
+  authUser,
+  authorize(["admin:editCategory"]),
+  updateCategoryController
+);
 
-router.get("/fines", getAllFinesController);
+router.delete(
+  "/inventory/categories/:categoryId",
+  authUser,
+  authorize(["admin:deleteCategory"]),
+  deleteCategoryController
+);
 
-router.get("/fines/:userId", fetchUserFinesController);
+/* ========================= FINES ========================= */
+router.get(
+  "/fines",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  getAllFinesController
+);
 
-router.post("/fines", createFinesController);
+router.get(
+  "/fines/:userId",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  fetchUserFinesController
+);
 
-router.put("/fines/:fineId", updateFineController);
+router.post(
+  "/fines",
+  authUser,
+  authorize(["admin:manageRentals"]),
+  createFinesController
+);
 
-router.get("/reports/inventory", getInventoryReportController);
+router.put(
+  "/fines/:fineId",
+  authUser,
+  authorize(["admin:manageRentals"]),
+  updateFineController
+);
 
-router.get("/reports/fines", getFinesReportController);
+/* ========================= REPORTS ========================= */
+router.get(
+  "/reports/inventory",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  getInventoryReportController
+);
 
-router.get("/reports/issued", getIssuedReportController);
+router.get(
+  "/reports/fines",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  getFinesReportController
+);
 
-router.get("/reports/inventory/pdf", getInventoryReportPDF);
+router.get(
+  "/reports/issued",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  getIssuedReportController
+);
 
-router.get("/reports/fines/pdf", getFinesReportPDF);
+router.get(
+  "/reports/inventory/pdf",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  getInventoryReportPDF
+);
 
-router.get("/reports/issued/pdf", getIssuedItemsReportPDF);
+router.get(
+  "/reports/fines/pdf",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  getFinesReportPDF
+);
 
-router.get("/settings/system-restrictions", getSystemRestrictionsController);
+router.get(
+  "/reports/issued/pdf",
+  authUser,
+  authorize(["admin:viewAllRentals"]),
+  getIssuedItemsReportPDF
+);
 
-router.put("/settings/system-restrictions", updateSystemRestrictionsController);
+/* ========================= SETTINGS ========================= */
+router.get(
+  "/settings/system-restrictions",
+  authUser,
+  authorize(["admin:manageItems"]),
+  getSystemRestrictionsController
+);
+
+router.put(
+  "/settings/system-restrictions",
+  authUser,
+  authorize(["admin:manageItems"]),
+  updateSystemRestrictionsController
+);
 
 router.get(
   "/settings/notification-templates",
+  authUser,
+  authorize(["admin:manageUsers"]),
   getNotificationTemplatesController
 );
 
 router.put(
   "/settings/notification-templates/:templateKey",
+  authUser,
+  authorize(["admin:manageUsers"]),
   updateNotificationTemplateController
 );
 
-router.get("/settings/profile/:userId", getAdminProfileController);
+router.get(
+  "/settings/profile/:userId",
+  authUser,
+  authorize(["admin:viewAllUsers"]),
+  getAdminProfileController
+);
 
-router.put("/settings/profile/:userId", updateAdminController);
+router.put(
+  "/settings/profile/:userId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  updateAdminController
+);
 
-// router.put("/settings/profile/avatar/:userId", updateAdminAvatarController);
+router.put(
+  "/settings/profile/password-reset/:userId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  resetPasswordAdminController
+);
 
-router.put("/settings/profile/password-reset/:userId", resetPasswordAdminController);
+router.put(
+  "/settings/profile/password/:userId",
+  authUser,
+  authorize(["admin:manageUsers"]),
+  updateAdminPasswordController
+);
 
-router.put("/settings/profile/password/:userId", updateAdminPasswordController);
+/* ========================= BARCODE ========================= */
+router.get(
+  "/barcode/generate",
+  authUser,
+  authorize(["admin:manageItems"]),
+  generateBarcodeController
+);
 
-router.get("/barcode/generate", generateBarcodeController);
+router.get(
+  "/barcode/download/:itemId",
+  authUser,
+  authorize(["admin:manageItems"]),
+  downloadBarcodeController
+);
 
-router.get("/barcode/download/:itemId", downloadBarcodeController);
+/* ========================= DONATIONS ========================= */
+router.get(
+  "/donations",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  getAllDonationsController
+);
 
-router.get("/donations", getAllDonationsController);
+router.put(
+  "/donations/:donationId/status",
+  authUser,
+  authorize(["admin:viewAllItems"]),
+  updateDonationStatusController
+);
 
-router.put("/donations/:donationId/status", updateDonationStatusController);
+
+/* ========================= QUEUE ========================= */
+router.get("/inventory/items/:itemId/view-queue", authUser, authorize(["admin:viewQueues"]), viewQueueController);
+
+router.post("/inventory/items/queue/:queueId/issue", authUser, issueItemFromQueueController);
 
 export default router;

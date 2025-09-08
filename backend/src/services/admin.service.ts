@@ -3,7 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
 import Fine from "../models/fine.model";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import InventoryItem from "../models/item.model";
 import IssuedIetm from "../models/issuedItem.model";
 import Category from "../models/category.model";
@@ -20,6 +20,8 @@ import { UpdateTemplateData } from "../interfaces/updateTemplate";
 import { v4 as uuidv4 } from "uuid";
 import bwipjs from "bwip-js";
 import Donation from "../models/donation.model";
+import Queue from "../models/queue.model";
+import IssuedItem from "../models/issuedItem.model";
 
 interface loginDTO {
   email: string;
@@ -1027,4 +1029,85 @@ export const updateDonationStatusService = async (
   await donation.save();
 
   return donation;
+};
+
+export const viewQueueService = async (itemId: string) => {
+  const queue = await Queue.find({ itemId: itemId })
+    .populate("itemId", "title status")
+    .populate("queueMembers.userId", "fullName email");
+
+  return queue || [];
+};
+
+export const issueItemFromQueueService = async (
+  queueId: string,
+  userId: string,
+  adminId: string
+) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+  try {
+    const queue = await Queue.findById(queueId).session(session);
+    if (!queue) {
+      throw new Error("Queue not found.");
+    }
+
+    const memberToIssue = queue.queueMembers.find(
+      (member) => member.userId.toString() === userId
+    );
+
+    if (!memberToIssue) {
+      throw new Error("User is not a member of this queue.");
+    }
+
+    const item = await InventoryItem.findById(queue.itemId).session(session);
+    if (!item) {
+      throw new Error("Item not found.");
+    }
+    
+    if (item.availableCopies <= 0) {
+      throw new Error("Item is not available to be issued.");
+    }
+
+    item.availableCopies -= 1;
+    await item.save({ session });
+
+    const issueDate = new Date();
+    const defaultReturnPeriod = 15;
+    const dueDate = new Date(
+      issueDate.setDate(issueDate.getDate() + defaultReturnPeriod)
+    );
+
+    const issuedItem = new IssuedItem({
+      itemId: queue.itemId,
+      userId: userId,
+      issueDate: new Date(),
+      dueDate: dueDate,
+      issuedBy: adminId,
+      status: "Issued",
+    });
+    await issuedItem.save({ session });
+
+    const remainingMembers = queue.queueMembers.filter(
+      (member) => member.userId.toString() !== userId
+    );
+
+
+    const updatedMembers = remainingMembers.map((member, index) => ({
+      ...member,
+      position: index + 1,
+    }));
+
+    queue.queueMembers = updatedMembers;
+    await queue.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return issuedItem;
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
 };

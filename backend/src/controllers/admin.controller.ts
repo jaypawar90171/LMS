@@ -24,6 +24,7 @@ import {
   getIssuedReportService,
   getNotificationTemplatesService,
   getSystemRestrictionsService,
+  issueItemFromQueueService,
   loginService,
   resetPasswordAdminService,
   updateAdminPasswordServive,
@@ -31,6 +32,7 @@ import {
   updateFineService,
   updateNotificationTemplateService,
   updateSystemRestrictionsService,
+  viewQueueService,
 } from "../services/admin.service";
 import { forgotPasswordService } from "../services/admin.service";
 import { verifyResetPasswordService } from "../services/admin.service";
@@ -1242,3 +1244,51 @@ export const updateDonationStatusController = async (
       .json({ message: error.message || "Error updating donation status" });
   }
 };
+
+export const viewQueueController = async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ message: "Invalid itemId" });
+    }
+
+    const queue = await viewQueueService(itemId);
+    return res.status(200).json({
+      success: true,
+      message: "Queue fetched successfully",
+      donation: queue,
+    });
+  } catch (error: any) {
+    console.error("Error in viewQueueController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const issueItemFromQueueController = async(req: Request, res: Response) => {
+  try {
+    const adminId = req.user._id;
+    const {queueId} = req.params;
+    const {userId} = req.body;
+
+    console.log(req.user._id);
+    console.log(queueId, userId, adminId);
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required.' });
+    }
+
+    const issuedItem = await issueItemFromQueueService(queueId, userId, adminId);
+    return res.status(200).json({
+      success: true,
+      message: "item issued for the queue member successfully",
+      donation: issuedItem,
+    });
+  } catch (error: any) {
+    console.error("Error in issueItemFromQueueController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+}
