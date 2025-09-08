@@ -49,8 +49,9 @@ import {
   getIssuedReportController,
   viewQueueController,
   issueItemFromQueueController,
+  removeUserFromQueueController,
 } from "../controllers/admin.controller";
-import { authorize } from "./authorize";
+import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 
 const router = Router();
@@ -374,10 +375,25 @@ router.put(
   updateDonationStatusController
 );
 
-
 /* ========================= QUEUE ========================= */
-router.get("/inventory/items/:itemId/view-queue", authUser, authorize(["admin:viewQueues"]), viewQueueController);
+router.get(
+  "/inventory/items/:itemId/view-queue",
+  authUser,
+  authorize(["admin:viewQueues"]),
+  viewQueueController
+);
 
-router.post("/inventory/items/queue/:queueId/issue", authUser, issueItemFromQueueController);
+router.post(
+  "/inventory/items/queue/:queueId/issue",
+  authUser,
+  issueItemFromQueueController
+);
+
+router.put(
+  "/inventory/items/queue/:queueId/remove-user",
+  authUser,
+  authorize(["admin:removeUserFromQueue"]),
+  removeUserFromQueueController
+);
 
 export default router;

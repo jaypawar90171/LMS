@@ -5,6 +5,7 @@ import cors from "cors";
 import connect from "./config/db";
 import UserRoutes from "./routes/user.routes";
 import AdminRoutes from "./routes/admin.routes";
+import rateLimiter from "./middleware/rateLimiter";
 
 dotenv.config();
 connect();
@@ -14,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: true }));
+app.use(rateLimiter);
 app.set("view engine", "ejs");
 
 app.get("/", (req: Request, res: Response) => {

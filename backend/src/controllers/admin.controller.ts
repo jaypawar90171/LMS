@@ -26,6 +26,7 @@ import {
   getSystemRestrictionsService,
   issueItemFromQueueService,
   loginService,
+  removeUserFromQueueService,
   resetPasswordAdminService,
   updateAdminPasswordServive,
   updateDonationStatusService,
@@ -1292,3 +1293,25 @@ export const issueItemFromQueueController = async(req: Request, res: Response) =
       .json({ error: error.message || "Internal server error" });
   }
 }
+
+export const removeUserFromQueueController = async (req: Request, res: Response) => {
+  try {
+    const { queueId } = req.params;
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: 'User ID is required in the request body.' });
+    }
+
+    const result = await removeUserFromQueueService(queueId, userId);
+     return res.status(200).json({
+      success: true,
+      message: result
+    });
+  } catch (error: any) {
+    console.error("Error in removeUserFromQueueController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};

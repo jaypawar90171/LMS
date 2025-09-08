@@ -1064,7 +1064,7 @@ export const issueItemFromQueueService = async (
     if (!item) {
       throw new Error("Item not found.");
     }
-    
+
     if (item.availableCopies <= 0) {
       throw new Error("Item is not available to be issued.");
     }
@@ -1092,7 +1092,6 @@ export const issueItemFromQueueService = async (
       (member) => member.userId.toString() !== userId
     );
 
-
     const updatedMembers = remainingMembers.map((member, index) => ({
       ...member,
       position: index + 1,
@@ -1108,6 +1107,64 @@ export const issueItemFromQueueService = async (
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
+    throw error;
+  }
+};
+
+export const removeUserFromQueueService = async (
+  queueId: string,
+  userId: string
+) => {
+  // Start a new session for the database transaction
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1. Find the queue by its ID within the transaction session
+    const queue = await Queue.findById(queueId).session(session);
+
+    // If the queue does not exist, throw an error
+    if (!queue) {
+      throw new Error("Queue not found.");
+    }
+
+    // 2. Add a defensive check to ensure queueMembers is an array and not empty
+    if (!queue.queueMembers || queue.queueMembers.length === 0) {
+      throw new Error("User is not in the queue.");
+    }
+
+    // 3. Find the index of the member to be removed using Mongoose's ObjectId.equals() method
+    const memberIndex = queue.queueMembers.findIndex((member) =>
+      member.userId.equals(new mongoose.Types.ObjectId(userId))
+    );
+
+    // If the user is not found in the queue, throw an error
+    if (memberIndex === -1) {
+      throw new Error("User is not in the queue.");
+    }
+
+    // 4. Remove the member from the array using splice
+    queue.queueMembers.splice(memberIndex, 1);
+
+    // 5. Re-assign positions to the remaining members to maintain order
+    queue.queueMembers.forEach((member, index) => {
+      member.position = index + 1;
+    });
+
+    // 6. Save the updated queue document within the transaction
+    await queue.save({ session });
+
+    // 7. Commit the transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    return { message: "User removed from queue successfully." };
+  } catch (error) {
+    // If an error occurs, abort the transaction
+    await session.abortTransaction();
+    session.endSession();
+
+    // Re-throw the error to be handled by the controller
     throw error;
   }
 };
