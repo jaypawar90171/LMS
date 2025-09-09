@@ -4,35 +4,80 @@
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
+    <title>Reset Password</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Ensure the body takes up the full viewport height */
+      body {
+        min-height: 100vh;
+      }
+    </style>
     <script>
       var status = "<%- JSON.stringify(status) %>";
 
       if (JSON.parse(status) == "verified") {
-        if (confirm("Do u want to login?")) {
+        if (confirm("Do you want to log in?")) {
           window.location.href = "http://localhost:3000/";
         }
       }
     </script>
   </head>
-  <body>
-    <h1><%= email%></h1>
-    <form action="" method="post">
-      <input
-        type="password"
-        name="newPassword"
-        id="password"
-        placeholder="New password"
-        required
-      /><br />
-      <input
-        type="password"
-        name="confirmPassword"
-        id="confirm-password"
-        placeholder="Confirm password"
-        required
-      /><br />
-      <input type="submit" value="Submit" />
-    </form>
+  <body class="font-sans bg-gray-100 flex items-center justify-center p-5">
+    <div
+      class="bg-white p-8 md:p-10 rounded-xl shadow-md max-w-md w-full text-center"
+    >
+      <h1 class="text-xl font-semibold text-slate-800 mb-3 tracking-tight">
+        Create a new secure password for your account
+      </h1>
+      <form action="" method="post" class="space-y-6">
+        <div class="space-y-4 text-left">
+          <div>
+            <label
+              for="password"
+              class="block text-sm font-medium text-gray-700 mb-1"
+              >New Password</label
+            >
+            <input
+              type="password"
+              name="newPassword"
+              id="password"
+              placeholder="Enter your new password"
+              required
+              class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+            />
+          </div>
+
+          <div>
+            <label
+              for="confirm-password"
+              class="block text-sm font-medium text-gray-700 mb-1"
+              >Confirm Password</label
+            >
+            <input
+              type="password"
+              name="confirmPassword"
+              id="confirm-password"
+              placeholder="Confirm your new password"
+              required
+              class="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+            />
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-black text-white py-2.5 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors font-medium"
+        >
+          Update Password
+        </button>
+      </form>
+
+      <div
+        class="mt-8 p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800"
+      >
+        <strong>Security tip:</strong> Choose a password that's at least 8
+        characters long and includes a mix of letters, numbers, and symbols.
+      </div>
+    </div>
   </body>
 </html>

@@ -31,6 +31,7 @@ export const registrationSchema = z
 export const loginSchema = z.object({
   email: z.string().trim().min(1, "email is required"),
   password: z.string().min(8, "Password must be at least 8 characters long."),
+  rememberMe: z.boolean()
 });
 
 export const createUserSchema = z.object({

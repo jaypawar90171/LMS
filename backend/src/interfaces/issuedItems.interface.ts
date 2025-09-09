@@ -1,15 +1,18 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
+import mongoose, { Schema, Document, Types, PopulatedDoc } from "mongoose";
+import { IInventoryItem } from "./inventoryItems.interface";
+import { IUser } from "./user.interface";
+import { IFine } from "./fine.interface";
 
 export interface IIssuedItem extends Document {
-  itemId: Types.ObjectId;
-  userId: Types.ObjectId;
+  itemId: PopulatedDoc<IInventoryItem & Document>;
+  userId: PopulatedDoc<IUser & Document>;
   issuedDate: Date;
   dueDate: Date;
-  issuedBy: Types.ObjectId;
-  returnedTo?: Types.ObjectId | null;
+  issuedBy: PopulatedDoc<IUser & Document>;
+  returnedTo?: PopulatedDoc<IUser & Document> | null;
   returnDate?: Date | null;
   status: "Issued" | "Returned";
   extensionCount: number;
   maxExtensionAllowed: number;
-  fineId: Types.ObjectId;
+  fineId?: PopulatedDoc<IFine & Document> | null;
 }

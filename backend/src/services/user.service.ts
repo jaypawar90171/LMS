@@ -15,6 +15,7 @@ import { Types } from "mongoose";
 import { IIssuedItem } from "../interfaces/issuedItems.interface";
 import { IFine } from "../interfaces/fine.interface";
 import Donation from "../models/donation.model";
+import nodemailer from "nodemailer";
 
 interface RegisterDTO {
   fullName: string;
@@ -139,7 +140,7 @@ export const forgotPasswordService = async (email: any) => {
     .exec();
 
   if (!oldUser) {
-    const err: any = new Error("Email does not exists");
+    const err: any = new Error("Email does not exist");
     err.statusCode = 403;
     throw err;
   }
@@ -150,7 +151,55 @@ export const forgotPasswordService = async (email: any) => {
     email: oldUser.email,
     username: oldUser.username,
   };
+
   const token = jwt.sign(payload, secret, { expiresIn: "1h" });
+
+  let transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: oldUser.email,
+    subject: "Password Reset Request",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #4CAF50;">Password Reset Request</h2>
+        <p>Dear ${oldUser.username || oldUser.email},</p>
+        <p>We received a request to reset the password for your account.</p>
+        <p>Please click the button below to reset your password. This link is valid for <strong>1 Hour</strong>.</p>
+        <a href="http://localhost:3000/api/user/auth/reset-password/${
+          oldUser._id
+        }/${token}" 
+           style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
+           Reset Password
+        </a>
+        <p style="margin-top: 20px;">If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
+        <p><a href="http://localhost:3000/api/user/auth/reset-password/${
+          oldUser._id
+        }/${token}">http://localhost:3000/api/admin/auth/reset-password/${
+      oldUser._id
+    }/${token}</a></p>
+        <p style="color: #888;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+        <p style="font-size: 12px; color: #888;">Sincerely,<br>The [Your Company/App Name] Team</p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent: " + info.response);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    const err: any = new Error("Failed to send password reset email");
+    err.statusCode = 500;
+    throw err;
+  }
 
   const link = `http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}`;
   return link;

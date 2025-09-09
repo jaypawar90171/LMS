@@ -70,15 +70,16 @@ export const loginController = async (req: Request, res: Response) => {
     const validatedData = loginSchema.parse(req.body);
     const user = await loginService(validatedData);
     if (!user) {
-      return res.status(400).json({ message: "invalid creadentials" });
+      return res.status(400).json({ message: "Invalid credentials" });
     }
-
     return res.status(200).json(user);
   } catch (error: any) {
-    console.error("Login error:", error.message);
-
+    if (error.name === "ZodError" && error.errors?.length) {
+      const messages = error.errors.map((err: any) => err.message);
+      return res.status(400).json({ errors: messages });
+    }
     return res.status(error.statusCode || 500).json({
-      message: error.message || "Internal server error",
+      error: error.message || "Internal server error",
     });
   }
 };
@@ -196,6 +197,7 @@ export const getDashboardSummaryController = async (
       overdueItems,
       categories,
       recentActivity,
+      recentOrders,
     } = await getDashboardSummaryService();
     return res.status(200).json({
       totalItems,
@@ -203,6 +205,7 @@ export const getDashboardSummaryController = async (
       overdueItems,
       categories,
       recentActivity,
+      recentOrders,
     });
   } catch (error) {
     console.error("Error fetching dashboard summary:", error);
@@ -1268,19 +1271,26 @@ export const viewQueueController = async (req: Request, res: Response) => {
   }
 };
 
-export const issueItemFromQueueController = async(req: Request, res: Response) => {
+export const issueItemFromQueueController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const adminId = req.user._id;
-    const {queueId} = req.params;
-    const {userId} = req.body;
+    const { queueId } = req.params;
+    const { userId } = req.body;
 
     console.log(req.user._id);
     console.log(queueId, userId, adminId);
     if (!userId) {
-      return res.status(400).json({ message: 'User ID is required.' });
+      return res.status(400).json({ message: "User ID is required." });
     }
 
-    const issuedItem = await issueItemFromQueueService(queueId, userId, adminId);
+    const issuedItem = await issueItemFromQueueService(
+      queueId,
+      userId,
+      adminId
+    );
     return res.status(200).json({
       success: true,
       message: "item issued for the queue member successfully",
@@ -1292,21 +1302,26 @@ export const issueItemFromQueueController = async(req: Request, res: Response) =
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error" });
   }
-}
+};
 
-export const removeUserFromQueueController = async (req: Request, res: Response) => {
+export const removeUserFromQueueController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { queueId } = req.params;
     const { userId } = req.body;
 
     if (!userId) {
-      return res.status(400).json({ message: 'User ID is required in the request body.' });
+      return res
+        .status(400)
+        .json({ message: "User ID is required in the request body." });
     }
 
     const result = await removeUserFromQueueService(queueId, userId);
-     return res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: result
+      message: result,
     });
   } catch (error: any) {
     console.error("Error in removeUserFromQueueController:", error);

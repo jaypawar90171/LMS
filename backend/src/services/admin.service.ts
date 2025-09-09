@@ -22,14 +22,21 @@ import bwipjs from "bwip-js";
 import Donation from "../models/donation.model";
 import Queue from "../models/queue.model";
 import IssuedItem from "../models/issuedItem.model";
+import nodemailer from "nodemailer";
+import { PopulatedDoc, Document } from "mongoose";
+import { IInventoryItem } from "../interfaces/inventoryItems.interface";
 
 interface loginDTO {
   email: string;
   password: string;
 }
 
-export const loginService = async (data: loginDTO) => {
-  const { email, password } = data;
+interface loginDTOWithRemember extends loginDTO {
+  rememberMe: boolean;
+}
+
+export const loginService = async (data: loginDTOWithRemember) => {
+  const { email, password, rememberMe } = data;
   if (!email || !password) {
     const err: any = new Error("Email and Password required");
     throw err;
@@ -54,20 +61,24 @@ export const loginService = async (data: loginDTO) => {
     throw err;
   }
 
-  const payload = {
-    _id: user._id,
-    email: user.email,
-  };
+  const accessTokenPayload = { id: user._id, email: user.email };
+  const refreshTokenPayload = { id: user._id };
 
-  const token = jwt.sign(payload, process.env.SECRET_KEY!, {
-    expiresIn: "10d",
+  const accessToken = jwt.sign(accessTokenPayload, process.env.SECRET_KEY!, {
+    expiresIn: "1d",
   });
+  const refreshToken = jwt.sign(refreshTokenPayload, process.env.SECRET_KEY!, {
+    expiresIn: "30d",
+  });
+
   return {
     user: {
       id: user._id,
       email: user.email,
     },
-    token: token,
+    accessToken,
+    refreshToken,
+    rememberMe,
   };
 };
 
@@ -84,18 +95,66 @@ export const forgotPasswordService = async (email: any) => {
     .exec();
 
   if (!oldUser) {
-    const err: any = new Error("Email does not exists");
+    const err: any = new Error("Email does not exist");
     err.statusCode = 403;
     throw err;
   }
 
-  const secret = process.env.SECRET_KEY + oldUser.password!;
+  const secret = process.env.SECRET_KEY + oldUser.password;
   const payload = {
     id: oldUser._id,
     email: oldUser.email,
     username: oldUser.username,
   };
+
   const token = jwt.sign(payload, secret, { expiresIn: "1h" });
+
+  let transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: oldUser.email,
+    subject: "Password Reset Request",
+    html: `
+      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+        <h2 style="color: #4CAF50;">Password Reset Request</h2>
+        <p>Dear ${oldUser.username || oldUser.email},</p>
+        <p>We received a request to reset the password for your account.</p>
+        <p>Please click the button below to reset your password. This link is valid for <strong>1 Hour</strong>.</p>
+        <a href="http://localhost:3000/api/admin/auth/reset-password/${
+          oldUser._id
+        }/${token}" 
+           style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
+           Reset Password
+        </a>
+        <p style="margin-top: 20px;">If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
+        <p><a href="http://localhost:3000/api/admin/auth/reset-password/${
+          oldUser._id
+        }/${token}">http://localhost:3000/api/admin/auth/reset-password/${
+      oldUser._id
+    }/${token}</a></p>
+        <p style="color: #888;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin-top: 20px;">
+        <p style="font-size: 12px; color: #888;">Sincerely,<br>The [Your Company/App Name] Team</p>
+      </div>
+    `,
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent: " + info.response);
+  } catch (error) {
+    console.error("Error sending email:", error);
+    const err: any = new Error("Failed to send password reset email");
+    err.statusCode = 500;
+    throw err;
+  }
 
   const link = `http://localhost:3000/api/admin/auth/reset-password/${oldUser._id}/${token}`;
   return link;
@@ -188,15 +247,22 @@ export const getDashboardSummaryService = async () => {
     overdueItems,
     categories,
     recentActivityData,
+    recentOrdersData,
   ] = await Promise.all([
     InventoryItem.countDocuments(),
     User.countDocuments({ status: "Active" }),
-    IssuedIetm.countDocuments({
+    IssuedItem.countDocuments({
       status: "Issued",
       dueDate: { $lt: new Date() },
     }),
     Category.countDocuments(),
     Activity.find({}).sort({ createdAt: -1 }).limit(10).exec(),
+    IssuedItem.find({})
+      .sort({ issuedDate: -1 })
+      .limit(10)
+      .populate("itemId", "title")
+      .populate("userId", "fullName email")
+      .exec(),
   ]);
 
   const recentActivity = recentActivityData.map((activity) => ({
@@ -206,7 +272,29 @@ export const getDashboardSummaryService = async () => {
     date: activity.createdAt!.toISOString().split("T")[0],
   }));
 
-  return { totalItems, activeUsers, overdueItems, categories, recentActivity };
+  const recentOrders = (
+    recentOrdersData as unknown as Array<{
+      userId: { fullName: string };
+      itemId: { title: string };
+      status: string;
+      issuedDate: Date;
+    }>
+  ).map((order) => ({
+    // Access the properties through the populated objects
+    user: order.userId.fullName,
+    item: order.itemId.title,
+    status: order.status,
+    issuedDate: order.issuedDate!.toISOString().split("T")[0],
+  }));
+
+  return {
+    totalItems,
+    activeUsers,
+    overdueItems,
+    categories,
+    recentActivity,
+    recentOrders,
+  };
 };
 
 export const getAllUsersService = async () => {
@@ -727,8 +815,8 @@ export const generateIssuedItemsReportPDF = async (res: Response) => {
 
   // Table rows
   items.forEach((item) => {
-    doc.text(item.userId.toString(), 30, y, { width: 80 });
-    doc.text(item.itemId.toString() || "-", 120, y, { width: 120 });
+    doc.text(item.userId as any, 30, y, { width: 80 });
+    doc.text(item.itemId?.toString() || "-", 120, y, { width: 120 });
     doc.text((item.issuedDate as any) || "-", 250, y, { width: 90 });
     doc.text((item.dueDate as any) || "-", 350, y, { width: 90 });
     doc.text(item.status.toString() || "-", 450, y, { width: 60 });
