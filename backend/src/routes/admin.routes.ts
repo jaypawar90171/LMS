@@ -349,7 +349,7 @@ router.put(
 router.get(
   "/barcode/generate",
   authUser,
-  authorize(["admin:manageItems"]),
+  // authorize(["admin:manageItems"]),
   generateBarcodeController
 );
 

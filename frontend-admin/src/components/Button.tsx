@@ -1,50 +1,43 @@
-import React from "react";
-
-interface ButtonProps {
-  type?: "button" | "submit" | "reset";
-  color?: string;
-  onClick?: () => void;
-  children: React.ReactNode;
-  disabled?: boolean; // Add the disabled prop here
-}
-
-const Button: React.FC<ButtonProps> = ({
-  type = "button",
-  onClick,
+export const Button = ({
   children,
-  color,
-  disabled = false, // Give the disabled prop a default value of false
+  onClick,
+  variant = "default",
+  size = "default",
+  className = "",
+  ...props
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: "default" | "outline" | "ghost" | "destructive" | "secondary";
+  size?: "default" | "sm" | "lg";
+  className?: string;
+  [key: string]: any;
 }) => {
-  const defaultClasses =
-    "w-full py-3 rounded-lg font-medium transition-colors focus:ring-2 focus:ring-offset-2";
+  const baseClasses =
+    "inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 transform hover:scale-105 active:scale-95";
 
-  const colorMap: { [key: string]: string } = {
-    blue: "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500",
-    red: "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500",
-    green: "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
-    default: "bg-black text-white hover:bg-gray-900 focus:ring-gray-700",
+  const variants = {
+    default:
+      "bg-black text-white bg-black hover:bg-amber-700 shadow-lg hover:shadow-xl",
+    outline:
+      "border-2 border-amber-600 bg-white text-amber-600 hover:bg-amber-600 hover:text-white",
+    ghost: "hover:bg-yellow-100 text-gray-700 hover:text-amber-600",
+    destructive: "bg-red-600 text-white hover:bg-red-700 shadow-lg",
+    secondary: "bg-amber-600 text-white hover:bg-amber-600 shadow-md",
   };
 
-  const colorClasses =
-    colorMap[color as keyof typeof colorMap] || colorMap.default;
-
-  const disabledClasses = "opacity-50 cursor-not-allowed";
-
-  // Conditionally apply disabled styles
-  const finalClasses = `${defaultClasses} ${colorClasses} ${
-    disabled ? disabledClasses : ""
-  }`;
-
+  const sizes = {
+    default: "h-11 px-6 py-2 text-sm",
+    sm: "h-9 px-4 text-xs",
+    lg: "h-12 px-8 text-base",
+  };
   return (
     <button
-      type={type}
+      className={`${baseClasses} ${variants[variant]} ${sizes[size]} ${className}`}
       onClick={onClick}
-      className={finalClasses}
-      disabled={disabled} // Apply the disabled attribute
+      {...props}
     >
       {children}
     </button>
   );
 };
-
-export default Button;

@@ -1,4 +1,5 @@
-import mongoose from "mongoose";
+import mongoose, { Schema, Document, Types, PopulatedDoc } from "mongoose";
+import { Icategory } from "./category.interface";
 
 export interface IInventoryItem extends Document {
   title: string;
@@ -10,7 +11,7 @@ export interface IInventoryItem extends Document {
   price: mongoose.Types.Decimal128 | number;
   quantity: number;
   availableCopies: number;
-  categoryId: mongoose.Types.ObjectId;
+  categoryId: PopulatedDoc<Icategory & Document>;
   subcategoryId?: mongoose.Types.ObjectId;
   barcode: string;
   defaultReturnPeriod?: number;

@@ -51,7 +51,7 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
               )}
             </button>
             <h1 className="text-2xl font-bold text-slate-800 tracking-tight">
-              Dashboard
+              LMS
             </h1>
           </div>
           {/* ... rest of navbar ... */}

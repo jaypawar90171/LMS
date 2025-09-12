@@ -24,7 +24,7 @@ import Queue from "../models/queue.model";
 import IssuedItem from "../models/issuedItem.model";
 import nodemailer from "nodemailer";
 import { PopulatedDoc, Document } from "mongoose";
-import { IInventoryItem } from "../interfaces/inventoryItems.interface";
+import { Icategory } from "../interfaces/category.interface";
 
 interface loginDTO {
   email: string;
@@ -487,7 +487,7 @@ export const deleteRoleService = async (roleId: string) => {
 };
 
 export const fetchInventoryIetmsService = async () => {
-  const items = await InventoryItem.find();
+  const items = await InventoryItem.find().populate("categoryId", "name");
 
   if (items.length === 0) {
     const err: any = new Error("No inventory items found");
@@ -508,12 +508,27 @@ export const createInventoryItemsService = async (data: any) => {
 };
 
 export const fetchSpecificItemServive = async (itemId: any) => {
-  const item = await InventoryItem.findById(itemId);
+  const item = await InventoryItem.findById(itemId)
+  .populate("categoryId", "name")
+  .lean();
 
   if (!item) {
     const err: any = new Error("No inventory items found");
     err.statusCode = 404;
     throw err;
+  }
+
+  // Manually populate the category
+  if (item.categoryId) {
+    const category = await Category.findById(item.categoryId)
+      .select('name description')
+      .lean();
+    
+    if (category) {
+      (item as any).category = category;
+      // Optionally remove the categoryId if you don't need it
+      // delete item.categoryId;
+    }
   }
 
   return item;
@@ -694,7 +709,18 @@ export const updateFineService = async ({ fineId, data }: any) => {
 };
 
 export const generateInventoryReportPDF = async (res: Response) => {
-  const items = await Item.find().populate("categoryId", "name"); // populate category name
+  // Fetch inventory items with populated category
+  const items = await InventoryItem.find()
+  .populate<{ categoryId: Icategory }>('categoryId')
+  .lean()
+  .exec() as unknown as Array<{
+    _id: Types.ObjectId;
+    title: string;
+    categoryId: Icategory | null;
+    publisherOrManufacturer?: string;
+    status: string;
+    createdAt?: Date;
+  }>;
 
   const doc = new PDFDocument({ margin: 30, size: "A4" });
 
@@ -724,9 +750,9 @@ export const generateInventoryReportPDF = async (res: Response) => {
 
   // Table rows
   items.forEach((item) => {
-    doc.text(item._id.toString(), 30, y, { width: 80 });
+    doc.text(item._id.toString() as any, 30, y, { width: 80 });
     doc.text(item.title || "-", 120, y, { width: 120 });
-    doc.text((item.categoryId as any)?.name || "-", 250, y, { width: 90 });
+    doc.text(item.categoryId?.name || "-", 250, y, { width: 90 });
     doc.text(item.publisherOrManufacturer || "-", 350, y, { width: 90 });
     doc.text(item.status || "-", 450, y, { width: 60 });
     doc.text(

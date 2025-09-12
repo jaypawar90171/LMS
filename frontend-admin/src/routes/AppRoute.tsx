@@ -3,6 +3,7 @@ import LoginPage from "../screens/Login";
 import DashboardPage from "../screens/Dashboard";
 import ForgotPasswordPage from "../screens/ForgotPassword";
 import Layout from "../components/Layout";
+import Inventory from "../screens/Inventory";
 
 const AppRoute = () => {
   return (
@@ -18,6 +19,14 @@ const AppRoute = () => {
         />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route
+          path="/inventory"
+          element={
+            <Layout>
+              <Inventory />
+            </Layout>
+          }
+        />
       </Routes>
     </BrowserRouter>
   );
