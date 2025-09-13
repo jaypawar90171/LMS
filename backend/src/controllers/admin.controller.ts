@@ -63,7 +63,6 @@ import { createFineService } from "../services/admin.service";
 import { fetchUserFinesService } from "../services/admin.service";
 import { generateInventoryReportPDF } from "../services/admin.service";
 import { generateFinesReportPDF } from "../services/admin.service";
-import { success } from "zod";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -456,7 +455,12 @@ export const createInventoryItemsController = async (
 ) => {
   try {
     const validatedData = InventoryItemsSchema.parse(req.body);
-    const newItem = await createInventoryItemsService(validatedData);
+    const file = req.file;
+    const dataWithFile = {
+      ...validatedData,
+      mediaUrl: file ? file.path : undefined,
+    };
+    const newItem = await createInventoryItemsService(dataWithFile);
 
     return res.status(201).json({
       message: "Inventory item created successfully",

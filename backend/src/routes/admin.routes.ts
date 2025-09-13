@@ -53,7 +53,7 @@ import {
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
-
+import multer from "multer";
 const router = Router();
 
 /* ========================= AUTH ========================= */
@@ -159,10 +159,12 @@ router.get(
   fetchInventoryItemsController
 );
 
+const upload = multer({ dest: "uploads/" });
 router.post(
   "/inventory/items",
   authUser,
   authorize(["admin:manageItems"]),
+  upload.single("mediaUrl"),
   createInventoryItemsController
 );
 

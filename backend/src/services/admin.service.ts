@@ -509,8 +509,8 @@ export const createInventoryItemsService = async (data: any) => {
 
 export const fetchSpecificItemServive = async (itemId: any) => {
   const item = await InventoryItem.findById(itemId)
-  .populate("categoryId", "name")
-  .lean();
+    .populate("categoryId", "name")
+    .lean();
 
   if (!item) {
     const err: any = new Error("No inventory items found");
@@ -521,9 +521,9 @@ export const fetchSpecificItemServive = async (itemId: any) => {
   // Manually populate the category
   if (item.categoryId) {
     const category = await Category.findById(item.categoryId)
-      .select('name description')
+      .select("name description")
       .lean();
-    
+
     if (category) {
       (item as any).category = category;
       // Optionally remove the categoryId if you don't need it
@@ -534,7 +534,7 @@ export const fetchSpecificItemServive = async (itemId: any) => {
   return item;
 };
 
-export const updateItemService = async ({ itemId, data }: any) => {
+export const updateItemService = async ({ itemId, validatedData }: any) => {
   const existingItem = await InventoryItem.findById(itemId);
 
   if (!existingItem) {
@@ -543,10 +543,14 @@ export const updateItemService = async ({ itemId, data }: any) => {
     throw err;
   }
 
-  const updatedData = await InventoryItem.findByIdAndUpdate(itemId, data, {
-    new: true,
-    runValidators: true,
-  });
+  const updatedData = await InventoryItem.findByIdAndUpdate(
+    itemId,
+    validatedData,
+    {
+      new: true,
+      runValidators: true,
+    }
+  );
 
   return updatedData;
 };
@@ -710,10 +714,10 @@ export const updateFineService = async ({ fineId, data }: any) => {
 
 export const generateInventoryReportPDF = async (res: Response) => {
   // Fetch inventory items with populated category
-  const items = await InventoryItem.find()
-  .populate<{ categoryId: Icategory }>('categoryId')
-  .lean()
-  .exec() as unknown as Array<{
+  const items = (await InventoryItem.find()
+    .populate<{ categoryId: Icategory }>("categoryId")
+    .lean()
+    .exec()) as unknown as Array<{
     _id: Types.ObjectId;
     title: string;
     categoryId: Icategory | null;

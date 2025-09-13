@@ -31,7 +31,7 @@ export const registrationSchema = z
 export const loginSchema = z.object({
   email: z.string().trim().min(1, "email is required"),
   password: z.string().min(8, "Password must be at least 8 characters long."),
-  rememberMe: z.boolean()
+  rememberMe: z.boolean(),
 });
 
 export const createUserSchema = z.object({
@@ -58,10 +58,13 @@ export const InventoryItemsSchema = z.object({
   isbnOrIdentifier: z.string().trim().min(1, "ISBN/Identifier is required"),
   description: z.string().trim().optional(),
   publisherOrManufacturer: z.string().trim().optional(),
-  publicationYear: z.number().int().min(0, "Invalid year").optional(),
-  price: z.number().nonnegative("Price must be non-negative"),
-  quantity: z.number().int().nonnegative("Quantity must be non-negative"),
-  availableCopies: z
+  publicationYear: z.coerce.number().int().min(0, "Invalid year").optional(),
+  price: z.coerce.number().nonnegative("Price must be non-negative"),
+  quantity: z.coerce
+    .number()
+    .int()
+    .nonnegative("Quantity must be non-negative"),
+  availableCopies: z.coerce
     .number()
     .int()
     .nonnegative("Available copies must be non-negative"),
@@ -69,8 +72,8 @@ export const InventoryItemsSchema = z.object({
   categoryId: z.string().min(1, "CategoryId is required"),
   subcategoryId: z.string().optional(),
   barcode: z.string().trim().min(1, "Barcode is required"),
-  defaultReturnPeriod: z.number().int().optional(),
-  mediaUrl: z.string().url("Invalid URL").optional(),
+  defaultReturnPeriod: z.coerce.number().int().optional(),
+  mediaUrl: z.string().optional(),
   status: z
     .enum(["Available", "Issued", "Lost", "Damaged"])
     .default("Available"),
