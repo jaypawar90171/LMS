@@ -43,8 +43,12 @@ import {
   ArrowUpDown,
   Download,
   RefreshCw,
+  Edit,
 } from "lucide-react";
+import { toast } from "sonner";
 import axios from "axios";
+import { DialogModal } from "@/components/Dialog";
+import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
 
 interface InventoryItem {
   _id: string;
@@ -54,11 +58,15 @@ interface InventoryItem {
     _id: string;
     name: string;
   };
-  quantity: number; // total copies in inventory
-  availableCopies: number; // currently available copies
-  isbn?: string;
-  publishedYear?: number;
+  quantity: number;
+  availableCopies: number;
+  isbnOrIdentifier?: string;
+  publicationYear?: number;
   description?: string;
+  publisherOrManufacturer?: string;
+  defaultReturnPeriod?: number;
+  status?: string;
+  barcode?: string;
 }
 
 interface FilterState {
@@ -103,99 +111,100 @@ const Inventory = () => {
     sortBy: "title",
     sortOrder: "asc",
   });
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ _id: string; name: string }[]>(
+    []
+  );
   const [stats, setStats] = useState({
     totalItems: 0,
     availableItems: 0,
     unavailableItems: 0,
     totalCategories: 0,
   });
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedItemData, setSelectedItemData] = useState<any | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
+  const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+
+  const fetchInventoryItems = async () => {
+    try {
+      setLoading(true);
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        setError("No access token found. Please log in.");
+        setLoading(false);
+        return;
+      }
+      const [inventoryResponse, categoriesResponse] = await Promise.all([
+        axios.get("http://localhost:3000/api/admin/inventory/items", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }),
+        axios.get("http://localhost:3000/api/admin/inventory/categories", {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }),
+      ]);
+
+      const items = Array.isArray(inventoryResponse.data.inventoryItems)
+        ? inventoryResponse.data.inventoryItems
+        : [];
+      setInventoryItems(items);
+
+      const uniqueCategories = Array.isArray(categoriesResponse.data.data)
+        ? categoriesResponse.data.data
+        : [];
+      setCategories(uniqueCategories);
+
+      const totalItems = items.length;
+      const availableItems = items.filter(
+        (item: any) => item.availableCopies > 0
+      ).length;
+      const unavailableItems = totalItems - availableItems;
+
+      setStats({
+        totalItems,
+        availableItems,
+        unavailableItems,
+        totalCategories: uniqueCategories.length,
+      });
+    } catch (error: any) {
+      setError(
+        error.response?.data?.message || "Failed to fetch inventory items"
+      );
+      console.error("Error fetching inventory:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchInventoryItems = async () => {
-      try {
-        const accessToken = localStorage.getItem("accessToken");
-        if (!accessToken) {
-          setError("No access token found. Please log in.");
-          setLoading(false);
-          return;
-        }
-        const result = await axios.get(
-          "http://localhost:3000/api/admin/inventory/items",
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
-          }
-        );
-
-        const items = Array.isArray(result.data.inventoryItems)
-          ? result.data.inventoryItems.map((item: any) => ({
-              ...item,
-              // Map backend 'quantity' to totalCopies for clarity (optional)
-              totalCopies: item.quantity,
-            }))
-          : [];
-        setInventoryItems(items);
-
-        // Extract unique categories
-        const uniqueCategories = [
-          ...new Set(items.map((item: any) => item.categoryId.name)),
-        ] as string[];
-        setCategories(uniqueCategories);
-
-        // Calculate stats properly using availableCopies and quantity
-        const totalItems = items.length;
-        const availableItems = items.filter(
-          (item: any) => item.availableCopies > 0
-        ).length;
-        const unavailableItems = totalItems - availableItems;
-
-        setStats({
-          totalItems,
-          availableItems,
-          unavailableItems,
-          totalCategories: uniqueCategories.length,
-        });
-      } catch (error: any) {
-        setError(
-          error.response?.data?.message || "Failed to fetch inventory items"
-        );
-        console.error("Error fetching inventory:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchInventoryItems();
   }, []);
 
   useEffect(() => {
     let filtered = [...inventoryItems];
 
-    // Apply search filter
     if (search) {
       filtered = filtered.filter(
         (item) =>
           item.title.toLowerCase().includes(search.toLowerCase()) ||
           item.authorOrCreator?.toLowerCase().includes(search.toLowerCase()) ||
-          item.categoryId.name.toLowerCase().includes(search.toLowerCase())
+          item.categoryId?.name.toLowerCase().includes(search.toLowerCase())
       );
     }
 
-    // Apply category filter
     if (filters.category !== "all") {
       filtered = filtered.filter(
         (item) =>
-          item.categoryId.name.toLowerCase() === filters.category.toLowerCase()
+          item.categoryId?.name.toLowerCase() === filters.category.toLowerCase()
       );
     }
 
-    // Apply availability filter
     if (filters.availability !== "all") {
       if (filters.availability === "available") {
         filtered = filtered.filter((item) => item.availableCopies > 0);
@@ -204,9 +213,8 @@ const Inventory = () => {
       }
     }
 
-    // Apply sorting
     filtered.sort((a, b) => {
-      let aValue, bValue;
+      let aValue: any, bValue: any;
 
       switch (filters.sortBy) {
         case "title":
@@ -218,8 +226,8 @@ const Inventory = () => {
           bValue = b.authorOrCreator?.toLowerCase() || "";
           break;
         case "category":
-          aValue = a.categoryId.name.toLowerCase();
-          bValue = b.categoryId.name.toLowerCase();
+          aValue = a.categoryId?.name.toLowerCase();
+          bValue = b.categoryId?.name.toLowerCase();
           break;
         case "availability":
           aValue = a.availableCopies;
@@ -230,11 +238,9 @@ const Inventory = () => {
           bValue = b.title.toLowerCase();
       }
 
-      if (filters.sortOrder === "asc") {
-        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      }
+      if (aValue < bValue) return filters.sortOrder === "asc" ? -1 : 1;
+      if (aValue > bValue) return filters.sortOrder === "asc" ? 1 : -1;
+      return 0;
     });
 
     setFilteredItems(filtered);
@@ -262,10 +268,10 @@ const Inventory = () => {
   };
 
   const handleViewDetails = async (itemId: string) => {
-    setIsModalOpen(true);
+    setIsDetailsModalOpen(true);
     setModalLoading(true);
     setModalError(null);
-    setSelectedItemData(null);
+    setSelectedItem(null);
 
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -273,7 +279,6 @@ const Inventory = () => {
         setModalError("No access token found. Please log in.");
         return;
       }
-
       const response = await axios.get(
         `http://localhost:3000/api/admin/inventory/items/${itemId}`,
         {
@@ -282,26 +287,7 @@ const Inventory = () => {
           },
         }
       );
-      const item = response.data.item;
-
-      // Map backend fields to front end shape
-      const formattedItemData = {
-        _id: item._id,
-        title: item.title,
-        authorOrCreator: item.authorOrCreator,
-        categoryId: item.categoryId,
-        isbnOrIdentifier: item.isbnOrIdentifier,
-        publisherOrManufacturer: item.publisherOrManufacturer,
-        publicationYear: item.publicationYear,
-        description: item.description,
-        defaultReturnPeriod: item.defaultReturnPeriod,
-        status: item.status,
-        totalCopies: item.quantity, // total copies
-        availableCopies: item.availableCopies, // available copies
-        barcode: item.barcode,
-      };
-
-      setSelectedItemData(formattedItemData);
+      setSelectedItem(response.data.item);
     } catch (err: any) {
       setModalError(
         err.response?.data?.message || "Failed to fetch item details."
@@ -309,6 +295,145 @@ const Inventory = () => {
       console.error("Error fetching item details:", err);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleEditItem = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteItem = (item: InventoryItem) => {
+    setSelectedItem(item);
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteItem = async () => {
+    if (!selectedItem) return;
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast.error("No access token found. Please log in again.");
+        return;
+      }
+
+      await axios.delete(
+        `http://localhost:3000/api/admin/inventory/items/${selectedItem._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      toast.success(`${selectedItem.title} has been deleted.`);
+      fetchInventoryItems();
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to delete the item."
+      );
+    } finally {
+      setIsDeleteModalOpen(false);
+      setSelectedItem(null);
+    }
+  };
+
+  const handleSubmit = async (formData: Record<string, any>) => {
+    if (!selectedItem) return;
+    const categoryObject = categories.find(
+      (cat) => cat._id === formData.categoryId
+    );
+
+    const dataToSend = {
+      title: formData.title,
+      authorOrCreator: formData.authorOrCreator,
+      description: formData.description,
+      quantity: Number(formData.quantity),
+      availableCopies: Number(formData.availableCopies),
+      categoryId: formData.categoryId,
+      status: formData.status,
+    };
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast.error("No access token found. Please log in again.");
+        return;
+      }
+
+      await axios.put(
+        `http://localhost:3000/api/admin/inventory/items/${selectedItem._id}`,
+        dataToSend,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      toast.success("Item has been updated");
+      fetchInventoryItems();
+    } catch (error: any) {
+      console.error("Error in updating the item:", error);
+      toast.error(error.response?.data?.message || "Failed to update item.");
+    } finally {
+      setIsEditModalOpen(false);
+      setSelectedItem(null);
+    }
+  };
+
+  const handleAddSubmit = async (formData: Record<string, any>) => {
+    const dataToSend = new FormData();
+
+    for (const key in formData) {
+      if (formData[key] instanceof File) {
+        dataToSend.append(key, formData[key]);
+      } else {
+        dataToSend.append(key, String(formData[key]));
+      }
+    }
+
+    let barcode = "";
+    try {
+      const result = await axios.get(
+        "http://localhost:3000/api/admin/barcode/generate",
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      );
+      barcode = result.data.barcode;
+      dataToSend.append("barcode", barcode);
+    } catch (error) {
+      console.error("Error generating barcode:", error);
+    }
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast.error("No access token found. Please log in again.");
+        return;
+      }
+
+      await axios.post(
+        "http://localhost:3000/api/admin/inventory/items",
+        dataToSend,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      toast.success("New item added successfully.");
+      fetchInventoryItems();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to add new item.");
+    } finally {
+      setIsAddItemModalOpen(false);
     }
   };
 
@@ -365,7 +490,6 @@ const Inventory = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="container mx-auto p-6 space-y-6">
-        {/* Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">
@@ -388,14 +512,12 @@ const Inventory = () => {
               <Eye className="h-4 w-4 mr-2" />
               View Requests
             </Button>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setIsAddItemModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Add New Item
             </Button>
           </div>
         </div>
-
-        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -458,8 +580,6 @@ const Inventory = () => {
             </CardContent>
           </Card>
         </div>
-
-        {/* Filters and Search */}
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -487,13 +607,12 @@ const Inventory = () => {
                   <SelectContent>
                     <SelectItem value="all">All Categories</SelectItem>
                     {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
+                      <SelectItem key={category._id} value={category.name}>
+                        {category.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-
                 <Select
                   value={filters.availability}
                   onValueChange={(value) =>
@@ -509,7 +628,6 @@ const Inventory = () => {
                     <SelectItem value="unavailable">Unavailable</SelectItem>
                   </SelectContent>
                 </Select>
-
                 <Select
                   value={filters.sortBy}
                   onValueChange={(value) => handleFilterChange("sortBy", value)}
@@ -524,12 +642,10 @@ const Inventory = () => {
                     <SelectItem value="availability">Availability</SelectItem>
                   </SelectContent>
                 </Select>
-
                 <Button variant="outline" size="sm" onClick={toggleSortOrder}>
                   <ArrowUpDown className="h-4 w-4 mr-2" />
                   {filters.sortOrder === "asc" ? "A-Z" : "Z-A"}
                 </Button>
-
                 <Button variant="outline" size="sm" onClick={clearFilters}>
                   <Filter className="h-4 w-4 mr-2" />
                   Clear
@@ -538,15 +654,11 @@ const Inventory = () => {
             </div>
           </CardContent>
         </Card>
-
-        {/* Results Summary */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {filteredItems.length} of {inventoryItems.length} items
           </p>
         </div>
-
-        {/* Inventory Table */}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -578,9 +690,9 @@ const Inventory = () => {
                           <p className="font-semibold text-foreground">
                             {item.title}
                           </p>
-                          {item.isbn && (
+                          {item.isbnOrIdentifier && (
                             <p className="text-xs text-muted-foreground">
-                              ISBN: {item.isbn}
+                              ISBN: {item.isbnOrIdentifier}
                             </p>
                           )}
                         </div>
@@ -589,18 +701,20 @@ const Inventory = () => {
                         <p className="text-foreground hover:text-primary cursor-pointer">
                           {item.authorOrCreator}
                         </p>
-                        {item.publishedYear && (
+                        {item.publicationYear && (
                           <p className="text-xs text-muted-foreground">
-                            {item.publishedYear}
+                            {item.publicationYear}
                           </p>
                         )}
                       </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
-                          className={categoryBadgeColor(item.categoryId.name)}
+                          className={categoryBadgeColor(
+                            item.categoryId?.name || ""
+                          )}
                         >
-                          {item.categoryId.name}
+                          {item.categoryId?.name}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -650,13 +764,16 @@ const Inventory = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            {item.availableCopies > 0 && (
-                              <DropdownMenuItem>
-                                <Clock className="h-4 w-4 mr-2" />
-                                Queue Item
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem className="text-destructive">
+                            <DropdownMenuItem
+                              onClick={() => handleEditItem(item)}
+                            >
+                              <Edit className="h-4 w-4 mr-2" />
+                              Edit Item
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDeleteItem(item)}
+                              className="text-destructive"
+                            >
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
@@ -690,11 +807,147 @@ const Inventory = () => {
           </CardContent>
         </Card>
       </div>
-      {isModalOpen && (
+      {isDetailsModalOpen && selectedItem && (
         <ItemDetailsModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          itemData={selectedItemData}
+          isOpen={isDetailsModalOpen}
+          onClose={() => setIsDetailsModalOpen(false)}
+          itemData={selectedItem}
+          loading={modalLoading}
+          error={modalError}
+        />
+      )}
+      {isEditModalOpen && selectedItem && (
+        <DialogModal
+          isOpen={isEditModalOpen}
+          onOpenChange={setIsEditModalOpen}
+          title="Edit Item"
+          description={`Editing item: ${selectedItem.title}`}
+          fields={[
+            { type: "text", name: "title", label: "Title" },
+            { type: "text", name: "authorOrCreator", label: "Author/Creator" },
+            {
+              type: "select",
+              name: "categoryId",
+              label: "Category",
+              options: [
+                { value: "Tools", label: "Tools" },
+                { value: "Books", label: "Books" },
+                { value: "Electronics", label: "Electronics" },
+                { value: "Furniture", label: "Furniture" },
+                { value: "Sports Equipment", label: "Sports Equipment" },
+                { value: "Kitchen Accessories", label: "Kitchen Accessories" },
+                { value: "Clothes", label: "Clothes" },
+              ],
+            },
+            { type: "text", name: "quantity", label: "Total Copies" },
+            {
+              type: "text",
+              name: "availableCopies",
+              label: "Available Copies",
+            },
+            {
+              type: "select",
+              name: "status",
+              label: "Status",
+              options: [
+                { value: "Available", label: "Available" },
+                { value: "Issued", label: "Issued" },
+                { value: "Damaged", label: "Damaged" },
+                { value: "Lost", label: "Lost" },
+              ],
+            },
+          ]}
+          defaultValues={{
+            title: selectedItem.title,
+            authorOrCreator: selectedItem.authorOrCreator,
+            categoryId: selectedItem.categoryId._id,
+            quantity: selectedItem.quantity,
+            availableCopies: selectedItem.availableCopies,
+            status: selectedItem.status,
+          }}
+          onSubmit={handleSubmit}
+        />
+      )}
+      {isDeleteModalOpen && selectedItem && (
+        <DeleteConfirmationModal
+          isOpen={isDeleteModalOpen}
+          onOpenChange={setIsDeleteModalOpen}
+          onConfirm={confirmDeleteItem}
+          itemName={selectedItem.title}
+        />
+      )}
+
+      {isAddItemModalOpen && (
+        <DialogModal
+          isOpen={isAddItemModalOpen}
+          onOpenChange={setIsAddItemModalOpen}
+          title="Add New Item"
+          description="Fill in the details for the new inventory item."
+          fields={[
+            { type: "text", name: "title", label: "Title" },
+            { type: "text", name: "authorOrCreator", label: "Author/Creator" },
+            { type: "text", name: "description", label: "Description" },
+            { type: "text", name: "isbnOrIdentifier", label: "ISBN" },
+            {
+              type: "text",
+              name: "publisherOrManufacturer",
+              label: "Publisher/Manufacturer",
+            },
+            {
+              type: "text",
+              name: "publicationYear",
+              label: "Publication Year",
+            },
+            { type: "text", name: "price", label: "Price" },
+            {
+              type: "text",
+              name: "defaultReturnPeriod",
+              label: "Default Return Period",
+            },
+            {
+              type: "select",
+              name: "categoryId",
+              label: "Category",
+              options: categories.map((cat) => ({
+                value: cat._id,
+                label: cat.name,
+              })),
+            },
+            { type: "text", name: "quantity", label: "Total Copies" },
+            {
+              type: "text",
+              name: "availableCopies",
+              label: "Available Copies",
+            },
+            {
+              type: "select",
+              name: "status",
+              label: "Status",
+              options: [
+                { value: "Available", label: "Available" },
+                { value: "Issued", label: "Issued" },
+                { value: "Damaged", label: "Damaged" },
+                { value: "Lost", label: "Lost" },
+              ],
+            },
+            { type: "file", name: "mediaUrl", label: "Image" },
+          ]}
+          defaultValues={{
+            title: "",
+            authorOrCreator: "",
+            description: "",
+            isbnOrIdentifier: "",
+            publisherOrManufacturer: "",
+            publicationYear: "",
+            price: "",
+            defaultReturnPeriod: "",
+            categoryId: "",
+            quantity: 1,
+            availableCopies: 1,
+            status: "Available",
+            mediaUrl: null,
+          }}
+          onSubmit={handleAddSubmit}
         />
       )}
     </div>
