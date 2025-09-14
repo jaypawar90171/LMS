@@ -297,9 +297,20 @@ export const getDashboardSummaryService = async () => {
   };
 };
 
-export const getAllUsersService = async () => {
-  const users = await User.find().select("-password");
-  return users;
+export const getAllUsersService = async (page = 1, limit = 10) => {
+
+  const skip = (page - 1) * limit;
+
+  const desiredRoles = await Role.find({
+    roleName: {$in: ["employee", "family"]}
+  }).select("_id");
+
+  const roleIds = desiredRoles.map(role => role._id);
+
+  const totalUsers = await User.countDocuments({ roles: { $in: roleIds } });
+
+  const users = await User.find({roles: {$in: roleIds}}).select("-password").populate("roles", "roleName").limit(limit).skip(skip);
+  return {users, totalUsers};
 };
 
 export const createUserService = async ({
@@ -310,10 +321,13 @@ export const createUserService = async ({
   role,
   emp_id,
   ass_emp_id,
+  passwordResetRequired
 }: any) => {
+
   const existingUser = await User.findOne({
     $or: [{ email }, { username: userName }],
   });
+
   if (existingUser) {
     const err: any = new Error(
       "User with this email or username already exists."
@@ -328,15 +342,38 @@ export const createUserService = async ({
     err.statusCode = 400;
     throw err;
   }
+
+  let employeeIdValue = emp_id;
+  let associatedEmployeeIdValue = undefined;
+  if(role === 'family')
+  {
+    if (!ass_emp_id) {
+      const err: any = new Error("Associated employee ID is required for a family member.");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    const associatedEmployee = await User.findOne({ employeeId: ass_emp_id });
+    if (!associatedEmployee) {
+      const err: any = new Error(`Employee with ID '${ass_emp_id}' not found.`);
+      err.statusCode = 404; 
+      throw err;
+    }
+
+    associatedEmployeeIdValue = associatedEmployee._id;
+    employeeIdValue = undefined; 
+  }
+
   const newUser = new User({
     fullName: fullName,
     email: email,
     username: userName,
     password: password,
     roles: [userRole._id],
-    employeeId: emp_id,
-    associatedEmployeeId: ass_emp_id,
-    status: "Inactive",
+    employeeId: employeeIdValue,
+    associatedEmployeeId: associatedEmployeeIdValue,
+    passwordResetRequired: passwordResetRequired,
+    status: "Active",
   });
 
   await newUser.save();

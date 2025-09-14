@@ -214,11 +214,19 @@ export const getDashboardSummaryController = async (
 
 export const getAllUsersController = async (req: Request, res: Response) => {
   try {
-    const users = await getAllUsersService();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const {users, totalUsers} = await getAllUsersService(page, limit);
 
     return res.status(200).json({
       message: "Users fetched successfully.",
       users: users,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalUsers / limit),
+        totalUsers,
+      },
     });
   } catch (error: any) {
     console.error("Error fetching users:", error);
@@ -231,15 +239,8 @@ export const getAllUsersController = async (req: Request, res: Response) => {
 export const createUserController = async (req: Request, res: Response) => {
   try {
     const validatedData = createUserSchema.parse(req.body);
-    const { fullName, email, userName, password, role, emp_id, ass_emp_id } =
-      validatedData;
+    const { fullName, email, userName, password, role, emp_id, ass_emp_id, passwordResetRequired } = validatedData;
 
-    if (!fullName || !email || !userName || !password) {
-      return res.status(400).json({
-        message:
-          "Missing required fields: fullname, email, username, and password.",
-      });
-    }
     const newUser = await createUserService({
       fullName,
       email,
@@ -248,6 +249,7 @@ export const createUserController = async (req: Request, res: Response) => {
       role,
       emp_id,
       ass_emp_id,
+      passwordResetRequired
     });
 
     return res.status(201).json({

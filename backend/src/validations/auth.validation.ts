@@ -34,15 +34,45 @@ export const loginSchema = z.object({
   rememberMe: z.boolean(),
 });
 
-export const createUserSchema = z.object({
-  fullName: z.string().trim().min(1, "Atleast 1 character"),
-  email: z.string().email("Invalid email address.").trim().toLowerCase(),
-  userName: z.string().trim(),
-  password: z.string().trim(),
-  role: z.string().trim(),
-  emp_id: z.string().trim(),
-  ass_emp_id: z.string().trim().optional(),
-});
+// export const createUserSchema = z.object({
+//   fullName: z.string().trim().min(1, "Atleast 1 character"),
+//   email: z.string().email("Invalid email address.").trim().toLowerCase(),
+//   userName: z.string().trim(),
+//   password: z.string().trim(),
+//   role: z.string().trim(),
+//   emp_id: z.string().trim(),
+//   ass_emp_id: z.string().trim().optional(),
+// });
+
+export const createUserSchema = z
+  .object({
+    fullName: z.string().trim().min(1, "Full name is required"),
+    email: z.string().email("Invalid email address.").trim().toLowerCase(),
+    userName: z.string().trim().min(1, "Username is required"),
+    password: z.string().trim().min(1, "Password is required"),
+    role: z.string().trim(),
+    emp_id: z.string().trim().optional(),
+    ass_emp_id: z.string().trim().optional(),
+    passwordResetRequired: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    // Check for Employee role
+    if (data.role === "employee" && !data.emp_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Employee ID is required for the Employee role.",
+        path: ["emp_id"], 
+      });
+    }
+    // Check for Family Member role
+    if (data.role === "family" && !data.ass_emp_id) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "The main Employee's User ID must be provided.",
+        path: ["ass_emp_id"], 
+      });
+    }
+  });
 
 export const updateUserSchema = createUserSchema.partial();
 

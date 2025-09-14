@@ -106,15 +106,15 @@ userSchema.methods.comparePassword = async function (userPassword: string) {
 };
 
 // check if the roles is employee it should also include the empoyeeId
-const EMPLOYEE_ROLE_ID = new mongoose.Types.ObjectId(
-  "68b5a390c3a9af30dbdf3be8"
-);
-userSchema.pre("validate", function (next) {
-  if (this.roles && this.roles.includes(EMPLOYEE_ROLE_ID) && !this.employeeId) {
-    return next(new Error("employeeId is required for Employee role"));
-  }
-  next();
-});
+// const EMPLOYEE_ROLE_ID = new mongoose.Types.ObjectId(
+//   "68b5a390c3a9af30dbdf3be8"
+// );
+// userSchema.pre("validate", function (next) {
+//   if (this.roles && this.roles.includes(EMPLOYEE_ROLE_ID) && !this.employeeId) {
+//     return next(new Error("employeeId is required for Employee role"));
+//   }
+//   next();
+// });
 
 const User = mongoose.model<IUser>("User", userSchema);
 export default User;
