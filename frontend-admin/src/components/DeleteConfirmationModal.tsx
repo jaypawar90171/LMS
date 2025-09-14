@@ -33,7 +33,7 @@ export const DeleteConfirmationModal: React.FC<
           </DialogDescription>
         </DialogHeader>
 
-        <DialogFooter className="flex flex-col sm:flex-row-reverse gap-2 sm:gap-0">
+        <DialogFooter className="flex flex-col sm:flex-row-reverse gap-2">
           <Button variant="destructive" onClick={onConfirm}>
             Delete
           </Button>

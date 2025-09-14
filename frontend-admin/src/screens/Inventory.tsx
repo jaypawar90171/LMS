@@ -44,11 +44,13 @@ import {
   Download,
   RefreshCw,
   Edit,
+  List,
 } from "lucide-react";
 import { toast } from "sonner";
 import axios from "axios";
 import { DialogModal } from "@/components/Dialog";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
+import { useNavigate } from "react-router-dom";
 
 interface InventoryItem {
   _id: string;
@@ -127,6 +129,8 @@ const Inventory = () => {
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState<string | null>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
+
+  const Navigate = useNavigate();
 
   const fetchInventoryItems = async () => {
     try {
@@ -489,7 +493,7 @@ const Inventory = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="container mx-auto space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">
@@ -500,9 +504,15 @@ const Inventory = () => {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Export
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                Navigate("/categories");
+              }}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Manage Categories
             </Button>
             <Button variant="outline" size="sm">
               <Clock className="h-4 w-4 mr-2" />
@@ -777,6 +787,16 @@ const Inventory = () => {
                               <Trash2 className="h-4 w-4 mr-2" />
                               Delete
                             </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => {
+                                Navigate("/queues", {
+                                  state: { itemId: item._id },
+                                });
+                              }}
+                            >
+                              <List className="h-4 w-4 mr-2" />
+                              View Queue
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
@@ -807,6 +827,7 @@ const Inventory = () => {
           </CardContent>
         </Card>
       </div>
+
       {isDetailsModalOpen && selectedItem && (
         <ItemDetailsModal
           isOpen={isDetailsModalOpen}
@@ -816,6 +837,7 @@ const Inventory = () => {
           error={modalError}
         />
       )}
+
       {isEditModalOpen && selectedItem && (
         <DialogModal
           isOpen={isEditModalOpen}
@@ -868,6 +890,7 @@ const Inventory = () => {
           onSubmit={handleSubmit}
         />
       )}
+
       {isDeleteModalOpen && selectedItem && (
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}

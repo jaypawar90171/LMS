@@ -83,7 +83,7 @@ export const DialogModal: React.FC<DialogProps> = ({
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       {/* Added overflow-y-auto to allow scrolling */}
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>

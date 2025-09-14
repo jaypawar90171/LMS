@@ -4,6 +4,8 @@ import DashboardPage from "../screens/Dashboard";
 import ForgotPasswordPage from "../screens/ForgotPassword";
 import Layout from "../components/Layout";
 import Inventory from "../screens/Inventory";
+import Category from "@/screens/Category";
+import QueuePage from "@/screens/Queue";
 
 const AppRoute = () => {
   return (
@@ -24,6 +26,22 @@ const AppRoute = () => {
           element={
             <Layout>
               <Inventory />
+            </Layout>
+          }
+        />
+        <Route
+          path="/categories"
+          element={
+            <Layout>
+              <Category />
+            </Layout>
+          }
+        />
+        <Route
+          path="/queues"
+          element={
+            <Layout>
+              <QueuePage />
             </Layout>
           }
         />
