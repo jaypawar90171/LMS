@@ -48,6 +48,7 @@ const CategoryPage = () => {
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
   const [IsEditModalOpen, setIsEditModalOpen] = useState(false);
   const [item, setItem] = useState<Category | null>(null);
+  
 
   useEffect(() => {
     const fetchCategories = async () => {

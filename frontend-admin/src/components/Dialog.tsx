@@ -1,5 +1,3 @@
-// File: src/components/Dialog.tsx
-
 import React, { useState, useEffect } from "react";
 import {
   Dialog,
@@ -21,10 +19,22 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 
-// We'll define all possible field types in one union type
+// Helper type to allow passing the setFormData function
+type SetFormData = React.Dispatch<React.SetStateAction<Record<string, any>>>;
+
+// Defines all possible field types, including the `renderAdornment` for text inputs
 type Field =
-  | { type: "text"; name: string; label: string }
+  | {
+      type: "text";
+      name: string;
+      label: string;
+      renderAdornment?: (
+        formData: Record<string, any>,
+        setFormData: SetFormData
+      ) => React.ReactNode;
+    }
   | { type: "textarea"; name: string; label: string }
   | {
       type: "select";
@@ -32,7 +42,8 @@ type Field =
       label: string;
       options: { value: string; label: string }[];
     }
-  | { type: "file"; name: string; label: string };
+  | { type: "file"; name: string; label: string }
+  | { type: "checkbox"; name: string; label: string };
 
 interface DialogProps {
   isOpen: boolean;
@@ -55,11 +66,15 @@ export const DialogModal: React.FC<DialogProps> = ({
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>(defaultValues);
 
+  // FIX: Added 'isOpen' to dependency array to ensure form resets on open
   useEffect(() => {
-    setFormData(defaultValues);
-  }, [defaultValues]);
+    if (isOpen) {
+      setFormData(defaultValues);
+    }
+  }, [defaultValues, isOpen]);
 
-  const handleChange = (name: string, value: string | File) => {
+  // FIX: Updated signature to accept boolean for checkboxes
+  const handleChange = (name: string, value: string | File | boolean) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -82,8 +97,7 @@ export const DialogModal: React.FC<DialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      {/* Added overflow-y-auto to allow scrolling */}
-      <DialogContent className="sm:max-w-[400px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto scrollbar-hide">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
@@ -91,53 +105,85 @@ export const DialogModal: React.FC<DialogProps> = ({
 
         <form onSubmit={handleSubmit} className="grid gap-4 py-4">
           {fields.map((field) => (
-            <div key={field.name} className="grid gap-3">
-              <Label htmlFor={field.name}>{field.label}</Label>
-              {field.type === "text" && (
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  value={formData[field.name] || ""}
-                  onChange={handleTextChange}
-                />
+            <div key={field.name}>
+              {/* FIX: Conditionally render the top label to avoid one on checkboxes */}
+              {field.type !== "checkbox" && (
+                <Label htmlFor={field.name} className="mb-2 block">
+                  {field.label}
+                </Label>
               )}
-              {field.type === "textarea" && (
-                <Textarea
-                  id={field.name}
-                  name={field.name}
-                  value={formData[field.name] || ""}
-                  onChange={handleTextChange}
-                />
-              )}
-              {field.type === "file" && (
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  type="file"
-                  onChange={handleFileChange}
-                />
-              )}
-              {field.type === "select" && (
-                <Select
-                  value={formData[field.name] || ""}
-                  onValueChange={(value) => handleChange(field.name, value)}
-                  name={field.name}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder={`Select ${field.label}`} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {field.options.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+              <div className="flex items-center gap-2">
+                <div className="flex-grow">
+                  {field.type === "text" && (
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      value={formData[field.name] || ""}
+                      onChange={handleTextChange}
+                    />
+                  )}
+                  {field.type === "textarea" && (
+                    <Textarea
+                      id={field.name}
+                      name={field.name}
+                      value={formData[field.name] || ""}
+                      onChange={handleTextChange}
+                    />
+                  )}
+                  {field.type === "file" && (
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      type="file"
+                      onChange={handleFileChange}
+                    />
+                  )}
+                  {field.type === "select" && (
+                    <Select
+                      value={formData[field.name] || ""}
+                      onValueChange={(value) => handleChange(field.name, value)}
+                      name={field.name}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${field.label}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {field.options.map((opt) => (
+                          <SelectItem key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {field.type === "checkbox" && (
+                    <div className="flex items-center space-x-2 h-10">
+                      <Checkbox
+                        id={field.name}
+                        name={field.name}
+                        checked={!!formData[field.name]}
+                        onCheckedChange={(checked) =>
+                          handleChange(field.name, !!checked)
+                        }
+                      />
+                      <Label
+                        htmlFor={field.name}
+                        className="font-normal leading-none"
+                      >
+                        {field.label}
+                      </Label>
+                    </div>
+                  )}
+                </div>
+                {/* ADDED: Feature to render a button next to an input */}
+                {field.type === "text" && field.renderAdornment && (
+                  <div className="flex-shrink-0">
+                    {field.renderAdornment(formData, setFormData)}
+                  </div>
+                )}
+              </div>
             </div>
           ))}
-
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline" type="button">

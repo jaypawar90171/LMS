@@ -528,6 +528,7 @@ const Inventory = () => {
             </Button>
           </div>
         </div>
+        {/* stattistics */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -590,6 +591,7 @@ const Inventory = () => {
             </CardContent>
           </Card>
         </div>
+
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -664,6 +666,7 @@ const Inventory = () => {
             </div>
           </CardContent>
         </Card>
+        
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {filteredItems.length} of {inventoryItems.length} items
