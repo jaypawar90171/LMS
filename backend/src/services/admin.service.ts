@@ -298,19 +298,16 @@ export const getDashboardSummaryService = async () => {
 };
 
 export const getAllUsersService = async (page = 1, limit = 10) => {
-
   const skip = (page - 1) * limit;
 
-  const desiredRoles = await Role.find({
-    roleName: {$in: ["employee", "family"]}
-  }).select("_id");
+  const totalUsers = await User.countDocuments({});
+  const users = await User.find({})
+    .select("-password")
+    .populate("roles", "roleName")
+    .limit(limit)
+    .skip(skip);
 
-  const roleIds = desiredRoles.map(role => role._id);
-
-  const totalUsers = await User.countDocuments({ roles: { $in: roleIds } });
-
-  const users = await User.find({roles: {$in: roleIds}}).select("-password").populate("roles", "roleName").limit(limit).skip(skip);
-  return {users, totalUsers};
+  return { users, totalUsers };
 };
 
 export const createUserService = async ({
@@ -399,6 +396,26 @@ export const forcePasswordResetService = async (userId: any) => {
   }
 
   return user;
+};
+
+export const deleteUserService = async (userId: string) => {
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    const err: any = new Error("Invalid user ID format.");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Optional: Add logic here to prevent deletion of certain users, e.g., the last super admin.
+
+  await User.findByIdAndDelete(userId);
+  return { message: "User deleted successfully." };
 };
 
 export const fetchRolesService = async () => {

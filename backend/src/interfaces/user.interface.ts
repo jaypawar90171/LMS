@@ -6,6 +6,7 @@ export interface INotificationPreference {
 }
 
 export interface IUser extends Document {
+  _id: string;
   fullName: string;
   email: string;
   username: string;

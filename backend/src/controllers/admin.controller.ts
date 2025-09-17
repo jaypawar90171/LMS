@@ -14,6 +14,7 @@ import {
   updateUserSchema,
 } from "../validations/auth.validation";
 import {
+  deleteUserService,
   generateBarcodePDF,
   generateBarcodeString,
   generateIssuedItemsReportPDF,
@@ -338,6 +339,19 @@ export const forcePasswordResetController = async (
     return res.status(200).json({ message: "chnages made", user: updatedUser });
   } catch (error: any) {
     console.log("Error in updating user");
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
+  }
+};
+
+export const deleteUserController = async (req: Request, res: Response) => {
+  try {
+    const { userId } = req.params;
+    const result = await deleteUserService(userId);
+    return res.status(200).json(result);
+  } catch (error: any) {
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",

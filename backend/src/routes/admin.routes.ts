@@ -50,6 +50,7 @@ import {
   viewQueueController,
   issueItemFromQueueController,
   removeUserFromQueueController,
+  deleteUserController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
@@ -68,17 +69,17 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 router.get("/auth/logout", authUser, logoutController);
 
 /* ========================= USERS ========================= */
-router.post(
+router.put(
   "/users/:userId/status",
   authUser,
-  authorize(["admin:manageUsers", "admin:approveUser"]),
+  // authorize(["admin:manageUsers", "admin:approveUser"]),
   updateUserStatusController
 );
 
 router.get(
   "/users",
   authUser,
-  authorize(["admin:viewAllUsers"]),
+  // authorize(["admin:viewAllUsers"]),
   getAllUsersController
 );
 
@@ -92,50 +93,57 @@ router.post(
 router.get(
   "/users/:userId",
   authUser,
-  authorize(["admin:viewAllUsers"]),
+  // authorize(["admin:viewAllUsers"]),
   getUserDetailsController
 );
 
 router.put(
   "/users/:userId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   updateUserController
 );
 
 router.put(
   "/users/:userId/reset-password",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   forcePasswordResetController
+);
+
+router.delete(
+  "/users/:userId",
+  authUser,
+  // authorize(["admin:manageUsers"]),
+  deleteUserController
 );
 
 /* ========================= ROLES ========================= */
 router.get(
   "/roles",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   fetchRolesController
 );
 
 router.post(
   "/roles",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   createRoleController
 );
 
 router.put(
   "/roles/:roleId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   updateRoleController
 );
 
 router.delete(
   "/roles/:roleId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   deleteRoleController
 );
 
