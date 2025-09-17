@@ -15,7 +15,9 @@ import {
   ArrowUpDown,
   Filter,
   Plus,
-  KeyRound,
+  ToggleLeft,
+  ToggleRight,
+  ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -32,9 +34,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import axios from "axios";
-import { UserDetailsModal } from "@/components/UserDetailsModal";
+
 import {
   Pagination,
   PaginationContent,
@@ -50,40 +53,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { DialogModal } from "@/components/Dialog";
+
+import { UserFormModal } from "@/components/UserFormModal";
+import { UserRolesModal } from "@/components/UserRolesModal";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
-
-interface Role {
-  _id: string;
-  name: string;
-}
-
-interface NotificationPreference {
-  email: boolean;
-  whatsApp: boolean;
-}
-
-export interface User {
-  _id: string;
-  fullName: string;
-  email: string;
-  username: string;
-  roles: Role[] | string[];
-  status: "Active" | "Inactive" | "Locked";
-  passwordResetRequired: boolean;
-  rememberMe: boolean;
-  createdAt: string;
-  updatedAt: string;
-  notificationPreference: NotificationPreference;
-  employeeId?: string;
-  associatedEmployeeId?: string;
-  phoneNumber?: string;
-  dateOfBirth?: string;
-  address?: string;
-  lastLogin?: string;
-  accountLockedUntil?: string;
-  profile?: string;
-}
+import { User, Role } from "@/interfaces/user.interface";
+import { UserProfileModal } from "@/components/UserProfileModal";
 
 const USERS_PER_PAGE = 10;
 
@@ -101,45 +76,40 @@ const UserManagementPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     status: "all",
-    userType: "all",
+    role: "all",
     sortBy: "fullName",
     sortOrder: "asc",
   });
+
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [formMode, setFormMode] = useState<"add" | "edit">("add");
+
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
-  const [isAddUserModalOpen, setIsAddUserModelOpen] = useState(false);
-  const [newUserRole, setNewUserRole] = useState("employee");
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [allRoles, setAllRoles] = useState<Role[]>([]);
 
-  const handleViewProfile = (user: User) => {
-    setSelectedUser(user);
-    setIsModalOpen(true);
-  };
-
-  const fetchAllUsers = async () => {
+  const fetchAllUsers = async (page = currentPage) => {
     try {
       const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        setError("No access token found. Please log in.");
-        return;
-      }
-
+      if (!accessToken)
+        throw new Error("No access token found. Please log in.");
       const response = await axios.get(
-        `http://localhost:3000/api/admin/users?page=${currentPage}&limit=${USERS_PER_PAGE}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
+        `http://localhost:3000/api/admin/users?page=${page}&limit=${USERS_PER_PAGE}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setUsers(response.data.users);
       setTotalPages(response.data.pagination.totalPages);
     } catch (error: any) {
       const errorMessage =
-        error.response?.data?.message || "Failed to fetch users.";
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch users.";
       setError(errorMessage);
       toast.error(errorMessage);
     } finally {
@@ -147,206 +117,160 @@ const UserManagementPage = () => {
     }
   };
 
+  const fetchAllRoles = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await axios.get(
+        `http://localhost:3000/api/admin/roles`,
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      setAllRoles(response.data.roles);
+    } catch (error) {
+      toast.error("Failed to fetch roles.");
+    }
+  };
+
   useEffect(() => {
-    fetchAllUsers();
+    fetchAllUsers(currentPage);
+    fetchAllRoles();
   }, [currentPage]);
 
   useEffect(() => {
     if (users.length > 0) {
       const total = users.length;
       const active = users.filter((u) => u.status === "Active").length;
-      const inactive = users.filter((u) => u.status !== "Active").length;
-
-      const allRoles = users.flatMap((user) =>
-        user.roles.map((role) => (typeof role === "string" ? role : role.name))
+      const inactive = total - active;
+      const uniqueRoles = new Set(
+        users.flatMap((u) => u.roles.map((r) => r.roleName))
       );
-      const uniqueRoles = new Set(allRoles.filter(Boolean));
-      const rolesCount = uniqueRoles.size;
-
-      setStats({ total, active, inactive, roles: rolesCount });
+      setStats({ total, active, inactive, roles: uniqueRoles.size });
     }
   }, [users]);
 
+  // --- Filtering and Sorting ---
   useEffect(() => {
     let result = [...users];
 
-    // filter by status
-    if (filters.status !== "all") {
-      result = result.filter((u) => u.status === filters.status);
-    }
-
-    // filter by userType
-    if (filters.userType !== "all") {
-      result = result.filter((u) => {
-        if (filters.userType === "Employee") return !!u.employeeId;
-        if (filters.userType === "Family") return !!u.associatedEmployeeId;
-        if (filters.userType === "Standard")
-          return !u.employeeId && !u.associatedEmployeeId;
-        return true;
-      });
-    }
-
-    // search filter
-    if (searchTerm.trim() !== "") {
+    // Search filter
+    if (searchTerm.trim()) {
       const lower = searchTerm.toLowerCase();
       result = result.filter(
         (u) =>
           u.fullName.toLowerCase().includes(lower) ||
-          u.email.toLowerCase().includes(lower)
+          u.email.toLowerCase().includes(lower) ||
+          u.username.toLowerCase().includes(lower)
       );
     }
 
-    // sorting
-    if (filters.sortBy) {
-      result = result.sort((a, b) => {
-        const fieldA = a[filters.sortBy as keyof User];
-        const fieldB = b[filters.sortBy as keyof User];
-
-        if (typeof fieldA === "string" && typeof fieldB === "string") {
-          return filters.sortOrder === "asc"
-            ? fieldA.localeCompare(fieldB)
-            : fieldB.localeCompare(fieldA);
-        }
-
-        if (typeof fieldA === "number" && typeof fieldB === "number") {
-          return filters.sortOrder === "asc"
-            ? fieldA - fieldB
-            : fieldB - fieldA;
-        }
-
-        return 0;
-      });
+    // Status filter
+    if (filters.status !== "all") {
+      result = result.filter((u) => u.status === filters.status);
     }
+
+    // Role filter
+    if (filters.role !== "all") {
+      result = result.filter((u) =>
+        u.roles.some((r) => r._id === filters.role)
+      );
+    }
+
+    // Sorting
+    result.sort((a, b) => {
+      const fieldA = a[filters.sortBy as keyof User] ?? "";
+      const fieldB = b[filters.sortBy as keyof User] ?? "";
+      if (typeof fieldA === "string" && typeof fieldB === "string") {
+        return filters.sortOrder === "asc"
+          ? fieldA.localeCompare(fieldB)
+          : fieldB.localeCompare(fieldA);
+      }
+      return 0;
+    });
 
     setFilteredUsers(result);
   }, [users, filters, searchTerm]);
 
-  const handleAddSubmit = async (formData: Record<string, any>) => {
-    const payload = {
-      fullName: formData.fullName,
-      email: formData.email,
-      userName: formData.username,
-      password: formData.password,
-      passwordResetRequired: formData.passwordResetRequired,
-      role: formData.role,
-      emp_id: formData.role === "employee" ? formData.Id : undefined,
-      ass_emp_id: formData.role === "family" ? formData.Id : undefined,
-    };
-
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      await axios.post("http://localhost:3000/api/admin/users", payload, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      toast.success("User created successfully!");
-      setIsAddUserModelOpen(false);
-      fetchAllUsers();
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to create user.");
-    }
-  };
-
-  const generateRandomPassword = () => {
-    const length = 12;
-    const charset =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()";
-    let retVal = "";
-    for (let i = 0, n = charset.length; i < length; ++i) {
-      retVal += charset.charAt(Math.floor(Math.random() * n));
-    }
-    return retVal;
-  };
-
-  const addUserFormFields = [
-    { type: "text" as const, name: "fullName", label: "Full Name" },
-    { type: "text" as const, name: "email", label: "Email" },
-    { type: "text" as const, name: "username", label: "Username" },
-    {
-      type: "text" as const,
-      name: "password",
-      label: "Password",
-      renderAdornment: (formData: any, setFormData: any) => (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            const newPassword = generateRandomPassword();
-            setFormData({ ...formData, password: newPassword });
-            toast.info("New password generated and copied to clipboard.");
-            navigator.clipboard.writeText(newPassword);
-          }}
-        >
-          <KeyRound className="h-4 w-4 mr-2" />
-          Generate
-        </Button>
-      ),
-    },
-    {
-      type: "checkbox" as const,
-      name: "passwordResetRequired",
-      label: "User must reset password on next login",
-    },
-    {
-      type: "select" as const,
-      name: "role",
-      label: "Role",
-      options: [
-        { value: "employee", label: "Employee" },
-        { value: "family", label: "Family Member" },
-      ],
-    },
-
-    ...(newUserRole === "employee"
-      ? [{ type: "text" as const, name: "Id", label: "Employee ID" }]
-      : []),
-    ...(newUserRole === "family"
-      ? [
-          {
-            type: "text" as const,
-            name: "Id",
-            label: "Associated Employee's User ID",
-          },
-        ]
-      : []),
-  ];
-
-  const handleEditOpen = (user: User) => {
+  // --- Action Handlers ---
+  const handleOpenFormModal = (
+    mode: "add" | "edit",
+    user: User | null = null
+  ) => {
+    setFormMode(mode);
     setSelectedUser(user);
-    setIsEditModalOpen(true);
+    setIsFormModalOpen(true);
   };
 
-//   const handleDeleteOpen = (user: User) => {
-//     setSelectedUser(user);
-//     setIsDeleteModalOpen(true);
-//   };
-
-//   const handleDeleteUser = async () => {
-//     if (!selectedUser) {
-//       toast.error("No user selected for deletion.");
-//       return;
-//     }
-//     try {
-//       const accessToken = localStorage.getItem("accessToken");
-//       if (!accessToken) {
-//         toast.error("No access token found");
-//         return;
-//       }
-//       await axios.delete(
-//         `http://localhost:3000/api/admin/users/${selectedUser._id}`,
-//         { headers: { Authorization: `Bearer ${accessToken}` } }
-//       );
-//     } catch (error) {
-//     } finally {
-//       setSelectedUser(null);
-//       setIsDeleteModalOpen(false);
-//     }
-//   };
-
-  const handleEditUser = async () => {
-    try {
-    } catch (error) {}
+  const handleOpenRolesModal = (user: User) => {
+    setSelectedUser(user);
+    setIsRolesModalOpen(true);
   };
+
+  const handleOpenDeleteModal = (user: User) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleOpenProfileModal = (user: User) => {
+    setSelectedUser(user);
+    setIsProfileModalOpen(true);
+  };
+
+  const handleToggleStatus = async (user: User) => {
+    const newStatus = user.status === "Active" ? "Inactive" : "Active";
+    console.log(newStatus);
+    toast.promise(
+      axios.put(
+        `http://localhost:3000/api/admin/users/${user._id}/status`,
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+          },
+        }
+      ),
+      {
+        loading: `Updating status to ${newStatus}...`,
+        success: () => {
+          fetchAllUsers(currentPage);
+          return `User status updated to ${newStatus}.`;
+        },
+        error: "Failed to update user status.",
+      }
+    );
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    const accessToken = localStorage.getItem("accessToken");
+    console.log(accessToken);
+    if (!accessToken) {
+      toast.error("No access token found. Please log in again.");
+      return;
+    }
+
+    toast.promise(
+      axios.delete(
+        `http://localhost:3000/api/admin/users/${selectedUser._id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      ),
+      {
+        loading: "Deleting user...",
+        success: () => {
+          setIsDeleteModalOpen(false);
+          setSelectedUser(null);
+          fetchAllUsers(currentPage);
+          return "User deleted successfully.";
+        },
+        error: (err) => err.response?.data?.message || "Failed to delete user.",
+      }
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -385,7 +309,7 @@ const UserManagementPage = () => {
                 </h3>
                 <p className="text-muted-foreground">{error}</p>
               </div>
-              <Button onClick={fetchAllUsers} variant="outline">
+              <Button onClick={() => {}} variant="outline">
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Try Again
               </Button>
@@ -406,18 +330,16 @@ const UserManagementPage = () => {
               User Management
             </h1>
             <p className="text-muted-foreground">
-              View, manage, and edit user accounts.
+              View, create, and manage all user accounts.
             </p>
           </div>
-          <div className="flex">
-            <Button size="sm" onClick={() => setIsAddUserModelOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add New User
-            </Button>
-          </div>
+          <Button size="sm" onClick={() => handleOpenFormModal("add")}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add New User
+          </Button>
         </div>
 
-        {/* Statistics */}
+        {/* Statistics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="p-6">
@@ -454,7 +376,7 @@ const UserManagementPage = () => {
               <div className="flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-sm font-medium text-muted-foreground">
-                    Inactive / Pending
+                    Inactive / Locked
                   </p>
                   <p className="text-2xl font-bold text-amber-600">
                     {stats.inactive}
@@ -481,25 +403,24 @@ const UserManagementPage = () => {
           </Card>
         </div>
 
+        {/* Filter & Search Section */}
         <Card>
           <CardContent className="p-6">
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* 🔍 Search */}
+              {/* Search */}
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name or email..."
+                    placeholder="Search by name, email, username..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
                   />
                 </div>
               </div>
-
               {/* Filters */}
               <div className="flex flex-wrap gap-2">
-                {/* Status Filter */}
                 <Select
                   value={filters.status}
                   onValueChange={(value) =>
@@ -510,79 +431,31 @@ const UserManagementPage = () => {
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="all">All Statuses</SelectItem>
                     <SelectItem value="Active">Active</SelectItem>
                     <SelectItem value="Inactive">Inactive</SelectItem>
                     <SelectItem value="Locked">Locked</SelectItem>
                   </SelectContent>
                 </Select>
-
-                {/* User Type Filter */}
                 <Select
-                  value={filters.userType}
+                  value={filters.role}
                   onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, userType: value }))
+                    setFilters((prev) => ({ ...prev, role: value }))
                   }
                 >
                   <SelectTrigger className="w-[160px]">
-                    <SelectValue placeholder="User Type" />
+                    <SelectValue placeholder="Role" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Types</SelectItem>
-                    <SelectItem value="Employee">Employee</SelectItem>
-                    <SelectItem value="Family">Family Member</SelectItem>
-                    <SelectItem value="Standard">Standard</SelectItem>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    {allRoles.map((role) => (
+                      <SelectItem key={role._id} value={role._id}>
+                        {role.roleName}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
-
-                {/* Sort By */}
-                <Select
-                  value={filters.sortBy}
-                  onValueChange={(value) =>
-                    setFilters((prev) => ({ ...prev, sortBy: value }))
-                  }
-                >
-                  <SelectTrigger className="w-[140px]">
-                    <SelectValue placeholder="Sort By" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fullName">Name</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="createdAt">Created At</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Sort Order */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      sortOrder: prev.sortOrder === "asc" ? "desc" : "asc",
-                    }))
-                  }
-                >
-                  <ArrowUpDown className="h-4 w-4 mr-2" />
-                  {filters.sortOrder === "asc" ? "A-Z" : "Z-A"}
-                </Button>
-
-                {/* Clear Filters */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() =>
-                    setFilters({
-                      status: "all",
-                      userType: "all",
-                      sortBy: "fullName",
-                      sortOrder: "asc",
-                    })
-                  }
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  Clear
-                </Button>
+                {/* More filters like Sort By, Sort Order, Clear can be added here */}
               </div>
             </div>
           </CardContent>
@@ -595,8 +468,8 @@ const UserManagementPage = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>User Type</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead>Roles</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -624,23 +497,35 @@ const UserManagementPage = () => {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {user.employeeId
-                          ? "Employee"
-                          : user.associatedEmployeeId
-                          ? "Family Member"
-                          : "Standard"}
-                      </Badge>
+                      <p className="text-sm text-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.phoneNumber || "No phone"}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.slice(0, 2).map((role) => (
+                          <Badge key={role._id} variant="secondary">
+                            {role.roleName}
+                          </Badge>
+                        ))}
+                        {user.roles.length > 2 && (
+                          <Badge variant="outline">
+                            +{user.roles.length - 2}
+                          </Badge>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant="outline"
+                        variant={
+                          user.status === "Active" ? "default" : "outline"
+                        }
                         className={
                           user.status === "Active"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : "bg-slate-50 text-slate-700 border-slate-200"
+                            ? "bg-emerald-500/20 text-emerald-700"
+                            : "text-slate-600"
                         }
                       >
                         {user.status}
@@ -655,57 +540,44 @@ const UserManagementPage = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem
-                            onClick={() => handleViewProfile(user)}
+                            onClick={() => handleOpenProfileModal(user)}
                           >
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            View Profile
+                            <UserIcon className="h-4 w-4 mr-2" /> View Profile
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={() => handleEditOpen(user)}
+                            onClick={() => handleOpenFormModal("edit", user)}
                           >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit User
+                            <Edit className="h-4 w-4 mr-2" /> Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenRolesModal(user)}
+                          >
+                            <ShieldCheck className="h-4 w-4 mr-2" /> View Roles
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            onClick={() => handleToggleStatus(user)}
+                          >
+                            {user.status === "Active" ? (
+                              <ToggleLeft className="h-4 w-4 mr-2" />
+                            ) : (
+                              <ToggleRight className="h-4 w-4 mr-2" />
+                            )}
+                            {user.status === "Active"
+                              ? "Deactivate"
+                              : "Activate"}
                           </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-destructive"
-                            onClick={() => {}}
+                            onClick={() => handleOpenDeleteModal(user)}
                           >
-                            <UserIcon className="h-4 w-4 mr-2" />
-                            Force Password Reset
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete User
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
-                {filteredUsers.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
-                      <div className="space-y-2">
-                        <Package className="h-12 w-12 text-muted-foreground mx-auto" />
-                        <p className="text-muted-foreground">
-                          No Users found matching your criteria
-                        </p>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setFilters({
-                              status: "all",
-                              userType: "all",
-                              sortBy: "fullName",
-                              sortOrder: "asc",
-                            });
-                            setSearchTerm("");
-                            setCurrentPage(1);
-                          }}
-                        >
-                          Clear Filters
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
           </CardContent>
@@ -745,48 +617,40 @@ const UserManagementPage = () => {
         </Pagination>
       </div>
 
-      {/* Render the modal */}
-      <UserDetailsModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        user={selectedUser}
-      />
-
-      {/* Add New user */}
-      {isAddUserModalOpen && (
-        <DialogModal
-          isOpen={isAddUserModalOpen}
-          onOpenChange={setIsAddUserModelOpen}
-          title="Add New User"
-          description="Fill in the details for the new user."
-          fields={addUserFormFields}
-          defaultValues={{
-            fullName: "",
-            email: "",
-            username: "",
-            password: "",
-            passwordResetRequired: true,
-            role: newUserRole,
-            Id: "",
-          }}
-          onSubmit={(formData) => {
-            if (formData.role !== newUserRole) {
-              setNewUserRole(formData.role);
-            }
-            handleAddSubmit(formData);
-          }}
+      {/* --- Modals --- */}
+      {isFormModalOpen && (
+        <UserFormModal
+          isOpen={isFormModalOpen}
+          onOpenChange={setIsFormModalOpen}
+          mode={formMode}
+          userData={selectedUser}
+          allRoles={allRoles}
+          onSuccess={() => fetchAllUsers(currentPage)}
         />
       )}
-
-      {/* Delete User */}
-      {/* {isDeleteModalOpen && selectedUser && (
+      {isRolesModalOpen && selectedUser && (
+        <UserRolesModal
+          isOpen={isRolesModalOpen}
+          onOpenChange={setIsRolesModalOpen}
+          user={selectedUser}
+          allRoles={allRoles}
+        />
+      )}
+      {isDeleteModalOpen && selectedUser && (
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}
           onOpenChange={setIsDeleteModalOpen}
           onConfirm={handleDeleteUser}
           itemName={selectedUser.fullName}
         />
-      )} */}
+      )}
+      {isProfileModalOpen && selectedUser && (
+        <UserProfileModal
+          isOpen={isProfileModalOpen}
+          onOpenChange={setIsProfileModalOpen}
+          user={selectedUser}
+        />
+      )}
     </div>
   );
 };

@@ -56,8 +56,6 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
           </div>
           {/* ... rest of navbar ... */}
           <div className="flex items-center space-x-4">
-            {/* (standard right-side buttons remain unchanged) */}
-            {/* ... */}
             <div className="flex items-center space-x-3">
               <div className="h-8 w-8 bg-gray-300 rounded-full"></div>
               <span className="text-sm font-medium text-gray-700">

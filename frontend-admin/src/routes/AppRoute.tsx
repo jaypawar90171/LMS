@@ -7,6 +7,7 @@ import Inventory from "../screens/Inventory";
 import Category from "@/screens/Category";
 import QueuePage from "@/screens/Queue";
 import UserManagementPage from "@/screens/UserManagement";
+import RolesManagementPage from "@/screens/Roles";
 
 const AppRoute = () => {
   return (
@@ -51,6 +52,14 @@ const AppRoute = () => {
           element={
             <Layout>
               <UserManagementPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/roles"
+          element={
+            <Layout>
+              <RolesManagementPage />
             </Layout>
           }
         />

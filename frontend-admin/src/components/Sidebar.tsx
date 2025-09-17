@@ -159,25 +159,25 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    name: "Help/Documentation",
-    path: "/help",
-    icon: (
-      <svg
-        className="h-6 w-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 11V8a4 4 0 018 0v3a4 4 0 01-8 0zm0 0v-3m0 3a4 4 0 004 4h4a4 4 0 004-4v-3m0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4zm0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4"
-        />
-      </svg>
-    ),
-  },
+  // {
+  //   name: "Help/Documentation",
+  //   path: "/help",
+  //   icon: (
+  //     <svg
+  //       className="h-6 w-6"
+  //       fill="none"
+  //       stroke="currentColor"
+  //       viewBox="0 0 24 24"
+  //     >
+  //       <path
+  //         strokeLinecap="round"
+  //         strokeLinejoin="round"
+  //         strokeWidth={2}
+  //         d="M8 11V8a4 4 0 018 0v3a4 4 0 01-8 0zm0 0v-3m0 3a4 4 0 004 4h4a4 4 0 004-4v-3m0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4zm0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4"
+  //       />
+  //     </svg>
+  //   ),
+  // },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {

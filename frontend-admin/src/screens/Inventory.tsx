@@ -344,6 +344,7 @@ const Inventory = () => {
 
   const handleSubmit = async (formData: Record<string, any>) => {
     if (!selectedItem) return;
+
     const categoryObject = categories.find(
       (cat) => cat._id === formData.categoryId
     );
@@ -666,7 +667,7 @@ const Inventory = () => {
             </div>
           </CardContent>
         </Card>
-        
+
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             Showing {filteredItems.length} of {inventoryItems.length} items
