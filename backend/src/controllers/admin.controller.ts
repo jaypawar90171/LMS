@@ -14,6 +14,7 @@ import {
   updateUserSchema,
 } from "../validations/auth.validation";
 import {
+  deleteFineService,
   deleteUserService,
   generateBarcodePDF,
   generateBarcodeString,
@@ -472,11 +473,15 @@ export const createInventoryItemsController = async (
   try {
     const validatedData = InventoryItemsSchema.parse(req.body);
     const file = req.file;
-    const dataWithFile = {
+
+    const barcode = await generateBarcodeString();
+
+    const dataToSave  = {
       ...validatedData,
       mediaUrl: file ? file.path : undefined,
+      barcode: barcode
     };
-    const newItem = await createInventoryItemsService(dataWithFile);
+    const newItem = await createInventoryItemsService(dataToSave );
 
     return res.status(201).json({
       message: "Inventory item created successfully",
@@ -485,7 +490,7 @@ export const createInventoryItemsController = async (
   } catch (error: any) {
     if (error.name === "ZodError") {
       return res.status(400).json({
-        message: "Validation error",
+        message: "Validation error in createInventoryItemsController",
         errors: error.errors,
       });
     }
@@ -824,6 +829,31 @@ export const updateFineController = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const deleteFinesController = async(req: Request, res: Response) => {
+  try {
+    const { fineId } = req.params;
+
+    if (!Types.ObjectId.isValid(fineId)) {
+      return res.status(400).json({ error: "Invalid fineId" });
+    }
+
+    const message = await deleteFineService(fineId);
+    return res.status(200).json({msg: message});
+  } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: "No such fine exists",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+
+  
+}
 
 export const getInventoryReportPDF = async (req: Request, res: Response) => {
   try {

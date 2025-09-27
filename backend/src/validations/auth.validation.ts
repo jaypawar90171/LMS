@@ -101,7 +101,7 @@ export const InventoryItemsSchema = z.object({
 
   categoryId: z.string().min(1, "CategoryId is required"),
   subcategoryId: z.string().optional(),
-  barcode: z.string().trim().min(1, "Barcode is required"),
+  barcode: z.string().trim().min(1, "Barcode is required").optional(),
   defaultReturnPeriod: z.coerce.number().int().optional(),
   mediaUrl: z.string().optional(),
   status: z

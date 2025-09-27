@@ -553,11 +553,13 @@ export const fetchInventoryIetmsService = async () => {
 
 export const createInventoryItemsService = async (data: any) => {
   const newItem = new InventoryItem(data);
+
   if (!newItem) {
     const err: any = new Error("No inventory items found");
     err.statusCode = 11000;
     throw err;
   }
+  
   return await newItem.save();
 };
 
@@ -684,7 +686,9 @@ export const deleteCategoryService = async (categoryId: string) => {
 };
 
 export const getAllFinesService = async () => {
-  const fines = await Fine.find();
+  const fines = await Fine.find()
+  .populate("userId", "username email")
+  .populate("itemId", "title");
 
   if (!fines || fines.length === 0) {
     const err: any = new Error("No fines found");
@@ -765,6 +769,20 @@ export const updateFineService = async ({ fineId, data }: any) => {
 
   return updatedFine;
 };
+
+export const deleteFineService = async(fineId: string) => {
+  const isExists = await Fine.findById(fineId);
+
+  if(!isExists)
+  {
+    const err: any = new Error("No such Fine Exits");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  await Fine.findByIdAndDelete(fineId);
+  return { message: "Fine deleted successfully" };
+}
 
 export const generateInventoryReportPDF = async (res: Response) => {
   // Fetch inventory items with populated category
