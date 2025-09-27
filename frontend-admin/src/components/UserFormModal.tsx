@@ -1,4 +1,3 @@
-// src/components/UserFormModal.tsx
 import React from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,7 +23,7 @@ import {
 } from "./ui/select";
 import { toast } from "sonner";
 import axios from "axios";
-import { User, Role } from "@/interfaces/user.interface"; // Adjust path as needed
+import { User, Role } from "@/interfaces/user.interface";
 
 interface UserFormModalProps {
   isOpen: boolean;

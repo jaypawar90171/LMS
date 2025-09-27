@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import ItemDetailsModal from "@/components/ItemDetailsModal";
+import { ItemFormModal } from "@/components/ItemFormModal";
 
 import {
   Select,
@@ -842,58 +843,14 @@ const Inventory = () => {
         />
       )}
 
-      {isEditModalOpen && selectedItem && (
-        <DialogModal
-          isOpen={isEditModalOpen}
-          onOpenChange={setIsEditModalOpen}
-          title="Edit Item"
-          description={`Editing item: ${selectedItem.title}`}
-          fields={[
-            { type: "text", name: "title", label: "Title" },
-            { type: "text", name: "authorOrCreator", label: "Author/Creator" },
-            {
-              type: "select",
-              name: "categoryId",
-              label: "Category",
-              options: [
-                { value: "Tools", label: "Tools" },
-                { value: "Books", label: "Books" },
-                { value: "Electronics", label: "Electronics" },
-                { value: "Furniture", label: "Furniture" },
-                { value: "Sports Equipment", label: "Sports Equipment" },
-                { value: "Kitchen Accessories", label: "Kitchen Accessories" },
-                { value: "Clothes", label: "Clothes" },
-              ],
-            },
-            { type: "text", name: "quantity", label: "Total Copies" },
-            {
-              type: "text",
-              name: "availableCopies",
-              label: "Available Copies",
-            },
-            {
-              type: "select",
-              name: "status",
-              label: "Status",
-              options: [
-                { value: "Available", label: "Available" },
-                { value: "Issued", label: "Issued" },
-                { value: "Damaged", label: "Damaged" },
-                { value: "Lost", label: "Lost" },
-              ],
-            },
-          ]}
-          defaultValues={{
-            title: selectedItem.title,
-            authorOrCreator: selectedItem.authorOrCreator,
-            categoryId: selectedItem.categoryId._id,
-            quantity: selectedItem.quantity,
-            availableCopies: selectedItem.availableCopies,
-            status: selectedItem.status,
-          }}
-          onSubmit={handleSubmit}
-        />
-      )}
+      <ItemFormModal
+        isOpen={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        mode="edit"
+        itemData={selectedItem}
+        categories={categories}
+        onSuccess={fetchInventoryItems}
+      />
 
       {isDeleteModalOpen && selectedItem && (
         <DeleteConfirmationModal
@@ -904,79 +861,14 @@ const Inventory = () => {
         />
       )}
 
-      {isAddItemModalOpen && (
-        <DialogModal
-          isOpen={isAddItemModalOpen}
-          onOpenChange={setIsAddItemModalOpen}
-          title="Add New Item"
-          description="Fill in the details for the new inventory item."
-          fields={[
-            { type: "text", name: "title", label: "Title" },
-            { type: "text", name: "authorOrCreator", label: "Author/Creator" },
-            { type: "text", name: "description", label: "Description" },
-            { type: "text", name: "isbnOrIdentifier", label: "ISBN" },
-            {
-              type: "text",
-              name: "publisherOrManufacturer",
-              label: "Publisher/Manufacturer",
-            },
-            {
-              type: "text",
-              name: "publicationYear",
-              label: "Publication Year",
-            },
-            { type: "text", name: "price", label: "Price" },
-            {
-              type: "text",
-              name: "defaultReturnPeriod",
-              label: "Default Return Period",
-            },
-            {
-              type: "select",
-              name: "categoryId",
-              label: "Category",
-              options: categories.map((cat) => ({
-                value: cat._id,
-                label: cat.name,
-              })),
-            },
-            { type: "text", name: "quantity", label: "Total Copies" },
-            {
-              type: "text",
-              name: "availableCopies",
-              label: "Available Copies",
-            },
-            {
-              type: "select",
-              name: "status",
-              label: "Status",
-              options: [
-                { value: "Available", label: "Available" },
-                { value: "Issued", label: "Issued" },
-                { value: "Damaged", label: "Damaged" },
-                { value: "Lost", label: "Lost" },
-              ],
-            },
-            { type: "file", name: "mediaUrl", label: "Image" },
-          ]}
-          defaultValues={{
-            title: "",
-            authorOrCreator: "",
-            description: "",
-            isbnOrIdentifier: "",
-            publisherOrManufacturer: "",
-            publicationYear: "",
-            price: "",
-            defaultReturnPeriod: "",
-            categoryId: "",
-            quantity: 1,
-            availableCopies: 1,
-            status: "Available",
-            mediaUrl: null,
-          }}
-          onSubmit={handleAddSubmit}
-        />
-      )}
+      <ItemFormModal
+        isOpen={isAddItemModalOpen}
+        onOpenChange={setIsAddItemModalOpen}
+        mode="add"
+        itemData={null}
+        categories={categories}
+        onSuccess={fetchInventoryItems}
+      />
     </div>
   );
 };

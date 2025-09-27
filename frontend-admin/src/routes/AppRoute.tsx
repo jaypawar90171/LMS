@@ -8,6 +8,7 @@ import Category from "@/screens/Category";
 import QueuePage from "@/screens/Queue";
 import UserManagementPage from "@/screens/UserManagement";
 import RolesManagementPage from "@/screens/Roles";
+import FinesManagement from "@/screens/Fines";
 
 const AppRoute = () => {
   return (
@@ -60,6 +61,14 @@ const AppRoute = () => {
           element={
             <Layout>
               <RolesManagementPage />
+            </Layout>
+          }
+        />
+        <Route
+          path="/fines"
+          element={
+            <Layout>
+              <FinesManagement />
             </Layout>
           }
         />
