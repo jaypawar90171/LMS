@@ -7,25 +7,28 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Cookies from "js-cookie";
 import { Link } from "../components/Link";
+import { useAtom } from "jotai";
+import { userAtom } from "@/state/userAtom";
+import { User } from "@/interfaces/user.interface";
 
 const LoginPage: React.FC = () => {
+  const [, setUser] = useAtom(userAtom);
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [rememberMe, setRememberMe] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(false); // State for loading
-  const [error, setError] = useState<string>(""); // State for error messages
-  const [successMessage, setSuccessMessage] = useState<string>(""); // State for success messages
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
 
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    setError(""); // Clear previous errors
-    setSuccessMessage(""); // Clear previous success messages
-    setLoading(true); // Start loading
+    setError("");
+    setSuccessMessage("");
+    setLoading(true);
 
-    // Basic validation
     if (!email || !password) {
       setError("Please enter both email and password.");
       setLoading(false);
@@ -42,19 +45,21 @@ const LoginPage: React.FC = () => {
         }
       );
 
+      const userData: User = result.data.user;
+      console.log(userData);
+      setUser(userData);
+
       const {
         accessToken,
         refreshToken,
         rememberMe: rememberMeResponse,
       } = result.data;
 
-      // Store the access token in localStorage
       localStorage.setItem("accessToken", accessToken);
 
-      // Set the refresh token in cookies
       if (rememberMeResponse) {
         Cookies.set("refreshToken", refreshToken, {
-          expires: 30, // Expires in 30 days
+          expires: 30,
           secure: true,
           sameSite: "strict",
         });
@@ -68,7 +73,7 @@ const LoginPage: React.FC = () => {
       setSuccessMessage("Login successful! Redirecting...");
       setTimeout(() => {
         navigate("/");
-      }, 1000); // Redirect to homepage after 1 second
+      }, 1000);
     } catch (err: any) {
       const errorMessage =
         err.response?.data?.message ||
@@ -76,7 +81,7 @@ const LoginPage: React.FC = () => {
       setError(errorMessage);
       console.error("Login failed:", err);
     } finally {
-      setLoading(false); // Stop loading
+      setLoading(false);
     }
   };
 

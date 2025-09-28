@@ -1,6 +1,14 @@
-// src/components/Sidebar.tsx
+import { userAtom } from "@/state/userAtom";
+import { useAtom } from "jotai";
 import React from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { ChevronDown } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -65,8 +73,8 @@ const navItems = [
     ),
   },
   {
-    name: "Borrowing/Returns",
-    path: "/borrow",
+    name: "Roles & Permissions",
+    path: "/roles",
     icon: (
       <svg
         className="h-6 w-6"
@@ -78,7 +86,7 @@ const navItems = [
           strokeLinecap="round"
           strokeLinejoin="round"
           strokeWidth={2}
-          d="M8 4H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-4m-6 2l-3 3m0 0l3 3m-3-3h12"
+          d="M12 11c0-1.104-.896-2-2-2s-2 .896-2 2m0 0c0 1.104.896 2 2 2s2-.896 2-2zM12 11V3m0 0l2 2m-2-2l-2 2m-6 6h12a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v5a2 2 0 002 2h6"
         />
       </svg>
     ),
@@ -104,7 +112,6 @@ const navItems = [
   },
   {
     name: "Reports & Analytics",
-    path: "/reports",
     icon: (
       <svg
         className="h-6 w-6"
@@ -117,6 +124,30 @@ const navItems = [
           strokeLinejoin="round"
           strokeWidth={2}
           d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+        />
+      </svg>
+    ),
+    subItems: [
+      { name: "Inventory Report", path: "/reports/inventory" },
+      { name: "Fine Report", path: "/reports/fines" },
+      { name: "Issued Items Report", path: "/reports/issued-items" },
+    ],
+  },
+  {
+    name: "Donations",
+    path: "/donation",
+    icon: (
+      <svg
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 4H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-4m-6 2l-3 3m0 0l3 3m-3-3h12"
         />
       </svg>
     ),
@@ -139,50 +170,27 @@ const navItems = [
         />
       </svg>
     ),
+    subItems: [
+      { name: "Notification Settings", path: "/settings/notification" },
+      { name: "System Restrictions", path: "/settings/restrictions" },
+      { name: "Profile Settings", path: "/settings/profile" },
+    ],
   },
-  {
-    name: "Roles & Permissions",
-    path: "/roles",
-    icon: (
-      <svg
-        className="h-6 w-6"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 11c0-1.104-.896-2-2-2s-2 .896-2 2m0 0c0 1.104.896 2 2 2s2-.896 2-2zM12 11V3m0 0l2 2m-2-2l-2 2m-6 6h12a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v5a2 2 0 002 2h6"
-        />
-      </svg>
-    ),
-  },
-  // {
-  //   name: "Help/Documentation",
-  //   path: "/help",
-  //   icon: (
-  //     <svg
-  //       className="h-6 w-6"
-  //       fill="none"
-  //       stroke="currentColor"
-  //       viewBox="0 0 24 24"
-  //     >
-  //       <path
-  //         strokeLinecap="round"
-  //         strokeLinejoin="round"
-  //         strokeWidth={2}
-  //         d="M8 11V8a4 4 0 018 0v3a4 4 0 01-8 0zm0 0v-3m0 3a4 4 0 004 4h4a4 4 0 004-4v-3m0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4zm0 0a4 4 0 00-4-4h-4a4 4 0 00-4 4"
-  //       />
-  //     </svg>
-  //   ),
-  // },
 ];
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
+  const [, setUser] = useAtom(userAtom);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      setUser(null);
+      localStorage.removeItem("accessToken");
+      navigate("/login");
+    }
+  };
+
   return (
-    // Sidebar appears and transitions between open/closed
     <aside
       className={`fixed top-0 left-0 h-screen w-64 bg-white z-50 transform transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
@@ -193,29 +201,66 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
           Library Management System
         </h2>
         <nav>
-          <ul className="space-y-2">
-            {navItems.map((item, index) => (
-              <li key={index}>
-                <NavLink
-                  to={item.path}
-                  className={({ isActive }) =>
-                    `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
-                      isActive
-                        ? "bg-blue-100 text-blue-700 font-semibold"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`
-                  }
-                >
-                  <span className="mr-3">{item.icon}</span>
-                  <span>{item.name}</span>
-                </NavLink>
+          <ul className="space-y-1">
+            {navItems.map((item) => (
+              <li key={item.name}>
+                {item.subItems ? (
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value={item.name} className="border-b-0">
+                      <AccordionTrigger className="flex items-center w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 hover:no-underline transition-colors duration-200">
+                        <div className="flex items-center">
+                          <span className="mr-3">{item.icon}</span>
+                          <span>{item.name}</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent className="pt-2">
+                        <ul className="space-y-1">
+                          {item.subItems.map((subItem) => (
+                            <li key={subItem.name}>
+                              <NavLink
+                                to={subItem.path}
+                                className={({ isActive }) =>
+                                  `flex items-center w-full rounded-lg transition-colors duration-200 text-sm pl-12 pr-4 py-2 ${
+                                    isActive
+                                      ? "bg-blue-100 text-blue-700 font-semibold"
+                                      : "text-gray-600 hover:bg-gray-100"
+                                  }`
+                                }
+                              >
+                                {subItem.name}
+                              </NavLink>
+                            </li>
+                          ))}
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                ) : (
+                  <NavLink
+                    to={item.path!}
+                    className={({ isActive }) =>
+                      `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
+                        isActive
+                          ? "bg-blue-100 text-blue-700 font-semibold"
+                          : "text-gray-600 hover:bg-gray-100"
+                      }`
+                    }
+                  >
+                    <span className="mr-3">{item.icon}</span>
+                    <span>{item.name}</span>
+                  </NavLink>
+                )}
               </li>
             ))}
           </ul>
         </nav>
       </div>
+
       <div className="mt-auto pt-6 border-t border-gray-200">
-        <button className="flex items-center w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200">
+        <button
+          onClick={handleLogout}
+          className="flex items-center w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200"
+        >
           <svg
             className="h-6 w-6 mr-3"
             fill="none"

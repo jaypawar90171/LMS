@@ -9,69 +9,129 @@ import QueuePage from "@/screens/Queue";
 import UserManagementPage from "@/screens/UserManagement";
 import RolesManagementPage from "@/screens/Roles";
 import FinesManagement from "@/screens/Fines";
+import ProtectedRoute from "./ProtectedRoute";
+import IssuedItemsReportPage from "@/screens/IssuedItemsReport";
+import InventoryReportPage from "@/screens/InventoryReportPage";
+import FinesReportPage from "@/screens/FinesReportPage";
+import NotificationSettings from "@/screens/NotificationSettings";
+import SystemRestrictions from "@/screens/SystemRestrictions";
 
 const AppRoute = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route
-          path="/"
-          element={
-            <Layout>
-              <DashboardPage />
-            </Layout>
-          }
-        />
+        {/* Public Routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route
-          path="/inventory"
-          element={
-            <Layout>
-              <Inventory />
-            </Layout>
-          }
-        />
-        <Route
-          path="/categories"
-          element={
-            <Layout>
-              <Category />
-            </Layout>
-          }
-        />
-        <Route
-          path="/queues"
-          element={
-            <Layout>
-              <QueuePage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/users"
-          element={
-            <Layout>
-              <UserManagementPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/roles"
-          element={
-            <Layout>
-              <RolesManagementPage />
-            </Layout>
-          }
-        />
-        <Route
-          path="/fines"
-          element={
-            <Layout>
-              <FinesManagement />
-            </Layout>
-          }
-        />
+
+        {/* Protected Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route
+            path="/"
+            element={
+              <Layout>
+                <DashboardPage />
+              </Layout>
+            }
+          />
+
+          <Route
+            path="/inventory"
+            element={
+              <Layout>
+                <Inventory />
+              </Layout>
+            }
+          />
+          <Route
+            path="/categories"
+            element={
+              <Layout>
+                <Category />
+              </Layout>
+            }
+          />
+          <Route
+            path="/queues"
+            element={
+              <Layout>
+                <QueuePage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/users"
+            element={
+              <Layout>
+                <UserManagementPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/roles"
+            element={
+              <Layout>
+                <RolesManagementPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/fines"
+            element={
+              <Layout>
+                <FinesManagement />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports/issued-items"
+            element={
+              <Layout>
+                <IssuedItemsReportPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports/inventory"
+            element={
+              <Layout>
+                <InventoryReportPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports/fines"
+            element={
+              <Layout>
+                <FinesReportPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/settings/notification"
+            element={
+              <Layout>
+                <NotificationSettings />
+              </Layout>
+            }
+          />
+          <Route
+            path="/settings/restrictions"
+            element={
+              <Layout>
+                <SystemRestrictions />
+              </Layout>
+            }
+          />
+          <Route
+            path="/settings/profile"
+            element={
+              <Layout>
+                <FinesReportPage />
+              </Layout>
+            }
+          />
+        </Route>
       </Routes>
     </BrowserRouter>
   );
