@@ -75,6 +75,7 @@ export const loginService = async (data: loginDTOWithRemember) => {
     user: {
       id: user._id,
       email: user.email,
+      fullName: user.fullName
     },
     accessToken,
     refreshToken,

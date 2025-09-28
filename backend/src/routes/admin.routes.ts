@@ -308,56 +308,56 @@ router.get(
 router.get(
   "/settings/system-restrictions",
   authUser,
-  authorize(["admin:manageItems"]),
+  // authorize(["admin:manageItems"]),
   getSystemRestrictionsController
 );
 
 router.put(
   "/settings/system-restrictions",
   authUser,
-  authorize(["admin:manageItems"]),
+  // authorize(["admin:manageItems"]),
   updateSystemRestrictionsController
 );
 
 router.get(
   "/settings/notification-templates",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   getNotificationTemplatesController
 );
 
 router.put(
   "/settings/notification-templates/:templateKey",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   updateNotificationTemplateController
 );
 
 router.get(
   "/settings/profile/:userId",
   authUser,
-  authorize(["admin:viewAllUsers"]),
+  // authorize(["admin:viewAllUsers"]),
   getAdminProfileController
 );
 
 router.put(
   "/settings/profile/:userId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   updateAdminController
 );
 
 router.put(
   "/settings/profile/password-reset/:userId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   resetPasswordAdminController
 );
 
 router.put(
   "/settings/profile/password/:userId",
   authUser,
-  authorize(["admin:manageUsers"]),
+  // authorize(["admin:manageUsers"]),
   updateAdminPasswordController
 );
 
