@@ -135,7 +135,7 @@ const navItems = [
   },
   {
     name: "Donations",
-    path: "/donation",
+    path: "/donations",
     icon: (
       <svg
         className="h-6 w-6"

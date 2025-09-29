@@ -26,10 +26,8 @@ import {
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
 
-// Register Chart.js components
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-// Interfaces for Fines Data
 interface FineDetails {
   user: string;
   item: string;
@@ -43,7 +41,6 @@ interface FineSummary {
   outstandingFines: number | null;
 }
 
-// Visuals Component for this specific report
 const FinesReportVisuals: FC<{ data: FineDetails[] }> = ({ data }) => {
   const statusData = useMemo(() => {
     const paid = data.filter((d) => d.status === "Paid").length;
@@ -74,7 +71,6 @@ const FinesReportVisuals: FC<{ data: FineDetails[] }> = ({ data }) => {
   );
 };
 
-// Main Page Component
 const FinesReportPage = () => {
   const [details, setDetails] = useState<FineDetails[]>([]);
   const [summary, setSummary] = useState<FineSummary | null>(null);

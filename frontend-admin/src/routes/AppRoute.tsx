@@ -15,6 +15,8 @@ import InventoryReportPage from "@/screens/InventoryReportPage";
 import FinesReportPage from "@/screens/FinesReportPage";
 import NotificationSettings from "@/screens/NotificationSettings";
 import SystemRestrictions from "@/screens/SystemRestrictions";
+import Profile from "@/screens/Profile";
+import DonationManagement from "@/screens/Donations";
 
 const AppRoute = () => {
   return (
@@ -127,7 +129,15 @@ const AppRoute = () => {
             path="/settings/profile"
             element={
               <Layout>
-                <FinesReportPage />
+                <Profile />
+              </Layout>
+            }
+          />
+          <Route
+            path="/donations"
+            element={
+              <Layout>
+                <DonationManagement />
               </Layout>
             }
           />

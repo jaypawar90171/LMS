@@ -44,9 +44,12 @@ const LoginPage: React.FC = () => {
           rememberMe,
         }
       );
-
-      const userData: User = result.data.user;
-      console.log(userData);
+      const { id, ...restOfUserData } = result.data.user;
+      const userData: User = {
+        _id: id,
+        ...restOfUserData,
+      };
+      console.log("Corrected User Data:", userData);
       setUser(userData);
 
       const {
