@@ -25,6 +25,7 @@ import IssuedItem from "../models/issuedItem.model";
 import nodemailer from "nodemailer";
 import { PopulatedDoc, Document } from "mongoose";
 import { Icategory } from "../interfaces/category.interface";
+import { sendWhatsAppMessage } from "../config/whatsapp";
 
 interface loginDTO {
   email: string;
@@ -158,6 +159,10 @@ export const forgotPasswordService = async (email: any) => {
   }
 
   const link = `http://localhost:3000/api/admin/auth/reset-password/${oldUser._id}/${token}`;
+  if (oldUser.phoneNumber) {
+    const message = `Hi ${oldUser.fullName}, you requested a password reset. Use this link (valid for 1 hour): ${link}`;
+    sendWhatsAppMessage(oldUser.phoneNumber, message);
+  }
   return link;
 };
 
@@ -238,6 +243,11 @@ export const updateUserStatusService = async (userId: any, status: string) => {
     throw err;
   }
 
+  if (updatedUser.phoneNumber && status === "Active") {
+    const message = `Hi ${updatedUser.fullName}, your account has been activated! You can now log in.`;
+    sendWhatsAppMessage(updatedUser.phoneNumber, message);
+  }
+
   return updatedUser;
 };
 
@@ -267,25 +277,26 @@ export const getDashboardSummaryService = async () => {
   ]);
 
   const recentActivity = recentActivityData.map((activity) => ({
-    user: activity.actor.name,
+    user: activity.actor?.name || "Unknown User",
     action: activity.actionType,
-    item: activity.target.name,
-    date: activity.createdAt!.toISOString().split("T")[0],
+    item: activity.target?.name || "Unknown Item",
+    date: activity.createdAt?.toISOString().split("T")[0] || "N/A",
   }));
 
   const recentOrders = (
     recentOrdersData as unknown as Array<{
-      userId: { fullName: string };
-      itemId: { title: string };
+      userId: { fullName: string } | null;
+      itemId: { title: string } | null;
       status: string;
       issuedDate: Date;
     }>
   ).map((order) => ({
-    // Access the properties through the populated objects
-    user: order.userId.fullName,
-    item: order.itemId.title,
+    user: order.userId ? order.userId.fullName : "Unknown User",
+    item: order.itemId ? order.itemId.title : "Unknown Item",
     status: order.status,
-    issuedDate: order.issuedDate!.toISOString().split("T")[0],
+    issuedDate: order.issuedDate
+      ? order.issuedDate.toISOString().split("T")[0]
+      : "N/A",
   }));
 
   return {
@@ -413,7 +424,6 @@ export const deleteUserService = async (userId: string) => {
     throw err;
   }
 
-  // Optional: Add logic here to prevent deletion of certain users, e.g., the last super admin.
 
   await User.findByIdAndDelete(userId);
   return { message: "User deleted successfully." };
@@ -541,15 +551,26 @@ export const deleteRoleService = async (roleId: string) => {
   };
 };
 
-export const fetchInventoryIetmsService = async () => {
-  const items = await InventoryItem.find().populate("categoryId", "name");
+export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
 
-  if (items.length === 0) {
+  const totalItems = await InventoryItem.countDocuments({});
+
+  // If there are no items at all in the collection → throw 404
+  if (totalItems === 0) {
     const err: any = new Error("No inventory items found");
     err.statusCode = 404;
     throw err;
   }
-  return items;
+
+  const items = await InventoryItem.find()
+    .populate("categoryId", "name")
+    .sort({ createdAt: -1 }) // ensure stable ordering
+    .limit(limit)
+    .skip(skip);
+
+  // For later pages beyond available results → just return empty array
+  return { items, totalItems };
 };
 
 export const createInventoryItemsService = async (data: any) => {
@@ -741,7 +762,11 @@ export const createFineService = async (data: any) => {
     managedByAdminId,
     dateSettled: outstandingAmount === 0 ? new Date() : null,
   });
-
+  const user = await User.findById(data.userId).lean();
+  if (user && user.phoneNumber) {
+    const message = `Hi ${user.fullName}, a new fine of $${data.amountIncurred} for "${data.reason}" has been added to your account.`;
+    sendWhatsAppMessage(user.phoneNumber, message);
+  }
   return fine;
 };
 
@@ -1192,12 +1217,8 @@ export const getAllDonationService = async () => {
   const donations = await Donation.find()
     .populate({ path: "userId", select: "fullName email" })
     .populate({ path: "itemType", select: "name description" });
-  if (!donations || donations.length === 0) {
-    const err: any = new Error("donations not available");
-    err.statusCode = 404;
-    throw err;
-  }
-  return donations;
+  
+  return donations || "";
 };
 
 export const updateDonationStatusService = async (

@@ -51,7 +51,6 @@ import { fetchRolesService } from "../services/admin.service";
 import { createRoleService } from "../services/admin.service";
 import { updateRoleService } from "../services/admin.service";
 import { deleteRoleService } from "../services/admin.service";
-import { fetchInventoryIetmsService } from "../services/admin.service";
 import { createInventoryItemsService } from "../services/admin.service";
 import { fetchSpecificItemServive } from "../services/admin.service";
 import { updateItemService } from "../services/admin.service";
@@ -65,6 +64,9 @@ import { createFineService } from "../services/admin.service";
 import { fetchUserFinesService } from "../services/admin.service";
 import { generateInventoryReportPDF } from "../services/admin.service";
 import { generateFinesReportPDF } from "../services/admin.service";
+import { fetchInventoryItemsService } from "../services/admin.service";
+import { uploadFile } from "../config/upload";
+import fs from 'fs'
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -454,18 +456,28 @@ export const fetchInventoryItemsController = async (
   req: Request,
   res: Response
 ) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+
   try {
-    const inventoryItems = await fetchInventoryIetmsService();
-    return res.status(200).json({ inventoryItems: inventoryItems });
+    const { items, totalItems } = await fetchInventoryItemsService(page, limit);
+
+    return res.status(200).json({
+      inventoryItems: items,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+      },
+    });
   } catch (error: any) {
-    console.log("Error in updating role");
+    console.error("Error in fetching inventory items:", error);
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",
     });
   }
 };
-
 export const createInventoryItemsController = async (
   req: Request,
   res: Response
@@ -473,12 +485,24 @@ export const createInventoryItemsController = async (
   try {
     const validatedData = InventoryItemsSchema.parse(req.body);
     const file = req.file;
+    let mediaUrl;
+
+    if(file)
+    {
+      const result = await uploadFile(file.path);
+
+      if (result) {
+        mediaUrl = result.secure_url; 
+      }
+
+      fs.unlinkSync(file.path);
+    }
 
     const barcode = await generateBarcodeString();
 
     const dataToSave  = {
       ...validatedData,
-      mediaUrl: file ? file.path : undefined,
+      mediaUrl: mediaUrl,
       barcode: barcode
     };
     const newItem = await createInventoryItemsService(dataToSave );
@@ -1092,16 +1116,20 @@ export const updateAdminController = async (req: Request, res: Response) => {
     if (!Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
     }
+    const updateData = { ...req.body };
 
-    if ("password" in req.body) {
-      return res
-        .status(400)
-        .json({ message: "password cannot be chnaged from here" });
+    if (req.file) {
+      const result = await uploadFile(req.file.path);
+
+      if (result) {
+        updateData.profile = result.secure_url;
+      }
+      fs.unlinkSync(req.file.path);
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { $set: req.body },
+      { $set: updateData },
       { new: true, runValidators: true }
     );
 
@@ -1109,9 +1137,12 @@ export const updateAdminController = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const userObj = updatedUser.toObject();
-    res.status(200).json(userObj);
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser.toObject()
+    });
   } catch (error: any) {
+    console.log(error.message);
     console.log("Error in updating user");
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
@@ -1185,9 +1216,6 @@ export const updateAdminPasswordController = async (
     }
 
     const validatedData = updateUserSchema.parse(req.body);
-    if (!validatedData) {
-      return res.status(400).json({ message: "new password is required" });
-    }
 
     const user = await updateAdminPasswordServive({
       userId,

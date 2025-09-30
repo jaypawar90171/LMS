@@ -56,6 +56,7 @@ import {
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
+import { upload } from "../config/upload";
 const router = Router();
 
 /* ========================= AUTH ========================= */
@@ -168,7 +169,8 @@ router.get(
   fetchInventoryItemsController
 );
 
-const upload = multer({ dest: "uploads/" });
+
+
 router.post(
   "/inventory/items",
   authUser,
@@ -335,7 +337,7 @@ router.put(
 
 router.get(
   "/settings/profile/:userId",
-  authUser,
+  // authUser,
   // authorize(["admin:viewAllUsers"]),
   getAdminProfileController
 );
@@ -344,6 +346,7 @@ router.put(
   "/settings/profile/:userId",
   authUser,
   // authorize(["admin:manageUsers"]),
+  upload.single('profile'),
   updateAdminController
 );
 

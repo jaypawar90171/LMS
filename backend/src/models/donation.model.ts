@@ -25,6 +25,9 @@ const donationSchema = new Schema<IDonation>(
     photos: {
       type: String,
     },
+    duration :{
+      type: Number
+    },
     preferredContactMethod: {
       type: String,
       enum: ["Email", "whatsApp"],

@@ -6,6 +6,7 @@ export interface IDonation extends Document {
   title: string;
   description?: string;
   photos?: string[];
+  duration: number;
   preferredContactMethod: "Email" | "whatsApp";
   status: "Pending" | "Accepted" | "Rejected";
 }
