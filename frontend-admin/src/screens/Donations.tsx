@@ -135,7 +135,7 @@ export default function DonationManagement() {
       .filter((donation) => {
         const search = searchTerm.toLowerCase();
         return (
-          donation.userId.fullName.toLowerCase().includes(search) ||
+          donation.userId?.fullName?.toLowerCase().includes(search) ||
           donation.title.toLowerCase().includes(search) ||
           donation.userId.email.toLowerCase().includes(search)
         );
@@ -356,10 +356,10 @@ export default function DonationManagement() {
                     <TableRow key={donation._id}>
                       <TableCell>
                         <div className="font-medium">
-                          {donation.userId.fullName}
+                          {donation?.userId?.fullName}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {donation.userId.email}
+                          {donation?.userId?.email}
                         </div>
                       </TableCell>
                       <TableCell>{donation.title}</TableCell>

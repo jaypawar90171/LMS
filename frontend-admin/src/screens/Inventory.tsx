@@ -52,6 +52,13 @@ import axios from "axios";
 import { DialogModal } from "@/components/Dialog";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
 import { useNavigate } from "react-router-dom";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface InventoryItem {
   _id: string;
@@ -131,9 +138,13 @@ const Inventory = () => {
   const [modalError, setModalError] = useState<string | null>(null);
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false);
 
-  const Navigate = useNavigate();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const fetchInventoryItems = async () => {
+  const Navigate = useNavigate();
+  const USERS_PER_PAGE = 10;
+
+  const fetchInventoryItems = async (page: number) => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
@@ -143,17 +154,22 @@ const Inventory = () => {
         return;
       }
       const [inventoryResponse, categoriesResponse] = await Promise.all([
-        axios.get("http://localhost:3000/api/admin/inventory/items", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }),
+        axios.get(
+          `http://localhost:3000/api/admin/inventory/items?page=${page}&limit=${USERS_PER_PAGE}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        ),
         axios.get("http://localhost:3000/api/admin/inventory/categories", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
         }),
       ]);
+
+      setTotalPages(inventoryResponse.data.pagination.totalPages);
 
       const items = Array.isArray(inventoryResponse.data.inventoryItems)
         ? inventoryResponse.data.inventoryItems
@@ -188,8 +204,8 @@ const Inventory = () => {
   };
 
   useEffect(() => {
-    fetchInventoryItems();
-  }, []);
+    fetchInventoryItems(currentPage);
+  }, [currentPage]);
 
   useEffect(() => {
     let filtered = [...inventoryItems];
@@ -332,7 +348,7 @@ const Inventory = () => {
       );
 
       toast.success(`${selectedItem.title} has been deleted.`);
-      fetchInventoryItems();
+      fetchInventoryItems(currentPage);
     } catch (error: any) {
       toast.error(
         error.response?.data?.message || "Failed to delete the item."
@@ -379,7 +395,7 @@ const Inventory = () => {
       );
 
       toast.success("Item has been updated");
-      fetchInventoryItems();
+      fetchInventoryItems(currentPage);
     } catch (error: any) {
       console.error("Error in updating the item:", error);
       toast.error(error.response?.data?.message || "Failed to update item.");
@@ -435,7 +451,7 @@ const Inventory = () => {
       );
 
       toast.success("New item added successfully.");
-      fetchInventoryItems();
+      fetchInventoryItems(currentPage);
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to add new item.");
     } finally {
@@ -831,6 +847,39 @@ const Inventory = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 py-2 text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       {isDetailsModalOpen && selectedItem && (
@@ -849,7 +898,9 @@ const Inventory = () => {
         mode="edit"
         itemData={selectedItem}
         categories={categories}
-        onSuccess={fetchInventoryItems}
+        onSuccess={() => {
+          fetchInventoryItems(currentPage);
+        }}
       />
 
       {isDeleteModalOpen && selectedItem && (
@@ -867,7 +918,9 @@ const Inventory = () => {
         mode="add"
         itemData={null}
         categories={categories}
-        onSuccess={fetchInventoryItems}
+        onSuccess={() => {
+          fetchInventoryItems(currentPage);
+        }}
       />
     </div>
   );

@@ -5,6 +5,16 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import TopBorrowedItems from "../components/TopBorrowedItems";
 import ActiveUsersDistribution from "../components/ActiveUsersDistribution";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -210,7 +220,6 @@ const DashboardPage: React.FC = () => {
             Here's what's happening with your business today.
           </p>
         </div>
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           {stats.map((stat, index) => (
             <div
@@ -264,7 +273,6 @@ const DashboardPage: React.FC = () => {
             </div>
           ))}
         </div>
-
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
@@ -395,165 +403,111 @@ const DashboardPage: React.FC = () => {
         </div>
 
         {/* Recent Orders */}
-        <div className="mt-8">
-          <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50 overflow-hidden">
-            <div className="px-8 py-6 bg-gradient-to-r from-slate-50 to-blue-50 border-b border-gray-100">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-10 w-10 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center shadow-lg">
-                    <svg
-                      className="h-5 w-5 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-slate-800 mb-1">
-                      Recent Orders
-                    </h3>
-                    <p className="text-gray-600 text-sm font-medium">
-                      Latest borrowing and return activities
-                    </p>
-                  </div>
-                </div>
+        <Card className="mt-8 bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-white/50">
+          {/* Header */}
+          <CardHeader className="px-8 py-6 bg-white from-slate-50 to-blue-50 border-b border-gray-100 rounded-2xl">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center shadow-lg">
+                <svg
+                  className="h-5 w-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+                  />
+                </svg>
+              </div>
+              <div className="">
+                <CardTitle className="text-2xl font-bold text-slate-800">
+                  Recent Orders
+                </CardTitle>
+                <CardDescription className="text-gray-600 text-sm font-medium">
+                  Latest borrowing and return activities
+                </CardDescription>
               </div>
             </div>
+          </CardHeader>
 
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead className="bg-gradient-to-r from-gray-50 to-slate-50">
-                  <tr>
-                    <th className="px-8 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      User
-                    </th>
-                    <th className="px-8 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Item
-                    </th>
-                    <th className="px-8 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-8 py-5 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">
-                      Date
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
-                  {dashboardData.recentOrders.length > 0 ? (
-                    dashboardData.recentOrders.map(
-                      (order: any, index: number) => (
-                        <tr
-                          key={index}
-                          className="hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-indigo-50/50 transition-all duration-300"
-                        >
-                          <td className="px-8 py-6 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <img
-                                src={
-                                  order.avatarUrl ||
-                                  `https://api.dicebear.com/7.x/avataaars/svg?seed=${
-                                    order.user || "/placeholder.svg"
-                                  }&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`
-                                }
-                                alt={order.user}
-                                className="h-12 w-12 rounded-full object-cover mr-4 border-2 border-blue-100 shadow-md"
-                              />
-                              <span className="text-sm font-bold text-slate-800 truncate max-w-[150px]">
-                                {order.user}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="px-8 py-6 whitespace-nowrap text-sm font-semibold text-gray-700">
-                            {order.item}
-                          </td>
-                          <td className="px-8 py-6 whitespace-nowrap">
-                            <span
-                              className={`inline-flex items-center px-4 py-2 text-xs font-bold rounded-full shadow-sm ${
-                                order.status === "Returned"
-                                  ? "bg-gradient-to-r from-emerald-100 to-emerald-200 text-emerald-800 border border-emerald-200"
-                                  : order.status === "Issued"
-                                  ? "bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 border border-blue-200"
-                                  : "bg-gradient-to-r from-amber-100 to-amber-200 text-amber-800 border border-amber-200"
-                              }`}
-                            >
-                              {order.status === "Returned" && (
-                                <svg
-                                  className="h-3 w-3 mr-1.5"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              )}
-                              {order.status === "Issued" && (
-                                <svg
-                                  className="h-3 w-3 mr-1.5"
-                                  fill="currentColor"
-                                  viewBox="0 0 20 20"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l3 3a1 1 0 001.414-1.414L11 9.586V6z"
-                                    clipRule="evenodd"
-                                  />
-                                </svg>
-                              )}
-                              {order.status}
-                            </span>
-                          </td>
-                          <td className="px-8 py-6 whitespace-nowrap text-sm font-semibold text-gray-600">
-                            {order.issuedDate}
-                          </td>
-                        </tr>
-                      )
-                    )
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={4}
-                        className="px-8 py-16 text-center bg-gradient-to-br from-gray-50 to-slate-50"
-                      >
-                        <div className="h-20 w-20 bg-gradient-to-br from-gray-200 to-gray-300 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-lg">
-                          <svg
-                            className="h-10 w-10 text-gray-500"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          {/* Table Content */}
+          <CardContent className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Item</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboardData.recentOrders.length > 0 ? (
+                  dashboardData.recentOrders.map(
+                    (order: any, index: number) => (
+                      <TableRow key={index} className="hover:bg-slate-50">
+                        <TableCell className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarImage
+                              src={
+                                order.avatarUrl ||
+                                `https://api.dicebear.com/8.x/initials/svg?seed=${order.user}`
+                              }
                             />
-                          </svg>
-                        </div>
-                        <h4 className="text-2xl font-bold text-gray-700 mb-3">
-                          No Orders Yet
-                        </h4>
-                        <p className="text-gray-500 max-w-md mx-auto leading-relaxed">
-                          Recent borrowing and return activities will appear
-                          here once recorded in the system.
-                        </p>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
+                            <AvatarFallback>
+                              {order.user
+                                ?.split(" ")
+                                .map((n: string) => n[0])
+                                .join("")
+                                .toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="font-medium text-slate-800">
+                            {order.user}
+                          </span>
+                        </TableCell>
+                        <TableCell className="font-medium text-slate-700">
+                          {order.item}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`inline-flex items-center px-3 py-1 text-xs font-semibold rounded-full ${
+                              order.status === "Returned"
+                                ? "bg-emerald-100 text-emerald-700"
+                                : order.status === "Issued"
+                                ? "bg-blue-100 text-blue-700"
+                                : "bg-amber-100 text-amber-700"
+                            }`}
+                          >
+                            {order.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-slate-600 font-medium">
+                          {order.issuedDate}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  )
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-10">
+                      <h4 className="text-lg font-semibold text-gray-700 mb-2">
+                        No Orders Yet
+                      </h4>
+                      <p className="text-gray-500 text-sm">
+                        Recent borrowing and return activities will appear here
+                        once recorded in the system.
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
