@@ -51,7 +51,7 @@ const fineSchema = new Schema<IFine>(
     },
     status: {
       type: String,
-      enum: ["Outstanding", "Paid"],
+      enum: ["Outstanding", "Paid", "Waived"],
       default: "Outstanding",
     },
     managedByAdminId: {

@@ -77,3 +77,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+.PhoneInput .PhoneInputCountry {
+  display: none;
+}
+
+.PhoneInput input {
+  width: 100%;
+  padding-left: 12px !important;
+}

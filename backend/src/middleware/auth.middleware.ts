@@ -16,6 +16,7 @@ export const authUser = (req: Request, res: Response, next: NextFunction) => {
     authHeader && authHeader.startsWith("Bearer ")
       ? authHeader.split(" ")[1]
       : authHeader;
+
   if (!token) {
     res.status(400).send({ err: "Token in not present in the request" });
     return;

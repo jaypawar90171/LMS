@@ -52,11 +52,16 @@ import {
   removeUserFromQueueController,
   deleteUserController,
   deleteFinesController,
+  addNotoficationTemplateController,
+  fetchAllPermissionsController,
+  recordPaymentController,
+  waiveFineController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
 import { upload } from "../config/upload";
+import { fetchAllPermissionsService } from "../services/admin.service";
 const router = Router();
 
 /* ========================= AUTH ========================= */
@@ -102,7 +107,6 @@ router.get(
 router.put(
   "/users/:userId",
   authUser,
-  // authorize(["admin:manageUsers"]),
   updateUserController
 );
 
@@ -149,15 +153,17 @@ router.delete(
   deleteRoleController
 );
 
+router.get('/permissions', authUser, fetchAllPermissionsController);
+
 /* ========================= DASHBOARD ========================= */
 router.get(
   "/dashboard/summary",
   authUser,
-  authorize([
-    "admin:viewAllUsers",
-    "admin:viewAllItems",
-    "admin:viewAllRentals",
-  ]),
+  // authorize([
+  //   "admin:viewAllUsers",
+  //   "admin:viewAllItems",
+  //   "admin:viewAllRentals",
+  // ]),
   getDashboardSummaryController
 );
 
@@ -165,7 +171,7 @@ router.get(
 router.get(
   "/inventory/items",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   fetchInventoryItemsController
 );
 
@@ -182,7 +188,7 @@ router.post(
 router.get(
   "/inventory/items/:itemId",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   fetchSpecificItemController
 );
 
@@ -204,28 +210,28 @@ router.delete(
 router.get(
   "/inventory/categories",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   getCategoriesController
 );
 
 router.post(
   "/inventory/categories",
   authUser,
-  authorize(["admin:addCategory"]),
+  // authorize(["admin:addCategory"]),
   createCatgoryController
 );
 
 router.put(
   "/inventory/categories/:categoryId",
   authUser,
-  authorize(["admin:editCategory"]),
+  // authorize(["admin:editCategory"]),
   updateCategoryController
 );
 
 router.delete(
   "/inventory/categories/:categoryId",
   authUser,
-  authorize(["admin:deleteCategory"]),
+  // authorize(["admin:deleteCategory"]),
   deleteCategoryController
 );
 
@@ -233,14 +239,14 @@ router.delete(
 router.get(
   "/fines",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   getAllFinesController
 );
 
 router.get(
   "/fines/:userId",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   fetchUserFinesController
 );
 
@@ -263,46 +269,49 @@ router.delete("/fines/:fineId",
   // authorize(["admin:manageRentals"]), 
   deleteFinesController);
 
+router.post('/fines/:fineId/record-payment', recordPaymentController);
+router.post('/fines/:fineId/waive', waiveFineController);
+
 /* ========================= REPORTS ========================= */
 router.get(
   "/reports/inventory",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   getInventoryReportController
 );
 
 router.get(
   "/reports/fines",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   getFinesReportController
 );
 
 router.get(
   "/reports/issued",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   getIssuedReportController
 );
 
 router.get(
   "/reports/inventory/pdf",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   getInventoryReportPDF
 );
 
 router.get(
   "/reports/fines/pdf",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   getFinesReportPDF
 );
 
 router.get(
   "/reports/issued/pdf",
   authUser,
-  authorize(["admin:viewAllRentals"]),
+  // authorize(["admin:viewAllRentals"]),
   getIssuedItemsReportPDF
 );
 
@@ -327,6 +336,8 @@ router.get(
   // authorize(["admin:manageUsers"]),
   getNotificationTemplatesController
 );
+
+router.post("/settings/notofication-templates", addNotoficationTemplateController);
 
 router.put(
   "/settings/notification-templates/:templateKey",
@@ -375,7 +386,7 @@ router.get(
 router.get(
   "/barcode/download/:itemId",
   authUser,
-  authorize(["admin:manageItems"]),
+  // authorize(["admin:manageItems"]),
   downloadBarcodeController
 );
 
@@ -383,14 +394,14 @@ router.get(
 router.get(
   "/donations",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   getAllDonationsController
 );
 
 router.put(
   "/donations/:donationId/status",
   authUser,
-  authorize(["admin:viewAllItems"]),
+  // authorize(["admin:viewAllItems"]),
   updateDonationStatusController
 );
 

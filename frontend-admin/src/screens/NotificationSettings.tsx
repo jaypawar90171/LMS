@@ -42,6 +42,12 @@ interface NotificationTemplates {
   bookReturned: Template;
 }
 
+interface AddTemplateModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (key: string, data: Template) => void;
+}
+
 interface EditTemplateModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -173,6 +179,79 @@ export default function NotificationSettings() {
     );
   }
 
+  const AddTemplateModal: FC<AddTemplateModalProps> = ({
+    isOpen,
+    onClose,
+    onSave,
+  }) => {
+    const [templateKey, setTemplateKey] = useState("");
+    const [subject, setSubject] = useState("");
+    const [emailBody, setEmailBody] = useState("");
+    const [whatsappMessage, setWhatsappMessage] = useState("");
+
+    const handleSave = () => {
+      if (!templateKey) {
+        toast.error("Template key is required!");
+        return;
+      }
+      onSave(templateKey, {
+        emailSubject: subject,
+        emailBody,
+        whatsappMessage,
+      });
+    };
+
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Add New Template</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="key">Template Key</Label>
+              <Input
+                id="key"
+                value={templateKey}
+                onChange={(e) => setTemplateKey(e.target.value)}
+                placeholder="e.g. userActivated"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Subject</Label>
+              <Input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Body</Label>
+              <Textarea
+                value={emailBody}
+                onChange={(e) => setEmailBody(e.target.value)}
+                rows={4}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>WhatsApp Message</Label>
+              <Textarea
+                value={whatsappMessage}
+                onChange={(e) => setWhatsappMessage(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>Save Template</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
   const EditTemplateModal: FC<EditTemplateModalProps> = ({
     isOpen,
     onClose,
@@ -265,10 +344,16 @@ export default function NotificationSettings() {
 
         {/* Templates Display */}
         <Card>
-          <CardHeader>
+          <div className="flex justify-end mr-3 mt-3">
+              <Button onClick={() => setIsModalOpen(true)}>
+                + Add New Template
+              </Button>
+            </div>
+          <CardHeader >
             <CardTitle className="flex items-center gap-2">
               <Bell /> Notification Templates
             </CardTitle>
+            
           </CardHeader>
           <CardContent>
             {notificationSettings && (
@@ -347,6 +432,12 @@ export default function NotificationSettings() {
           onSave={handleSaveChanges}
         />
       )}
+
+      <AddTemplateModal
+        isOpen={isModalOpen && !selectedTemplate}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveChanges}
+      />
     </div>
   );
 }

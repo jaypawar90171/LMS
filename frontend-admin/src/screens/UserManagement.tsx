@@ -18,6 +18,8 @@ import {
   ToggleLeft,
   ToggleRight,
   ShieldCheck,
+  KeyRound,
+  LockOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -160,7 +162,8 @@ const UserManagementPage = () => {
         (u) =>
           u.fullName.toLowerCase().includes(lower) ||
           u.email.toLowerCase().includes(lower) ||
-          u.username.toLowerCase().includes(lower)
+          (u.employeeId && u.employeeId.toLowerCase().includes(lower)) ||
+          (u.phoneNumber && u.phoneNumber.includes(lower))
       );
     }
 
@@ -180,6 +183,20 @@ const UserManagementPage = () => {
     result.sort((a, b) => {
       const fieldA = a[filters.sortBy as keyof User] ?? "";
       const fieldB = b[filters.sortBy as keyof User] ?? "";
+
+      // Handle date sorting for lastLogin
+      if (filters.sortBy === "lastLogin") {
+        const dateA =
+          typeof fieldA === "string" || typeof fieldA === "number"
+            ? new Date(fieldA).getTime()
+            : 0;
+        const dateB =
+          typeof fieldB === "string" || typeof fieldB === "number"
+            ? new Date(fieldB).getTime()
+            : 0;
+        return filters.sortOrder === "asc" ? dateA - dateB : dateB - dateA;
+      }
+
       if (typeof fieldA === "string" && typeof fieldB === "string") {
         return filters.sortOrder === "asc"
           ? fieldA.localeCompare(fieldB)
@@ -240,6 +257,20 @@ const UserManagementPage = () => {
     );
   };
 
+  const handleSort = (column: keyof User) => {
+    const isAsc = filters.sortBy === column && filters.sortOrder === "asc";
+    setFilters({
+      ...filters,
+      sortBy: column,
+      sortOrder: isAsc ? "desc" : "asc",
+    });
+  };
+
+  const handleFormSuccess = async () => {
+    console.log("Form submitted successfully, refreshing data...");
+    await fetchAllUsers();
+  };
+
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
     const accessToken = localStorage.getItem("accessToken");
@@ -274,7 +305,6 @@ const UserManagementPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        {/* Loading Spinner */}
         <div className="text-center space-y-4">
           <div className="relative">
             <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
@@ -296,7 +326,6 @@ const UserManagementPage = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        {/* Error Card */}
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
@@ -326,12 +355,12 @@ const UserManagementPage = () => {
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">
+              User Management &gt; Users List
+            </p>
             <h1 className="text-3xl font-bold text-foreground">
               User Management
             </h1>
-            <p className="text-muted-foreground">
-              View, create, and manage all user accounts.
-            </p>
           </div>
           <Button size="sm" onClick={() => handleOpenFormModal("add")}>
             <Plus className="h-4 w-4 mr-2" />
@@ -412,7 +441,7 @@ const UserManagementPage = () => {
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Search by name, email, username..."
+                    placeholder="Search by Name, Employee ID, Email, Phone Number"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -462,7 +491,7 @@ const UserManagementPage = () => {
         </Card>
 
         {/* User Table */}
-        <Card>
+        {/* <Card>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
@@ -581,6 +610,175 @@ const UserManagementPage = () => {
               </TableBody>
             </Table>
           </CardContent>
+        </Card> */}
+
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User ID</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort("fullName")}
+                    >
+                      Full Name
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => handleSort("email")}>
+                      Email
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead>Role(s)</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      onClick={() => handleSort("lastLogin")}
+                    >
+                      Last Login
+                      <ArrowUpDown className="ml-2 h-4 w-4" />
+                    </Button>
+                  </TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredUsers.map((user) => (
+                  <TableRow key={user._id} className="hover:bg-muted/30">
+                    <TableCell className="text-xs text-muted-foreground font-mono">
+                      {user._id.slice(-8)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={
+                            user.profile ||
+                            `https://api.dicebear.com/8.x/initials/svg?seed=${user.fullName}`
+                          }
+                          alt="avatar"
+                          className="h-10 w-10 rounded-full bg-muted"
+                        />
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            {user.fullName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            @{user.username}
+                          </p>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="text-sm text-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {user.phoneNumber || "No phone"}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {user.roles.slice(0, 2).map((role) => (
+                          <Badge key={role._id} variant="secondary">
+                            {role.roleName}
+                          </Badge>
+                        ))}
+                        {user.roles.length > 2 && (
+                          <Badge variant="outline">
+                            +{user.roles.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          user.status === "Active"
+                            ? "default"
+                            : user.status === "Locked"
+                            ? "destructive"
+                            : "outline"
+                        }
+                        className={
+                          user.status === "Active"
+                            ? "bg-emerald-500/20 text-emerald-700"
+                            : user.status === "Locked"
+                            ? "bg-red-500/20 text-red-700"
+                            : "text-slate-600"
+                        }
+                      >
+                        {user.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {user.lastLogin
+                        ? new Date(user.lastLogin).toLocaleString()
+                        : "N/A"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleOpenProfileModal(user)}
+                          >
+                            <UserIcon className="h-4 w-4 mr-2" /> View Profile
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenFormModal("edit", user)}
+                          >
+                            <Edit className="h-4 w-4 mr-2" /> Edit User
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleOpenRolesModal(user)}
+                          >
+                            <ShieldCheck className="h-4 w-4 mr-2" /> Manage
+                            Roles
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {}}>
+                            <KeyRound className="h-4 w-4 mr-2" /> Reset Password
+                          </DropdownMenuItem>
+                          {user.status === "Locked" && (
+                            <DropdownMenuItem onClick={() => {}}>
+                              <LockOpen className="h-4 w-4 mr-2" /> Unlock
+                              Account
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => handleToggleStatus(user)}
+                          >
+                            {user.status === "Active" ? (
+                              <ToggleLeft className="h-4 w-4 mr-2" />
+                            ) : (
+                              <ToggleRight className="h-4 w-4 mr-2" />
+                            )}
+                            {user.status === "Active"
+                              ? "Deactivate"
+                              : "Activate"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() => handleOpenDeleteModal(user)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" /> Delete User
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
         </Card>
 
         {/* Pagination */}
@@ -628,14 +826,19 @@ const UserManagementPage = () => {
           onSuccess={() => fetchAllUsers(currentPage)}
         />
       )}
+
       {isRolesModalOpen && selectedUser && (
         <UserRolesModal
           isOpen={isRolesModalOpen}
           onOpenChange={setIsRolesModalOpen}
           user={selectedUser}
           allRoles={allRoles}
+          onSuccess={() => {
+            handleFormSuccess;
+          }}
         />
       )}
+
       {isDeleteModalOpen && selectedUser && (
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}
@@ -644,6 +847,7 @@ const UserManagementPage = () => {
           itemName={selectedUser.fullName}
         />
       )}
+
       {isProfileModalOpen && selectedUser && (
         <UserProfileModal
           isOpen={isProfileModalOpen}

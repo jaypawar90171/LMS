@@ -1,5 +1,11 @@
 import mongoose, { Document, Schema } from "mongoose";
 
+export interface INotificationTemplate {
+  emailSubject?: string;
+  emailBody?: string;
+  whatsappMessage?: string;
+}
+
 export interface ISystemSettings extends Document {
   libraryName: string;
   contactEmail: string;
@@ -33,11 +39,5 @@ export interface ISystemSettings extends Document {
       phoneNumber: string;
     };
   };
-  notificationTemplates: {
-    [key: string]: {
-      emailSubject?: string;
-      emailBody?: string;
-      whatsappMessage?: string;
-    };
-  };
+  notificationTemplates?: Map<string, INotificationTemplate>;
 }

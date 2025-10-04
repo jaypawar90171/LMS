@@ -17,39 +17,102 @@ import IssuedItem from "./models/issuedItem.model";
 
 // A list of the permission keys we need to find.
 const permissionKeys = [
-  "admin:manageUsers",
-  "admin:viewAllUsers",
-  "admin:approveUser",
-  "admin:rejectUser",
-  "admin:blockUser",
-  "admin:unblockUser",
-  "admin:viewUserRequests",
-  "admin:manageItems",
-  "admin:viewAllItems",
-  "admin:verifyItem",
-  "admin:removeItem",
-  "admin:addCategory",
-  "admin:editCategory",
-  "admin:deleteCategory",
-  "admin:manageRentals",
-  "admin:viewAllRentals",
-  "admin:viewQueues",
-  "admin:assignItemFromQueue",
-  "admin:removeUserFromQueue",
-  "admin:markRentalAsReturned",
-  "user:viewProfile",
-  "user:editProfile",
-  "user:addProfilePicture",
-  "user:browseItems",
-  "user:viewItemDetails",
-  "user:addItem",
-  "user:requestRental",
-  "user:joinQueue",
-  "user:returnItem",
-  "user:viewNotifications",
-  "user:dismissNotification",
-  "user:viewMyRequests",
-  "user:makeNewItemRequest",
+  // Authentication & Core Permissions
+  "canLoginAdmin",
+  "canChangeOwnPassword",
+  "canResetOwnPassword",
+
+  // Dashboard & Navigation
+  "canViewDashboard",
+  "canViewSideNavigation",
+
+  // User Management Permissions
+  "canViewUser",
+  "canCreateUser",
+  "canEditUser",
+  "canDeactivateUser",
+  "canResetUserPassword",
+  "canUnlockUser",
+  "canViewRoles",
+  "canCreateRole",
+  "canEditRolePermissions",
+  "canDeleteRole",
+
+  // Inventory Management Permissions
+  "canViewItem",
+  "canCreateItem",
+  "canEditItem",
+  "canDeleteItem",
+  "canManageCopies",
+  "canPrintBarcode",
+  "canUpdateItemStatus",
+  "canViewCategories",
+  "canCreateCategory",
+  "canEditCategory",
+  "canDeleteCategory",
+
+  // Library Operations Permissions - Issue, Return & Extension
+  "canIssueItem",
+  "canReturnItem",
+  "canExtendPeriod",
+
+  // Library Operations Permissions - Queue Management
+  "canViewQueue",
+  "canAllocateItem",
+  "canRemoveFromQueue",
+
+  // Library Operations Permissions - Reminder Management
+  "canConfigureReminders",
+  "canSendReminders",
+
+  // Library Operations Permissions - Fine Management
+  "canViewFines",
+  "canRecordFinePayment",
+  "canWaiveFine",
+  "canEditFine",
+  "canAddManualFine",
+
+  // Reports Module Permissions
+  "canViewDefaulterReport",
+  "canViewQueueReport",
+  "canViewAllocationReport",
+  "canViewFineReport",
+  "canViewInventoryReport",
+  "canViewActivityLog",
+  "canExportReports",
+
+  // Settings Module Permissions
+  "canConfigureGeneralSettings",
+  "canConfigureBorrowingLimits",
+  "canConfigureFineRates",
+  "canConfigureNotificationChannels",
+  "canConfigureSystemRestrictions",
+  "canViewAuditLog",
+
+  // Employee Exit Process Permissions
+  "canValidateEmployeeExit",
+
+  // Mobile-App-Facing Admin Permissions
+  "canViewIssueRequests",
+  "canApproveIssueRequest",
+  "canViewDonationInterests",
+  "canApproveDonationInterest",
+  "canViewItemAcquisitionRequests",
+  "canProcessItemAcquisitionRequests",
+
+  // Data & Bulk Operations Permissions
+  "canImportData",
+  "canExportData",
+  "canPerformBulkActions",
+
+  // Advanced Administrative Permissions
+  "canManageSystemHealth",
+  "canManageAPIIntegrations",
+  "canBypassValidation",
+  "canImpersonateUser",
+  "canManageDatabase",
+  "canConfigureThemes",
+  "canManageLicense",
 ];
 
 async function seedDatabase() {
@@ -57,12 +120,10 @@ async function seedDatabase() {
   // const roles = await Role.find({
   //   roleName: { $in: ["superAdmin", "Admin", "librarian", "user"] },
   // });
-
   // const roleMap = roles.reduce((acc: any, role: any) => {
   //   acc[role.roleName] = role._id;
   //   return acc;
   // }, {});
-
   // const users = [
   //   {
   //     fullName: "Super Admin",
@@ -93,97 +154,164 @@ async function seedDatabase() {
   //     roles: [roleMap["user"]],
   //   },
   // ];
-
   // for (const userData of users) {
   //   const user = new User(userData);
   //   await user.save();
   // }
-
   // console.log("Initial users inserted successfully.");
-
-  // 2. Inserting a Role
+  // 1. First, insert all permissions
+  // await Permission.insertMany(
+  //   permissionKeys.map((permissionKey) => ({
+  //     permissionKey,
+  //     description: `Permission to ${permissionKey
+  //       .replace("can", "")
+  //       .replace(/([A-Z])/g, " $1")
+  //       .toLowerCase()}`,
+  //   }))
+  // );
+  // console.log("Permissions inserted successfully.");
+  // // 2. Then, fetch the inserted permissions to get their IDs
   // const permissions = await Permission.find({
   //   permissionKey: { $in: permissionKeys },
   // });
-
   // const permissionMap = permissions.reduce((acc: any, perm: any) => {
   //   acc[perm.permissionKey] = perm._id;
   //   return acc;
   // }, {});
-
+  // // Get all permission IDs for Super Admin
+  // const allPermissionIds = permissions.map((perm) => perm._id);
+  // // 3. Now insert roles with the permission IDs
   // await Role.insertMany([
   //   {
   //     roleName: "superAdmin",
   //     description:
   //       "The top-level administrator with full access to all system features and the ability to manage other roles.",
-  //     permissions: [
-  //       permissionMap["admin:manageUsers"],
-  //       permissionMap["admin:viewAllUsers"],
-  //       permissionMap["admin:approveUser"],
-  //       permissionMap["admin:rejectUser"],
-  //       permissionMap["admin:blockUser"],
-  //       permissionMap["admin:unblockUser"],
-  //       permissionMap["admin:viewUserRequests"],
-  //       permissionMap["admin:manageItems"],
-  //       permissionMap["admin:viewAllItems"],
-  //       permissionMap["admin:verifyItem"],
-  //       permissionMap["admin:removeItem"],
-  //       permissionMap["admin:addCategory"],
-  //       permissionMap["admin:editCategory"],
-  //       permissionMap["admin:deleteCategory"],
-  //       permissionMap["admin:manageRentals"],
-  //       permissionMap["admin:viewAllRentals"],
-  //       permissionMap["admin:viewQueues"],
-  //       permissionMap["admin:assignItemFromQueue"],
-  //       permissionMap["admin:removeUserFromQueue"],
-  //       permissionMap["admin:markRentalAsReturned"],
-  //     ],
+  //     permissions: allPermissionIds, // All 69 permissions
   //     immutable: true,
   //   },
   //   {
   //     roleName: "Admin",
   //     description:
-  //       "Administrator role with full system access. Manages all users, items, and rentals.",
+  //       "Administrator role with extensive system access. Manages all operations except core system configuration.",
   //     permissions: [
-  //       permissionMap["admin:manageUsers"],
-  //       permissionMap["admin:manageItems"],
-  //       permissionMap["admin:manageRentals"],
-  //       permissionMap["admin:viewUserRequests"],
+  //       // User Management (All except role management)
+  //       permissionMap["canViewUser"],
+  //       permissionMap["canCreateUser"],
+  //       permissionMap["canEditUser"],
+  //       permissionMap["canDeactivateUser"],
+  //       permissionMap["canResetUserPassword"],
+  //       permissionMap["canUnlockUser"],
+  //       permissionMap["canViewRoles"],
+  //       // Inventory Management (All)
+  //       permissionMap["canViewItem"],
+  //       permissionMap["canCreateItem"],
+  //       permissionMap["canEditItem"],
+  //       permissionMap["canDeleteItem"],
+  //       permissionMap["canManageCopies"],
+  //       permissionMap["canPrintBarcode"],
+  //       permissionMap["canUpdateItemStatus"],
+  //       permissionMap["canViewCategories"],
+  //       permissionMap["canCreateCategory"],
+  //       permissionMap["canEditCategory"],
+  //       permissionMap["canDeleteCategory"],
+  //       // Library Operations (All)
+  //       permissionMap["canIssueItem"],
+  //       permissionMap["canReturnItem"],
+  //       permissionMap["canExtendPeriod"],
+  //       permissionMap["canViewQueue"],
+  //       permissionMap["canAllocateItem"],
+  //       permissionMap["canRemoveFromQueue"],
+  //       permissionMap["canConfigureReminders"],
+  //       permissionMap["canSendReminders"],
+  //       permissionMap["canViewFines"],
+  //       permissionMap["canRecordFinePayment"],
+  //       permissionMap["canWaiveFine"],
+  //       permissionMap["canEditFine"],
+  //       permissionMap["canAddManualFine"],
+  //       permissionMap["canValidateEmployeeExit"],
+  //       // Reports (All)
+  //       permissionMap["canViewDefaulterReport"],
+  //       permissionMap["canViewQueueReport"],
+  //       permissionMap["canViewAllocationReport"],
+  //       permissionMap["canViewFineReport"],
+  //       permissionMap["canViewInventoryReport"],
+  //       permissionMap["canViewActivityLog"],
+  //       permissionMap["canExportReports"],
+  //       // Mobile-App-Facing (All)
+  //       permissionMap["canViewIssueRequests"],
+  //       permissionMap["canApproveIssueRequest"],
+  //       permissionMap["canViewDonationInterests"],
+  //       permissionMap["canApproveDonationInterest"],
+  //       permissionMap["canViewItemAcquisitionRequests"],
+  //       permissionMap["canProcessItemAcquisitionRequests"],
+  //       // Data & Bulk Operations
+  //       permissionMap["canImportData"],
+  //       permissionMap["canExportData"],
+  //       permissionMap["canPerformBulkActions"],
+  //       // Settings (Limited - no core system settings)
+  //       permissionMap["canConfigureBorrowingLimits"],
+  //       permissionMap["canConfigureFineRates"],
+  //       permissionMap["canConfigureNotificationChannels"],
+  //       permissionMap["canViewAuditLog"],
   //     ],
   //     immutable: true,
   //   },
   //   {
   //     roleName: "librarian",
   //     description:
-  //       "A restricted admin role that can manage daily library operations but not sensitive user data.",
+  //       "Responsible for daily library operations, user interactions, and routine tasks.",
   //     permissions: [
-  //       permissionMap["admin:viewAllUsers"],
-  //       permissionMap["admin:viewAllItems"],
-  //       permissionMap["admin:viewAllRentals"],
-  //       permissionMap["admin:verifyItem"],
-  //       permissionMap["admin:markRentalAsReturned"],
-  //       permissionMap["admin:addCategory"],
+  //       // User Management (View only)
+  //       permissionMap["canViewUser"],
+  //       permissionMap["canViewRoles"],
+  //       // Inventory Management (View and basic operations)
+  //       permissionMap["canViewItem"],
+  //       permissionMap["canCreateItem"],
+  //       permissionMap["canEditItem"],
+  //       permissionMap["canManageCopies"],
+  //       permissionMap["canPrintBarcode"],
+  //       permissionMap["canUpdateItemStatus"],
+  //       permissionMap["canViewCategories"],
+  //       permissionMap["canCreateCategory"],
+  //       permissionMap["canEditCategory"],
+  //       // Library Operations (Core daily tasks)
+  //       permissionMap["canIssueItem"],
+  //       permissionMap["canReturnItem"],
+  //       permissionMap["canExtendPeriod"],
+  //       permissionMap["canViewQueue"],
+  //       permissionMap["canAllocateItem"],
+  //       permissionMap["canRemoveFromQueue"],
+  //       permissionMap["canSendReminders"],
+  //       permissionMap["canViewFines"],
+  //       permissionMap["canRecordFinePayment"],
+  //       permissionMap["canValidateEmployeeExit"],
+  //       // Reports (View only)
+  //       permissionMap["canViewDefaulterReport"],
+  //       permissionMap["canViewQueueReport"],
+  //       permissionMap["canViewAllocationReport"],
+  //       permissionMap["canViewFineReport"],
+  //       permissionMap["canViewInventoryReport"],
+  //       permissionMap["canExportReports"],
+  //       // Mobile-App-Facing (All)
+  //       permissionMap["canViewIssueRequests"],
+  //       permissionMap["canApproveIssueRequest"],
+  //       permissionMap["canViewDonationInterests"],
+  //       permissionMap["canApproveDonationInterest"],
+  //       permissionMap["canViewItemAcquisitionRequests"],
+  //       permissionMap["canProcessItemAcquisitionRequests"],
   //     ],
   //     immutable: true,
   //   },
   //   {
   //     roleName: "employee",
   //     description:
-  //       "An employee role with limited access to manage their own tasks and view relevant resources.",
+  //       "An employee role with access to manage their own tasks and view relevant resources.",
   //     permissions: [
-  //       permissionMap["user:viewProfile"],
-  //       permissionMap["user:editProfile"],
-  //       permissionMap["user:addProfilePicture"],
-  //       permissionMap["user:browseItems"],
-  //       permissionMap["user:viewItemDetails"],
-  //       permissionMap["user:addItem"],
-  //       permissionMap["user:requestRental"],
-  //       permissionMap["user:joinQueue"],
-  //       permissionMap["user:returnItem"],
-  //       permissionMap["user:viewNotifications"],
-  //       permissionMap["user:dismissNotification"],
-  //       permissionMap["user:viewMyRequests"],
-  //       permissionMap["user:makeNewItemRequest"],
+  //       // Basic user permissions for mobile app access
+  //       permissionMap["canLoginAdmin"], // If they need admin panel access
+  //       permissionMap["canChangeOwnPassword"],
+  //       permissionMap["canResetOwnPassword"],
+  //       permissionMap["canViewDashboard"], // Limited dashboard view
   //     ],
   //     immutable: true,
   //   },
@@ -192,179 +320,16 @@ async function seedDatabase() {
   //     description:
   //       "A family role with access to manage family-related resources and view relevant information.",
   //     permissions: [
-  //       permissionMap["user:viewProfile"],
-  //       permissionMap["user:editProfile"],
-  //       permissionMap["user:addProfilePicture"],
-  //       permissionMap["user:browseItems"],
-  //       permissionMap["user:viewItemDetails"],
-  //       permissionMap["user:addItem"],
-  //       permissionMap["user:requestRental"],
-  //       permissionMap["user:joinQueue"],
-  //       permissionMap["user:returnItem"],
-  //       permissionMap["user:viewNotifications"],
-  //       permissionMap["user:dismissNotification"],
-  //       permissionMap["user:viewMyRequests"],
-  //       permissionMap["user:makeNewItemRequest"],
+  //       // Basic user permissions for mobile app access
+  //       permissionMap["canLoginAdmin"], // If they need admin panel access
+  //       permissionMap["canChangeOwnPassword"],
+  //       permissionMap["canResetOwnPassword"],
+  //       permissionMap["canViewDashboard"], // Limited dashboard view
   //     ],
   //     immutable: true,
   //   },
   // ]);
-
   // console.log("Roles inserted successfully.");
-
-  // //3. Inserting a permissions
-  // await Permission.insertMany([
-  //   {
-  //     permissionKey: "admin:manageUsers",
-  //     description: "A master permission to perform all user-related actions.",
-  //   },
-  //   {
-  //     permissionKey: "admin:viewAllUsers",
-  //     description:
-  //       "Allows viewing a list of all users, including their status.",
-  //   },
-  //   {
-  //     permissionKey: "admin:approveUser",
-  //     description:
-  //       "Allows changing a user's status from 'pending' to 'approved'.",
-  //   },
-  //   {
-  //     permissionKey: "admin:rejectUser",
-  //     description:
-  //       "Allows changing a user's status from 'pending' to 'rejected'.",
-  //   },
-  //   {
-  //     permissionKey: "admin:blockUser",
-  //     description:
-  //       "Allows changing a user's status to 'blocked', restricting their access.",
-  //   },
-  //   {
-  //     permissionKey: "admin:unblockUser",
-  //     description:
-  //       "Allows changing a blocked user's status to 'approved' to restore their access.",
-  //   },
-  //   {
-  //     permissionKey: "admin:viewUserRequests",
-  //     description: "Allows viewing the history of all user-initiated requests.",
-  //   },
-  //   {
-  //     permissionKey: "admin:manageItems",
-  //     description: "A master permission for all item-related actions.",
-  //   },
-  //   {
-  //     permissionKey: "admin:viewAllItems",
-  //     description: "Allows viewing a list of all items in the system.",
-  //   },
-  //   {
-  //     permissionKey: "admin:verifyItem",
-  //     description:
-  //       "Allows approving a new item submission, changing its status to 'available'.",
-  //   },
-  //   {
-  //     permissionKey: "admin:removeItem",
-  //     description: "Allows permanently removing an item from the system.",
-  //   },
-  //   {
-  //     permissionKey: "admin:addCategory",
-  //     description: "Allows creating a new item category.",
-  //   },
-  //   {
-  //     permissionKey: "admin:editCategory",
-  //     description: "Allows modifying an existing category.",
-  //   },
-  //   {
-  //     permissionKey: "admin:deleteCategory",
-  //     description: "Allows removing an existing category.",
-  //   },
-  //   {
-  //     permissionKey: "admin:manageRentals",
-  //     description:
-  //       "A master permission for all rental and queue-related actions.",
-  //   },
-  //   {
-  //     permissionKey: "admin:viewAllRentals",
-  //     description:
-  //       "Allows viewing all rental activity, including active, overdue, and returned items.",
-  //   },
-  //   {
-  //     permissionKey: "admin:viewQueues",
-  //     description:
-  //       "Allows viewing the waiting list of users for a specific item.",
-  //   },
-  //   {
-  //     permissionKey: "admin:assignItemFromQueue",
-  //     description: "Allows assigning an item to the next user in the queue.",
-  //   },
-  //   {
-  //     permissionKey: "admin:removeUserFromQueue",
-  //     description: "Allows manually removing a user from an item's queue.",
-  //   },
-  //   {
-  //     permissionKey: "admin:markRentalAsReturned",
-  //     description: "Allows manually marking an item as returned.",
-  //   },
-
-  //   // User Permissions
-  //   {
-  //     permissionKey: "user:viewProfile",
-  //     description: "Allows a user to view their own profile information.",
-  //   },
-  //   {
-  //     permissionKey: "user:editProfile",
-  //     description: "Allows a user to modify their own profile details.",
-  //   },
-  //   {
-  //     permissionKey: "user:addProfilePicture",
-  //     description: "Allows a user to add or change a profile picture.",
-  //   },
-  //   {
-  //     permissionKey: "user:browseItems",
-  //     description: "Allows a user to view all available items and categories.",
-  //   },
-  //   {
-  //     permissionKey: "user:viewItemDetails",
-  //     description:
-  //       "Allows a user to view detailed information about a specific item.",
-  //   },
-  //   {
-  //     permissionKey: "user:addItem",
-  //     description:
-  //       "Allows a user to add a new item to the library for admin review.",
-  //   },
-  //   {
-  //     permissionKey: "user:requestRental",
-  //     description: "Allows a user to submit a request to rent an item.",
-  //   },
-  //   {
-  //     permissionKey: "user:joinQueue",
-  //     description:
-  //       "Allows a user to join the waiting list for a currently rented item.",
-  //   },
-  //   {
-  //     permissionKey: "user:returnItem",
-  //     description:
-  //       "Allows a user to mark an item as returned on or before the due date.",
-  //   },
-  //   {
-  //     permissionKey: "user:viewNotifications",
-  //     description: "Allows a user to view a list of their own notifications.",
-  //   },
-  //   {
-  //     permissionKey: "user:dismissNotification",
-  //     description: "Allows a user to clear a notification from their list.",
-  //   },
-  //   {
-  //     permissionKey: "user:viewMyRequests",
-  //     description:
-  //       "Allows a user to view the status of their submitted rental and item requests.",
-  //   },
-  //   {
-  //     permissionKey: "user:makeNewItemRequest",
-  //     description:
-  //       "Allows a user to request for an item that is not listed in the library.",
-  //   },
-  // ]);
-
   // //4. Inserting a Category
   // await Category.insertMany([
   //   {
@@ -405,7 +370,6 @@ async function seedDatabase() {
   //   },
   // ]);
   // console.log("Categories inserted successfully.");
-
   // // 5. Inventory Items
   // const categories = await Category.find({
   //   name: {
@@ -421,12 +385,10 @@ async function seedDatabase() {
   //     ],
   //   },
   // });
-
   // const categoryMap = categories.reduce((acc: any, cat: any) => {
   //   acc[cat.name] = cat._id;
   //   return acc;
   // }, {});
-
   // await InventoryItem.insertMany([
   //   {
   //     title: "The Alchemist",
@@ -560,9 +522,7 @@ async function seedDatabase() {
   //     status: "Available",
   //   },
   // ]);
-
   // console.log("Sample inventory items inserted successfully.");
-
   // // 6.Inserting the System Settings
   // await Setting.create({
   //   libraryName: "Central Library",
@@ -583,9 +543,7 @@ async function seedDatabase() {
   //     fineGracePeriodDays: 3,
   //   },
   // });
-
   // console.log("System settings entry created successfully.");
-
   //7. Inserting Fines
   // const fines = [
   //   {
@@ -618,10 +576,8 @@ async function seedDatabase() {
   //     dateSettled: new Date(),
   //   },
   // ];
-
   // await Fine.insertMany(fines);
   // console.log("Fines seeded successfully!");
-
   //8. System Restrictions
   // const settings = [
   //   {
@@ -630,21 +586,18 @@ async function seedDatabase() {
   //     phoneNumber: "+91-9876543210",
   //     address: "123 Library Street, Pune, India",
   //     operationalHours: "Mon-Sat: 9 AM - 7 PM",
-
   //     borrowingLimits: {
   //       maxConcurrentIssuedItems: 5,
   //       maxConcurrentQueues: 3,
   //       maxPeriodExtensions: 2,
   //       extensionPeriodDays: 7,
   //     },
-
   //     fineRates: {
   //       overdueFineRatePerDay: 5,
   //       lostItemBaseFine: 500,
   //       damagedItemBaseFine: 300,
   //       fineGracePeriodDays: 2,
   //     },
-
   //     notificationChannels: {
   //       email: {
   //         enabled: true,
@@ -660,7 +613,6 @@ async function seedDatabase() {
   //         phoneNumber: "+919876543210",
   //       },
   //     },
-
   //     notificationTemplates: {
   //       bookIssued: {
   //         emailSubject: "Book Issued Successfully",
@@ -684,12 +636,9 @@ async function seedDatabase() {
   //     },
   //   },
   // ];
-
   // await Setting.deleteMany();
   // await Setting.insertMany(settings);
-
   // console.log("Settings added successfully!");
-
   //9. Donations
   //   await Donation.insertMany([
   //   {
@@ -711,9 +660,7 @@ async function seedDatabase() {
   //     status: "Accepted",
   //   },
   // ]);
-
   // console.log("Donations seeded");
-
   //10. Issued Items
   // const issuedItemsSeed = [
   //   {
@@ -743,11 +690,9 @@ async function seedDatabase() {
   //     fineId: null,
   //   },
   // ];
-
   // await IssuedItem.deleteMany({});
   // await IssuedItem.insertMany(issuedItemsSeed);
   // console.log("Issued items seeded successfully");
-
   // //11. requested items
   // const seedData = [
   //     {
@@ -767,42 +712,39 @@ async function seedDatabase() {
   //       status: "Approved",
   //     }
   //   ];
-
   //   await ItemRequest.deleteMany();
   //   await ItemRequest.insertMany(seedData);
   //   console.log("ItemRequests seeded successfully!");
-
   //12. queue
-  const queues = [
-    {
-      itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af3e"), 
-      queueMembers: [
-        {
-          userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"), // User ID
-          position: 1,
-          dateJoined: new Date("2025-09-01"),
-        },
-        {
-          userId: new mongoose.Types.ObjectId("68b5ea2b3bc30eb130e8bb17"),
-          position: 2,
-          dateJoined: new Date("2025-09-02"),
-        },
-      ],
-    },
-    {
-      itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af39"),
-      queueMembers: [
-        {
-          userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
-          position: 1,
-          dateJoined: new Date("2025-09-03"),
-        },
-      ],
-    },
-  ];
-
-  await Queue.insertMany(queues);
-  console.log("Queue data seeded successfully!");
+  // const queues = [
+  //   {
+  //     itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af3e"),
+  //     queueMembers: [
+  //       {
+  //         userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"), // User ID
+  //         position: 1,
+  //         dateJoined: new Date("2025-09-01"),
+  //       },
+  //       {
+  //         userId: new mongoose.Types.ObjectId("68b5ea2b3bc30eb130e8bb17"),
+  //         position: 2,
+  //         dateJoined: new Date("2025-09-02"),
+  //       },
+  //     ],
+  //   },
+  //   {
+  //     itemId: new mongoose.Types.ObjectId("68b1af1a8197b70dde91af39"),
+  //     queueMembers: [
+  //       {
+  //         userId: new mongoose.Types.ObjectId("68b5a4c91ebb4f744fbc1509"),
+  //         position: 1,
+  //         dateJoined: new Date("2025-09-03"),
+  //       },
+  //     ],
+  //   },
+  // ];
+  // await Queue.insertMany(queues);
+  // console.log("Queue data seeded successfully!");
 }
 
 (async () => {

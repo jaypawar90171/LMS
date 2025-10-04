@@ -5,17 +5,24 @@ export interface INotificationPreference {
   whatsApp: boolean;
 }
 
+export interface IPermission {
+  _id: string;
+  permissionKey: string;
+  description?: string;
+}
+
 export interface IUser extends Document {
   _id: string;
   fullName: string;
   email: string;
   username: string;
   password: string;
-  roles: Types.ObjectId[]; // references "Roles"
+  roles: Types.ObjectId[];
+  permissions: Types.ObjectId[];
   status?: "Active" | "Inactive" | "Locked";
 
   employeeId?: string;
-  associatedEmployeeId?: Types.ObjectId; // references "Users"
+  associatedEmployeeId?: Types.ObjectId;
 
   phoneNumber?: string;
   dateOfBirth?: Date;

@@ -3,13 +3,16 @@ import bcrypt from "bcrypt";
 import { IUser, INotificationPreference } from "../interfaces/user.interface";
 import Role from "./role.model";
 
-const addressSchema = new Schema({
-  street: { type: String, trim: true },
-  city: { type: String, trim: true },
-  state: { type: String, trim: true },
-  postalCode: { type: String, trim: true },
-  country: { type: String, trim: true },
-}, { _id: false });
+const addressSchema = new Schema(
+  {
+    street: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    country: { type: String, trim: true },
+  },
+  { _id: false }
+);
 
 const userSchema = new mongoose.Schema<IUser>(
   {
@@ -40,6 +43,12 @@ const userSchema = new mongoose.Schema<IUser>(
         ref: "Role",
       },
     ],
+    permissions: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Permission",
+      },
+    ],
     status: {
       type: String,
       enum: ["Active", "Inactive", "Locked"],
@@ -48,7 +57,7 @@ const userSchema = new mongoose.Schema<IUser>(
     employeeId: {
       type: String,
       unique: true,
-      sparse: true
+      sparse: true,
     },
     phoneNumber: String,
     dateOfBirth: Date,
@@ -91,7 +100,7 @@ userSchema.pre("save", async function (next) {
     if (this.roles && this.roles.length > 0) {
       const roles = await Role.find({ _id: { $in: this.roles } });
 
-      const alwaysActiveRoles = ["Super Admin", "Admin", "Librarian"]; 
+      const alwaysActiveRoles = ["Super Admin", "Admin", "Librarian"];
       const hasAlwaysActiveRole = roles.some((role) =>
         alwaysActiveRoles.includes(role.roleName)
       );

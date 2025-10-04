@@ -26,6 +26,8 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 import { Fine, User, Item } from "@/interfaces/fines";
+import { useAtom } from "jotai";
+import { userAtom } from "@/state/userAtom";
 
 interface FineFormModalProps {
   isOpen: boolean;
@@ -77,6 +79,9 @@ export const FineFormModal = ({
     resolver: zodResolver(fineFormSchema),
   });
 
+  const [user, setUser] = useAtom(userAtom);
+  console.log(user?._id);
+
   useEffect(() => {
     if (isOpen) {
       if (mode === "edit" && fineData) {
@@ -116,6 +121,7 @@ export const FineFormModal = ({
         paymentMethod: data.paymentMethod,
         transactionId: data.transactionId,
       },
+      managedByAdminId: user?._id
     };
 
     const apiEndpoint =
@@ -277,7 +283,7 @@ export const FineFormModal = ({
                   id="amountIncurred"
                   type="number"
                   step="0.01"
-                  {...register("amountIncurred")}
+                  {...register("amountIncurred", { valueAsNumber: true })}
                 />
                 {errors.amountIncurred && (
                   <p className="text-red-500 text-xs mt-1">

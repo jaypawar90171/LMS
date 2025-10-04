@@ -14,8 +14,10 @@ import {
   updateUserSchema,
 } from "../validations/auth.validation";
 import {
+  addTemplateService,
   deleteFineService,
   deleteUserService,
+  fetchAllPermissionsService,
   generateBarcodePDF,
   generateBarcodeString,
   generateIssuedItemsReportPDF,
@@ -28,6 +30,7 @@ import {
   getSystemRestrictionsService,
   issueItemFromQueueService,
   loginService,
+  recordPaymentService,
   removeUserFromQueueService,
   resetPasswordAdminService,
   updateAdminPasswordServive,
@@ -35,7 +38,9 @@ import {
   updateFineService,
   updateNotificationTemplateService,
   updateSystemRestrictionsService,
+  updateTemplateService,
   viewQueueService,
+  waiveFineService,
 } from "../services/admin.service";
 import { forgotPasswordService } from "../services/admin.service";
 import { verifyResetPasswordService } from "../services/admin.service";
@@ -43,7 +48,6 @@ import { resetPasswordService } from "../services/admin.service";
 import { updateUserStatusService } from "../services/admin.service";
 import { getDashboardSummaryService } from "../services/admin.service";
 import { getAllUsersService } from "../services/admin.service";
-import { createUserService } from "../services/admin.service";
 import { createUserSchema } from "../validations/auth.validation";
 import { getUserDetailsService } from "../services/admin.service";
 import { forcePasswordResetService } from "../services/admin.service";
@@ -66,7 +70,13 @@ import { generateInventoryReportPDF } from "../services/admin.service";
 import { generateFinesReportPDF } from "../services/admin.service";
 import { fetchInventoryItemsService } from "../services/admin.service";
 import { uploadFile } from "../config/upload";
-import fs from 'fs'
+import fs from "fs";
+import Role from "../models/role.model";
+import { sendEmail } from "../config/emailService";
+import { aw } from "@upstash/redis/zmscore-CgRD7oFR";
+import { Permission } from "../models/permission.model";
+import Fine from "../models/fine.model";
+import { Irole } from "../interfaces/role.interface";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -221,7 +231,7 @@ export const getAllUsersController = async (req: Request, res: Response) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
 
-    const {users, totalUsers} = await getAllUsersService(page, limit);
+    const { users, totalUsers } = await getAllUsersService(page, limit);
 
     return res.status(200).json({
       message: "Users fetched successfully.",
@@ -240,30 +250,265 @@ export const getAllUsersController = async (req: Request, res: Response) => {
   }
 };
 
+// export const createUserController = async (req: Request, res: Response) => {
+//   try {
+//     const { assignedRoles, permissions, ...userData } = req.body;
+//     const email = userData.email;
+
+//     const existingUser = await User.findOne({
+//       $or: [{ email }, { username: userData.username }],
+//     });
+
+//     if (existingUser) {
+//       throw new Error("User with this email or username already exists.");
+//     }
+
+//     let permissionsFromRoles: any[] = [];
+
+//     if (assignedRoles && assignedRoles.length > 0) {
+//       const roleDocs = await Role.find({ _id: { $in: assignedRoles } });
+
+//       if (roleDocs.length !== assignedRoles.length) {
+//         return res.status(400).json({
+//           error: "One or more invalid role IDs provided",
+//         });
+//       }
+
+//       userData.roles = roleDocs.map((role) => role._id);
+
+//       permissionsFromRoles = roleDocs.flatMap((role) => role.permissions || []);
+//     }
+
+//     let additionalPermissionIds: any[] = [];
+//     if (permissions && permissions.length > 0) {
+//       const permissionDocs = await Permission.find({
+//         permissionKey: { $in: permissions },
+//       });
+
+//       if (permissionDocs.length !== permissions.length) {
+//         return res.status(400).json({
+//           error: "One or more invalid permission keys provided",
+//         });
+//       }
+//       additionalPermissionIds = permissionDocs.map((p) => p._id);
+//     }
+
+//     const allPermissions = [
+//       ...new Set([...permissionsFromRoles, ...additionalPermissionIds]),
+//     ];
+//     userData.permissions = allPermissions;
+
+//     const user = await User.create({
+//       ...userData,
+//       roles: userData.roles,
+//     });
+
+//     const subject = "Welcome to the Library Management System!";
+//     const htmlBody = `
+//             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+//               <h2 style="color: #0056b3;">Welcome, ${userData.fullName}!</h2>
+//               <p>An account has been successfully created for you in our Library Management System (LMS).</p>
+//               <p>You can now log in using the following credentials:</p>
+//               <ul style="list-style-type: none; padding: 0;">
+//                 <li style="margin-bottom: 10px;"><strong>Username:</strong> ${
+//                   userData.username || "N/A"
+//                 }</li>
+//                 <li style="margin-bottom: 10px;"><strong>Temporary Password:</strong> <code style="background-color: #f4f4f4; padding: 3px 6px; border-radius: 4px; font-size: 1.1em;">${
+//                   userData.password
+//                 }</code></li>
+//               </ul>
+//               <p>For your security, you will be required to change this password after your first login.</p>
+//               <p>Thank you for joining us!</p>
+//             </div>
+//           `;
+
+//     await sendEmail(userData.email, subject, htmlBody);
+//     console.log("Welcome email sent successfully to:", userData.email);
+
+//     res.status(201).json(user);
+//   } catch (error) {
+//     console.error("Error creating user:", error);
+//     res.status(500).json({
+//       error: error instanceof Error ? error.message : "Failed to create user",
+//     });
+//   }
+// };
+
 export const createUserController = async (req: Request, res: Response) => {
   try {
-    const validatedData = createUserSchema.parse(req.body);
-    const { fullName, email, userName, password, role, emp_id, ass_emp_id, passwordResetRequired } = validatedData;
+    const {
+      assignedRoles,
+      permissions,
+      relationshipType,
+      employeeId,
+      associatedEmployeeId,
+      ...userData
+    } = req.body;
 
-    const newUser = await createUserService({
-      fullName,
-      email,
-      userName,
-      password,
-      role,
-      emp_id,
-      ass_emp_id,
-      passwordResetRequired
+    // Validate required fields
+    if (!userData.email || !userData.username) {
+      return res.status(400).json({
+        error: "Email and username are required",
+      });
+    }
+
+    // Check for existing user
+    const existingUser = await User.findOne({
+      $or: [{ email: userData.email }, { username: userData.username }],
     });
 
-    return res.status(201).json({
-      message: "User created successfully.",
-      user: newUser,
+    if (existingUser) {
+      return res.status(409).json({
+        error: "User with this email or username already exists.",
+      });
+    }
+
+    // Handle relationship type and IDs
+    if (relationshipType === "Employee") {
+      if (!employeeId) {
+        return res.status(400).json({
+          error: "Employee ID is required for employees",
+        });
+      }
+      userData.employeeId = employeeId;
+
+      // Check if employee ID already exists
+      const existingEmployee = await User.findOne({ employeeId });
+      if (existingEmployee) {
+        return res.status(409).json({
+          error: "Employee ID already exists",
+        });
+      }
+    } else if (relationshipType === "Family Member") {
+      if (!associatedEmployeeId) {
+        return res.status(400).json({
+          error: "Associated employee ID is required for family members",
+        });
+      }
+      userData.associatedEmployeeId = associatedEmployeeId;
+
+      // Verify associated employee exists
+      const associatedEmployee = await User.findOne({
+        $or: [
+          { employeeId: associatedEmployeeId },
+          { _id: associatedEmployeeId },
+        ],
+      });
+      if (!associatedEmployee) {
+        return res.status(400).json({
+          error: "Associated employee not found",
+        });
+      }
+    }
+
+    userData.relationshipType = relationshipType;
+
+    // Handle roles
+    let permissionsFromRoles: any[] = [];
+    if (assignedRoles && assignedRoles.length > 0) {
+      const roleDocs = await Role.find({ _id: { $in: assignedRoles } });
+
+      if (roleDocs.length !== assignedRoles.length) {
+        return res.status(400).json({
+          error: "One or more invalid role IDs provided",
+        });
+      }
+
+      userData.roles = assignedRoles;
+      permissionsFromRoles = roleDocs.flatMap((role) => role.permissions || []);
+    }
+
+    // Handle additional permissions
+    let additionalPermissionIds: any[] = [];
+    if (permissions && permissions.length > 0) {
+      const permissionDocs = await Permission.find({
+        permissionKey: { $in: permissions },
+      });
+
+      if (permissionDocs.length !== permissions.length) {
+        const foundKeys = permissionDocs.map((p) => p.permissionKey);
+        const missingKeys = permissions.filter(
+          (key: any) => !foundKeys.includes(key)
+        );
+        return res.status(400).json({
+          error: `Invalid permission keys: ${missingKeys.join(", ")}`,
+        });
+      }
+      additionalPermissionIds = permissionDocs.map((p) => p._id);
+    }
+
+    // Combine permissions from roles and additional permissions
+    const allPermissions = [
+      ...new Set([...permissionsFromRoles, ...additionalPermissionIds]),
+    ];
+    userData.permissions = allPermissions;
+
+    // Set default status if not provided
+    if (!userData.status) {
+      userData.status = "Inactive";
+    }
+
+    // Create the user
+    const user = await User.create(userData);
+
+    // Populate the created user for response
+    const populatedUser = await User.findById(user._id)
+      .populate("roles")
+      .populate("permissions");
+
+    // Send welcome email
+    try {
+      const subject = "Welcome to the Library Management System!";
+      const htmlBody = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+          <h2 style="color: #0056b3;">Welcome, ${userData.fullName}!</h2>
+          <p>An account has been successfully created for you in our Library Management System (LMS).</p>
+          <p>You can now log in using the following credentials:</p>
+          <ul style="list-style-type: none; padding: 0;">
+            <li style="margin-bottom: 10px;"><strong>Username:</strong> ${
+              userData.username || "N/A"
+            }</li>
+            <li style="margin-bottom: 10px;"><strong>Temporary Password:</strong> <code style="background-color: #f4f4f4; padding: 3px 6px; border-radius: 4px; font-size: 1.1em;">${
+              userData.password
+            }</code></li>
+          </ul>
+          <p>For your security, you will be required to change this password after your first login.</p>
+          <p>Thank you for joining us!</p>
+        </div>
+      `;
+
+      await sendEmail(userData.email, subject, htmlBody);
+      console.log("Welcome email sent successfully to:", userData.email);
+    } catch (emailError) {
+      console.error("Failed to send welcome email:", emailError);
+      // Don't fail the request if email fails
+    }
+
+    res.status(201).json({
+      message: "User created successfully",
+      user: populatedUser?.toObject() || user.toObject(),
     });
   } catch (error: any) {
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      error: error.message || "Internal server error.",
+    console.error("Error creating user:", error);
+
+    // Handle duplicate key errors
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyValue)[0];
+      return res.status(409).json({
+        error: `User with this ${field} already exists`,
+      });
+    }
+
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const errors = Object.values(error.errors).map((err: any) => err.message);
+      return res.status(400).json({
+        error: errors.join(", "),
+      });
+    }
+
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Failed to create user",
     });
   }
 };
@@ -288,6 +533,70 @@ export const getUserDetailsController = async (req: Request, res: Response) => {
   }
 };
 
+// export const updateUserController = async (req: Request, res: Response) => {
+//   try {
+//     const { userId } = req.params;
+
+//     if (!Types.ObjectId.isValid(userId)) {
+//       return res.status(400).json({ error: "Invalid userId" });
+//     }
+
+//     const { permissions, assignedRoles, ...updateData } = req.body;
+
+//     if ("password" in req.body) {
+//       return res
+//         .status(400)
+//         .json({ message: "password cannot be chnaged from here" });
+//     }
+
+//     if (permissions && Array.isArray(permissions)) {
+//       const permissionDocs = await Permission.find({
+//         permissionKey: { $in: permissions },
+//       });
+
+//       const permissionIds = permissionDocs.map((p) => p._id);
+
+//       const user = await User.findById(userId).populate<{ roles: Irole[] }>(
+//         "roles"
+//       );
+//       if (!user) {
+//         return res.status(404).json({ error: "User not found" });
+//       }
+
+//       const permissionsFromRoles = user.roles.flatMap(
+//         (role) => role.permissions || []
+//       );
+//       const allPermissionIds = [...permissionsFromRoles, ...permissionIds];
+
+//       updateData.permissions = [
+//         ...new Set(allPermissionIds.map((id) => id.toString())),
+//       ];
+//     }
+
+//     if (assignedRoles && Array.isArray(assignedRoles)) {
+//       updateData.roles = assignedRoles;
+//     }
+
+//     const updatedUser = await User.findByIdAndUpdate(
+//       userId,
+//       { $set: updateData },
+//       { new: true, runValidators: true }
+//     ).populate("roles permissions");
+
+//     if (!updatedUser) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+
+//     res.status(200).json(updatedUser.toObject());
+//   } catch (error: any) {
+//     console.log("Error in updating user");
+//     const statusCode = error.statusCode || 500;
+//     return res.status(statusCode).json({
+//       error: error.message || "Internal server error.",
+//     });
+//   }
+// };
+
 export const updateUserController = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
@@ -296,26 +605,119 @@ export const updateUserController = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid userId" });
     }
 
-    if ("password" in req.body) {
-      return res
-        .status(400)
-        .json({ message: "password cannot be chnaged from here" });
-    }
+    const {
+      permissions,
+      assignedRoles,
+      relationshipType,
+      employeeId,
+      associatedEmployeeId,
+      password, // Remove password from update data
+      ...updateData
+    } = req.body;
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: req.body },
-      { new: true, runValidators: true }
-    );
+    console.log("🔄 Update request received for user:", userId);
+    console.log("📦 Update data:", updateData);
+    console.log("🎯 Roles:", assignedRoles);
+    console.log("🔑 Permissions:", permissions);
 
-    if (!updatedUser) {
+    // Check if user exists
+    const existingUser = await User.findById(userId);
+    if (!existingUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const userObj = updatedUser.toObject();
-    res.status(200).json(userObj);
+    // Handle relationship type and IDs
+    if (relationshipType === "Employee") {
+      updateData.employeeId = employeeId;
+      updateData.associatedEmployeeId = undefined; // Clear family member field
+    } else if (relationshipType === "Family Member") {
+      updateData.associatedEmployeeId = associatedEmployeeId;
+      updateData.employeeId = undefined; // Clear employee field
+    }
+
+    if (relationshipType) {
+      updateData.relationshipType = relationshipType;
+    }
+
+    // Handle roles FIRST - this is likely causing the hang
+    if (assignedRoles && Array.isArray(assignedRoles)) {
+      // Validate that all role IDs exist
+      const validRoles = await Role.find({ _id: { $in: assignedRoles } });
+      if (validRoles.length !== assignedRoles.length) {
+        return res.status(400).json({
+          error: "One or more invalid role IDs provided",
+        });
+      }
+      updateData.roles = assignedRoles;
+    }
+
+    // Handle permissions - SIMPLIFIED to avoid circular references
+    if (permissions && Array.isArray(permissions)) {
+      const permissionDocs = await Permission.find({
+        permissionKey: { $in: permissions },
+      });
+
+      const permissionIds = permissionDocs.map((p) => p._id);
+
+      // Get permissions from the assigned roles
+      let permissionsFromRoles: any[] = [];
+      if (updateData.roles && updateData.roles.length > 0) {
+        const roleDocs = await Role.find({ _id: { $in: updateData.roles } });
+        permissionsFromRoles = roleDocs.flatMap(
+          (role) => role.permissions || []
+        );
+      }
+
+      // Combine role permissions and additional permissions
+      const allPermissionIds = [...permissionsFromRoles, ...permissionIds];
+      updateData.permissions = [
+        ...new Set(allPermissionIds.map((id) => id.toString())),
+      ];
+    }
+
+    console.log("✅ Final update data:", updateData);
+
+    // Use lean() to avoid mongoose document issues and simplify the query
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      {
+        new: true,
+        runValidators: true,
+        lean: true, // Add this to return plain JavaScript object
+      }
+    )
+      .populate("roles", "roleName description") // Only populate specific fields
+      .populate("permissions", "permissionKey description") // Only populate specific fields
+      .exec(); // Explicitly execute the query
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "User not found after update" });
+    }
+
+    console.log("✅ User updated successfully:", updatedUser._id);
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: updatedUser,
+    });
   } catch (error: any) {
-    console.log("Error in updating user");
+    console.error("❌ Error in updating user:", error);
+
+    // More specific error handling
+    if (error.name === "ValidationError") {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.errors,
+      });
+    }
+
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        error: "Invalid data format",
+      });
+    }
+
     const statusCode = error.statusCode || 500;
     return res.status(statusCode).json({
       error: error.message || "Internal server error.",
@@ -487,12 +889,11 @@ export const createInventoryItemsController = async (
     const file = req.file;
     let mediaUrl;
 
-    if(file)
-    {
+    if (file) {
       const result = await uploadFile(file.path);
 
       if (result) {
-        mediaUrl = result.secure_url; 
+        mediaUrl = result.secure_url;
       }
 
       fs.unlinkSync(file.path);
@@ -500,12 +901,12 @@ export const createInventoryItemsController = async (
 
     const barcode = await generateBarcodeString();
 
-    const dataToSave  = {
+    const dataToSave = {
       ...validatedData,
       mediaUrl: mediaUrl,
-      barcode: barcode
+      barcode: barcode,
     };
-    const newItem = await createInventoryItemsService(dataToSave );
+    const newItem = await createInventoryItemsService(dataToSave);
 
     return res.status(201).json({
       message: "Inventory item created successfully",
@@ -854,7 +1255,7 @@ export const updateFineController = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteFinesController = async(req: Request, res: Response) => {
+export const deleteFinesController = async (req: Request, res: Response) => {
   try {
     const { fineId } = req.params;
 
@@ -863,7 +1264,7 @@ export const deleteFinesController = async(req: Request, res: Response) => {
     }
 
     const message = await deleteFineService(fineId);
-    return res.status(200).json({msg: message});
+    return res.status(200).json({ msg: message });
   } catch (error: any) {
     if (error.statusCode === 404) {
       return res.status(404).json({
@@ -875,9 +1276,92 @@ export const deleteFinesController = async(req: Request, res: Response) => {
       message: error.message || "Internal Server Error",
     });
   }
+};
 
-  
-}
+export const recordPaymentController = async (req: Request, res: Response) => {
+  try {
+    const { fineId } = req.params;
+    const { amountPaid, paymentMethod, referenceId, notes } = req.body;
+
+    if (!Types.ObjectId.isValid(fineId)) {
+      return res.status(400).json({ error: "Invalid fineId" });
+    }
+
+    const fine = await Fine.findById(fineId);
+    if (!fine) {
+      return res.status(404).json({ message: "Fine not found" });
+    }
+
+    if (fine.status !== "Outstanding") {
+      return res
+        .status(400)
+        .json({ message: "Can only record payment for outstanding fines" });
+    }
+
+    if (amountPaid > fine.outstandingAmount) {
+      return res
+        .status(400)
+        .json({ message: "Payment amount cannot exceed outstanding amount" });
+    }
+
+    const updatedFine = await recordPaymentService({
+      fineId,
+      amountPaid,
+      paymentMethod,
+      referenceId,
+      notes,
+      managedByAdminId: req.user?.id, // Assuming you have user in request
+    });
+
+    return res.status(200).json({
+      message: "Payment recorded successfully",
+      fine: updatedFine,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const waiveFineController = async (req: Request, res: Response) => {
+  try {
+    const { fineId } = req.params;
+    const { waiverReason } = req.body;
+
+    if (!Types.ObjectId.isValid(fineId)) {
+      return res.status(400).json({ error: "Invalid fineId" });
+    }
+
+    if (!waiverReason) {
+      return res.status(400).json({ message: "Waiver reason is required" });
+    }
+
+    const fine = await Fine.findById(fineId);
+    if (!fine) {
+      return res.status(404).json({ message: "Fine not found" });
+    }
+
+    if (fine.status !== "Outstanding") {
+      return res.status(400).json({ message: "Can only waive outstanding fines" });
+    }
+
+    const updatedFine = await waiveFineService({
+      fineId,
+      waiverReason,
+      managedByAdminId: req.user?.id
+    });
+
+    return res.status(200).json({
+      message: "Fine waived successfully",
+      fine: updatedFine,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
 
 export const getInventoryReportPDF = async (req: Request, res: Response) => {
   try {
@@ -1051,6 +1535,49 @@ export const getNotificationTemplatesController = async (
   }
 };
 
+export const addNotoficationTemplateController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { key, emailSubject, emailBody, whatsappMessage } = req.body;
+
+    if (!key || !emailSubject || !emailBody || !whatsappMessage) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields required" });
+    }
+
+    const updated = await addTemplateService(key, {
+      emailSubject,
+      emailBody,
+      whatsappMessage,
+    });
+    res.json({ success: true, data: updated });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: "Error in adding notification templates",
+      error: error.message,
+    });
+  }
+};
+
+export const updateNotificationTemplate = async (
+  req: Request,
+  res: Response
+) => {
+  const { key } = req.params;
+  const { emailSubject, emailBody, whatsappMessage } = req.body;
+
+  const updated = await updateTemplateService(key, {
+    emailSubject,
+    emailBody,
+    whatsappMessage,
+  });
+  res.json({ success: true, data: updated });
+};
+
 export const updateNotificationTemplateController = async (
   req: Request,
   res: Response
@@ -1139,7 +1666,7 @@ export const updateAdminController = async (req: Request, res: Response) => {
 
     res.status(200).json({
       message: "Profile updated successfully",
-      user: updatedUser.toObject()
+      user: updatedUser.toObject(),
     });
   } catch (error: any) {
     console.log(error.message);
@@ -1406,5 +1933,24 @@ export const removeUserFromQueueController = async (
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const fetchAllPermissionsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const permissions = await fetchAllPermissionsService();
+    console.log("Permissions fetched successfully");
+    return res.status(200).json({
+      message: "Permissions fetched successfully",
+      data: permissions,
+    });
+  } catch (error) {
+    console.log("Error in fetching permissions");
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };

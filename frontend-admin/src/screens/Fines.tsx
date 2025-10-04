@@ -50,6 +50,26 @@ import { toast } from "sonner";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+
+interface PaymentData {
+  amountPaid: number;
+  paymentMethod: PaymentMethod;
+  referenceId?: string;
+  notes?: string;
+}
+
+interface WaiverData {
+  waiverReason: string;
+}
 
 export const FineReasons = ["Overdue", "Damaged"] as const;
 export const FineStatuses = ["Outstanding", "Paid", "Waived"] as const;
@@ -107,6 +127,18 @@ const FinesManagement = () => {
 
   const [allUsers, setAllUsers] = useState<User[]>([]);
   const [allItems, setAllItems] = useState<Item[]>([]);
+  const [isRecordPaymentModalOpen, setIsRecordPaymentModalOpen] =
+    useState(false);
+  const [isWaiveFineModalOpen, setIsWaiveFineModalOpen] = useState(false);
+  const [paymentData, setPaymentData] = useState<PaymentData>({
+    amountPaid: 0,
+    paymentMethod: "Cash",
+    referenceId: "",
+    notes: "",
+  });
+  const [waiverData, setWaiverData] = useState<WaiverData>({
+    waiverReason: "",
+  });
 
   const Navigate = useNavigate();
 
@@ -308,6 +340,87 @@ const FinesManagement = () => {
   useEffect(() => {
     fetchUsersAndItems();
   }, []);
+
+  const handleRecordPayment = async () => {
+    if (!selectedFine) return;
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast.error("No access token found. Please log in.");
+        return;
+      }
+
+      toast.promise(
+        axios.post(
+          `http://localhost:3000/api/admin/fines/${selectedFine._id}/record-payment`,
+          paymentData,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        ),
+        {
+          loading: "Recording payment...",
+          success: () => {
+            setIsRecordPaymentModalOpen(false);
+            setSelectedFine(null);
+            setPaymentData({
+              amountPaid: 0,
+              paymentMethod: "Cash",
+              referenceId: "",
+              notes: "",
+            });
+            fetchFines();
+            return `Payment of ₹${paymentData.amountPaid} recorded successfully.`;
+          },
+          error: (err) =>
+            err.response?.data?.message || "Failed to record payment.",
+        }
+      );
+    } catch (error: any) {
+      console.log(error.message);
+    }
+  };
+
+  const handleWaiveFine = async () => {
+    if (!selectedFine) return;
+
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken) {
+        toast.error("No access token found. Please log in.");
+        return;
+      }
+
+      toast.promise(
+        axios.post(
+          `http://localhost:3000/api/admin/fines/${selectedFine._id}/waive`,
+          waiverData,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        ),
+        {
+          loading: "Waiving fine...",
+          success: () => {
+            setIsWaiveFineModalOpen(false);
+            setSelectedFine(null);
+            setWaiverData({ waiverReason: "" });
+            fetchFines();
+            return "Fine waived successfully.";
+          },
+          error: (err) =>
+            err.response?.data?.message || "Failed to waive fine.",
+        }
+      );
+    } catch (error: any) {
+      console.log(error.message);
+    }
+  };
 
   if (loading) {
     return (
@@ -540,6 +653,9 @@ const FinesManagement = () => {
                     <TableHead className="font-semibold">
                       Date Incurred
                     </TableHead>
+                    <TableHead className="font-semibold">
+                      Date Settled
+                    </TableHead>
                     <TableHead className="font-semibold text-right">
                       Actions
                     </TableHead>
@@ -582,10 +698,20 @@ const FinesManagement = () => {
                           <span className="text-xs text-muted-foreground">
                             of ₹{fine.amountIncurred.toFixed(2)}
                           </span>
+                          {fine.amountPaid > 0 && (
+                            <span className="text-xs text-emerald-600">
+                              Paid: ₹{fine.amountPaid.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
                         {new Date(fine.dateIncurred).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        {fine.dateSettled
+                          ? new Date(fine.dateSettled).toLocaleDateString()
+                          : "-"}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -604,16 +730,47 @@ const FinesManagement = () => {
                               <Eye className="h-4 w-4 mr-2" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => {
-                                setFormMode("edit");
-                                setEditFine(fine);
-                                setIsFormModalOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit Fine
-                            </DropdownMenuItem>
+                            {fine.status === "Outstanding" && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedFine(fine);
+                                  setPaymentData({
+                                    amountPaid: fine.outstandingAmount,
+                                    paymentMethod: "Cash",
+                                    referenceId: "",
+                                    notes: "",
+                                  });
+                                  setIsRecordPaymentModalOpen(true);
+                                }}
+                              >
+                                <CreditCard className="h-4 w-4 mr-2" />
+                                Record Payment
+                              </DropdownMenuItem>
+                            )}
+                            {fine.status === "Outstanding" && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedFine(fine);
+                                  setWaiverData({ waiverReason: "" });
+                                  setIsWaiveFineModalOpen(true);
+                                }}
+                              >
+                                <BadgeCheck className="h-4 w-4 mr-2" />
+                                Waive Fine
+                              </DropdownMenuItem>
+                            )}
+                            {fine.status === "Outstanding" && (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setFormMode("edit");
+                                  setEditFine(fine);
+                                  setIsFormModalOpen(true);
+                                }}
+                              >
+                                <Edit className="h-4 w-4 mr-2" />
+                                Edit Fine
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuItem
                               onClick={() => {
                                 setSelectedFine(fine);
@@ -622,7 +779,7 @@ const FinesManagement = () => {
                               className="text-destructive"
                             >
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Waive/Delete
+                              Delete Fine
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -677,6 +834,147 @@ const FinesManagement = () => {
         allItems={allItems}
         onSuccess={() => fetchFines()}
       />
+
+      {/* Record Payment Modal */}
+      <Dialog
+        open={isRecordPaymentModalOpen}
+        onOpenChange={setIsRecordPaymentModalOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amountPaid">Amount Paid</Label>
+              <Input
+                id="amountPaid"
+                type="number"
+                value={paymentData.amountPaid}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    amountPaid: parseFloat(e.target.value) || 0,
+                  })
+                }
+                max={selectedFine?.outstandingAmount}
+              />
+              <p className="text-sm text-muted-foreground mt-1">
+                Outstanding: ₹{selectedFine?.outstandingAmount.toFixed(2)}
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Select
+                value={paymentData.paymentMethod}
+                onValueChange={(value: PaymentMethod) =>
+                  setPaymentData({ ...paymentData, paymentMethod: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="Online Transfer">
+                    Online Transfer
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="referenceId">Reference ID (Optional)</Label>
+              <Input
+                id="referenceId"
+                value={paymentData.referenceId}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    referenceId: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="notes">Notes (Optional)</Label>
+              <Textarea
+                id="notes"
+                value={paymentData.notes}
+                onChange={(e) =>
+                  setPaymentData({
+                    ...paymentData,
+                    notes: e.target.value,
+                  })
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRecordPaymentModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleRecordPayment}>Record Payment</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Waive Fine Modal */}
+      <Dialog
+        open={isWaiveFineModalOpen}
+        onOpenChange={setIsWaiveFineModalOpen}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Waive Fine</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="waiverReason">Reason for Waiver *</Label>
+              <Textarea
+                id="waiverReason"
+                value={waiverData.waiverReason}
+                onChange={(e) =>
+                  setWaiverData({
+                    waiverReason: e.target.value,
+                  })
+                }
+                placeholder="Enter reason for waiving this fine..."
+                required
+              />
+            </div>
+            {selectedFine && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-sm text-amber-800">
+                  You are about to waive a fine of ₹
+                  {selectedFine.outstandingAmount.toFixed(2)} for{" "}
+                  {selectedFine.userId?.username || "user"}.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsWaiveFineModalOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleWaiveFine}
+              disabled={!waiverData.waiverReason.trim()}
+            >
+              Waive Fine
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

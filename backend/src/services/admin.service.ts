@@ -26,6 +26,9 @@ import nodemailer from "nodemailer";
 import { PopulatedDoc, Document } from "mongoose";
 import { Icategory } from "../interfaces/category.interface";
 import { sendWhatsAppMessage } from "../config/whatsapp";
+import { sendEmail } from "../config/emailService";
+import { getNotificationTemplate } from "../utility/getNotificationTemplate";
+import { UserDefinedMessageInstance } from "twilio/lib/rest/api/v2010/account/call/userDefinedMessage";
 
 interface loginDTO {
   email: string;
@@ -76,7 +79,7 @@ export const loginService = async (data: loginDTOWithRemember) => {
     user: {
       id: user._id,
       email: user.email,
-      fullName: user.fullName
+      fullName: user.fullName,
     },
     accessToken,
     refreshToken,
@@ -227,6 +230,43 @@ export const updateUserStatusService = async (userId: any, status: string) => {
     throw err;
   }
 
+  const targetUser = await User.findById(userId);
+  if (!targetUser) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (status === "Inactive") {
+    // 1. Check issued inventory (Books, Courses, Toys) not returned
+    const issuedItems = await InventoryItem.findOne({
+      userId: targetUser._id,
+      status: "Issued",
+    });
+
+    if (issuedItems) {
+      const err: any = new Error(
+        "User cannot be deactivated: issued items are not yet returned."
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // 2. Check unpaid fines
+    const unpaidFine = await Fine.findOne({
+      userId: targetUser._id,
+      status: "Outstanding",
+    });
+
+    if (unpaidFine) {
+      const err: any = new Error(
+        "User cannot be deactivated: outstanding unpaid fines exist."
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+  }
+
   const updatedUser = await User.findOneAndUpdate(
     {
       _id: userId,
@@ -243,9 +283,28 @@ export const updateUserStatusService = async (userId: any, status: string) => {
     throw err;
   }
 
-  if (updatedUser.phoneNumber && status === "Active") {
-    const message = `Hi ${updatedUser.fullName}, your account has been activated! You can now log in.`;
-    sendWhatsAppMessage(updatedUser.phoneNumber, message);
+  // notifications
+  if (status === "Active") {
+    const { subject, body, whatsapp } = await getNotificationTemplate(
+      "userActivated",
+      { user: updatedUser.fullName },
+      {
+        subject: "Account Activated",
+        body: `Hi ${updatedUser.fullName}, your account has been activated! You can now log in.`,
+        whatsapp: `Hi ${updatedUser.fullName}, your account has been activated! 🎉`,
+      }
+    );
+
+    if (updatedUser.email && updatedUser.notificationPreference?.email) {
+      await sendEmail(updatedUser.email, subject, body);
+    }
+
+    if (
+      updatedUser.phoneNumber &&
+      updatedUser.notificationPreference?.whatsApp
+    ) {
+      await sendWhatsAppMessage(updatedUser.phoneNumber, whatsapp!);
+    }
   }
 
   return updatedUser;
@@ -322,72 +381,103 @@ export const getAllUsersService = async (page = 1, limit = 10) => {
   return { users, totalUsers };
 };
 
-export const createUserService = async ({
-  fullName,
-  email,
-  userName,
-  password,
-  role,
-  emp_id,
-  ass_emp_id,
-  passwordResetRequired
-}: any) => {
+// export const createUserService = async ({
+//   fullName,
+//   email,
+//   userName,
+//   password,
+//   role,
+//   assignedRoles,
+//   emp_id,
+//   ass_emp_id,
+//   passwordResetRequired,
+// }: any) => {
+//   try {
+//     // Check for existing user
+//     const existingUser = await User.findOne({
+//       $or: [{ email }, { username: userName }],
+//     });
 
-  const existingUser = await User.findOne({
-    $or: [{ email }, { username: userName }],
-  });
+//     if (existingUser) {
+//       throw new Error("User with this email or username already exists.");
+//     }
 
-  if (existingUser) {
-    const err: any = new Error(
-      "User with this email or username already exists."
-    );
-    err.statusCode = 409;
-    throw err;
-  }
+//     // Find and validate roles
+//     const rolesToFind =
+//       assignedRoles && assignedRoles.length > 0 ? assignedRoles : [role];
+//     const userRoleDocuments = await Role.find({ _id: { $in: rolesToFind } });
 
-  const userRole = await Role.findOne({ roleName: role });
-  if (!userRole) {
-    const err: any = new Error(`Role '${role}' not found.`);
-    err.statusCode = 400;
-    throw err;
-  }
+//     if (userRoleDocuments.length !== rolesToFind.length) {
+//       throw new Error("One or more specified roles could not be found.");
+//     }
 
-  let employeeIdValue = emp_id;
-  let associatedEmployeeIdValue = undefined;
-  if(role === 'family')
-  {
-    if (!ass_emp_id) {
-      const err: any = new Error("Associated employee ID is required for a family member.");
-      err.statusCode = 400;
-      throw err;
-    }
+//     // Handle employee/family member logic
+//     let employeeIdValue = emp_id;
+//     let associatedEmployeeIdValue = undefined;
 
-    const associatedEmployee = await User.findOne({ employeeId: ass_emp_id });
-    if (!associatedEmployee) {
-      const err: any = new Error(`Employee with ID '${ass_emp_id}' not found.`);
-      err.statusCode = 404; 
-      throw err;
-    }
+//     if (role === "Family Member") {
+//       if (!ass_emp_id) {
+//         throw new Error(
+//           "Associated employee ID is required for a family member."
+//         );
+//       }
+//       const associatedEmployee = await User.findOne({ employeeId: ass_emp_id });
+//       if (!associatedEmployee) {
+//         throw new Error(`Employee with ID '${ass_emp_id}' not found.`);
+//       }
+//       associatedEmployeeIdValue = associatedEmployee._id;
+//       employeeIdValue = undefined;
+//     }
 
-    associatedEmployeeIdValue = associatedEmployee._id;
-    employeeIdValue = undefined; 
-  }
+//     // Create new user
+//     const newUser = new User({
+//       fullName,
+//       email,
+//       username: userName,
+//       password,
+//       roles: userRoleDocuments.map((r) => r._id),
+//       employeeId: employeeIdValue,
+//       associatedEmployeeId: associatedEmployeeIdValue,
+//       passwordResetRequired,
+//       status: "Inactive",
+//     });
 
-  const newUser = new User({
-    fullName: fullName,
-    email: email,
-    username: userName,
-    password: password,
-    roles: [userRole._id],
-    employeeId: employeeIdValue,
-    associatedEmployeeId: associatedEmployeeIdValue,
-    passwordResetRequired: passwordResetRequired,
-    status: "Active",
-  });
+//     // Save user first
+//     const savedUser = await newUser.save();
+//     if (!savedUser) {
+//       throw new Error("Failed to create user");
+//     }
 
-  await newUser.save();
-  return newUser;
-};
+//     console.log("start to sending an email");
+//     try {
+//       const subject = "Welcome to the Library Management System!";
+//       const htmlBody = `
+//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+//           <h2 style="color: #0056b3;">Welcome, ${fullName}!</h2>
+//           <p>An account has been successfully created for you in our Library Management System (LMS).</p>
+//           <p>You can now log in using the following credentials:</p>
+//           <ul style="list-style-type: none; padding: 0;">
+//             <li style="margin-bottom: 10px;"><strong>Username:</strong> ${userName}</li>
+//             <li style="margin-bottom: 10px;"><strong>Temporary Password:</strong> <code style="background-color: #f4f4f4; padding: 3px 6px; border-radius: 4px; font-size: 1.1em;">${password}</code></li>
+//           </ul>
+//           <p>For your security, you will be required to change this password after your first login.</p>
+//           <p>Thank you for joining us!</p>
+//         </div>
+//       `;
+
+//       await sendEmail(email, subject, htmlBody);
+//       console.log("Welcome email sent successfully to:", email);
+//     } catch (emailError) {
+//       console.error("Failed to send welcome email:", emailError);
+//       // Don't throw here - we still want to return the created user
+//     }
+
+//     return savedUser;
+//   } catch (error) {
+//     console.error("Error in createUserService:", error);
+//     throw error; // Re-throw to be handled by the controller
+//   }
+// };
 
 export const getUserDetailsService = async (userId: any) => {
   const user = await User.findOne({ _id: userId });
@@ -424,7 +514,31 @@ export const deleteUserService = async (userId: string) => {
     throw err;
   }
 
+  const issuedItems = await InventoryItem.findOne({
+    userId: userId,
+    status: "Issued",
+  });
 
+  if (issuedItems) {
+    const err: any = new Error(
+      "User cannot be deactivated: issued items are not yet returned."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const unpaidFine = await Fine.findOne({
+    userId: userId,
+    status: "Outstanding",
+  });
+
+  if (unpaidFine) {
+    const err: any = new Error(
+      "User cannot be deactivated: outstanding unpaid fines exist."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
   await User.findByIdAndDelete(userId);
   return { message: "User deleted successfully." };
 };
@@ -465,11 +579,20 @@ export const createRoleService = async ({
   description?: string;
   permissions: string[];
 }) => {
+  // 1. Check if role already exists
+  const existingRole = await Role.findOne({ roleName });
+  if (existingRole) {
+    const err: any = new Error(`Role with name '${roleName}' already exists.`);
+    err.statusCode = 409; // 409 Conflict
+    throw err;
+  }
+
   const foundPermissions = await Permission.find({
     permissionKey: { $in: permissions },
   }).select("_id");
 
-  if (!foundPermissions.length) {
+  // 2. Improved check: Ensure ALL requested permissions were found
+  if (foundPermissions.length !== permissions.length) {
     const err: any = new Error("One or more permissions not found.");
     err.statusCode = 400;
     throw err;
@@ -483,7 +606,8 @@ export const createRoleService = async ({
     permissions: permissionIds,
   });
 
-  newRole.save();
+  // 3. Correctly await the save operation
+  await newRole.save();
   return newRole;
 };
 
@@ -581,7 +705,7 @@ export const createInventoryItemsService = async (data: any) => {
     err.statusCode = 11000;
     throw err;
   }
-  
+
   return await newItem.save();
 };
 
@@ -709,16 +833,10 @@ export const deleteCategoryService = async (categoryId: string) => {
 
 export const getAllFinesService = async () => {
   const fines = await Fine.find()
-  .populate("userId", "username email")
-  .populate("itemId", "title");
+    .populate("userId", "username email")
+    .populate("itemId", "title");
 
-  if (!fines || fines.length === 0) {
-    const err: any = new Error("No fines found");
-    err.statusCode = 404;
-    throw err;
-  }
-
-  return fines;
+  return fines || "";
 };
 
 export const fetchUserFinesService = async (userId: any) => {
@@ -796,11 +914,10 @@ export const updateFineService = async ({ fineId, data }: any) => {
   return updatedFine;
 };
 
-export const deleteFineService = async(fineId: string) => {
+export const deleteFineService = async (fineId: string) => {
   const isExists = await Fine.findById(fineId);
 
-  if(!isExists)
-  {
+  if (!isExists) {
     const err: any = new Error("No such Fine Exits");
     err.statusCode = 404;
     throw err;
@@ -808,7 +925,91 @@ export const deleteFineService = async(fineId: string) => {
 
   await Fine.findByIdAndDelete(fineId);
   return { message: "Fine deleted successfully" };
-}
+};
+
+export const recordPaymentService = async (data: any) => {
+  const { fineId, amountPaid, paymentMethod, referenceId, notes, managedByAdminId } = data;
+
+  const fine = await Fine.findById(fineId);
+  if (!fine) {
+    const err: any = new Error("Fine not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const newAmountPaid = fine.amountPaid + amountPaid;
+  const newOutstanding = fine.amountIncurred - newAmountPaid;
+  
+  const updateData: any = {
+    amountPaid: newAmountPaid,
+    outstandingAmount: newOutstanding,
+    status: newOutstanding > 0 ? "Outstanding" : "Paid",
+    dateSettled: newOutstanding === 0 ? new Date() : null,
+    managedByAdminId,
+  };
+
+  // Add payment details if this is the first payment
+  if (!fine.paymentDetails) {
+    updateData.paymentDetails = [];
+  }
+
+  updateData.paymentDetails.push({
+    amount: amountPaid,
+    paymentMethod,
+    referenceId,
+    notes,
+    paymentDate: new Date(),
+  });
+
+  const updatedFine = await Fine.findByIdAndUpdate(
+    fineId,
+    { $set: updateData },
+    { new: true, runValidators: true }
+  );
+
+  // Send notification to user
+  const user = await User.findById(fine.userId).lean();
+  if (user && user.phoneNumber) {
+    const message = `Hi ${user.fullName}, payment of ₹${amountPaid} has been recorded for your fine. Outstanding amount: ₹${newOutstanding}`;
+    sendWhatsAppMessage(user.phoneNumber, message);
+  }
+
+  return updatedFine;
+};
+
+export const waiveFineService = async (data: any) => {
+  const { fineId, waiverReason, managedByAdminId } = data;
+
+  const fine = await Fine.findById(fineId);
+  if (!fine) {
+    const err: any = new Error("Fine not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const updatedFine = await Fine.findByIdAndUpdate(
+    fineId,
+    {
+      $set: {
+        status: "Waived",
+        outstandingAmount: 0,
+        dateSettled: new Date(),
+        waiverReason,
+        managedByAdminId,
+      },
+    },
+    { new: true, runValidators: true }
+  );
+
+  // Send notification to user
+  const user = await User.findById(fine.userId).lean();
+  if (user && user.phoneNumber) {
+    const message = `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} has been waived. Reason: ${waiverReason}`;
+    sendWhatsAppMessage(user.phoneNumber, message);
+  }
+
+  return updatedFine;
+};
 
 export const generateInventoryReportPDF = async (res: Response) => {
   // Fetch inventory items with populated category
@@ -1065,6 +1266,24 @@ export const getNotificationTemplatesService = async () => {
   return templates;
 };
 
+export const addTemplateService = async (key: string, template: any) => {
+  const settings = await Setting.findOneAndUpdate(
+    {},
+    { $set: { [`notificationTemplates.${key}`]: template } },
+    { upsert: true, new: true }
+  );
+  return settings.notificationTemplates;
+};
+
+export const updateTemplateService = async (key: string, template: any) => {
+  const settings = await Setting.findOneAndUpdate(
+    {},
+    { $set: { [`notificationTemplates.${key}`]: template } },
+    { new: true }
+  );
+  return settings?.notificationTemplates || "";
+};
+
 export const updateNotificationTemplateService = async ({
   templateKey,
   data,
@@ -1217,7 +1436,7 @@ export const getAllDonationService = async () => {
   const donations = await Donation.find()
     .populate({ path: "userId", select: "fullName email" })
     .populate({ path: "itemType", select: "name description" });
-  
+
   return donations || "";
 };
 
@@ -1372,11 +1591,20 @@ export const removeUserFromQueueService = async (
 
     return { message: "User removed from queue successfully." };
   } catch (error) {
-    // If an error occurs, abort the transaction
     await session.abortTransaction();
     session.endSession();
 
-    // Re-throw the error to be handled by the controller
     throw error;
   }
 };
+
+export const fetchAllPermissionsService = async () => {
+  const permissions = await Permission.find({}).lean();
+  if (!permissions.length) {
+    const err: any = new Error("No permissions found.");
+    err.statusCode = 404;
+    throw err;
+  }
+  return permissions;
+};
+

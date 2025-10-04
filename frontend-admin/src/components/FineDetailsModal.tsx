@@ -6,7 +6,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Fine } from "@/screens/Fines";
+import { Fine } from "@/interfaces/fines";
 import { Badge } from "./ui/badge";
 
 interface FineDetailsModalProps {
