@@ -61,7 +61,7 @@ export const createUserSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "Employee ID is required for the Employee role.",
-        path: ["emp_id"], 
+        path: ["emp_id"],
       });
     }
     // Check for Family Member role
@@ -69,7 +69,7 @@ export const createUserSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         message: "The main Employee's User ID must be provided.",
-        path: ["ass_emp_id"], 
+        path: ["ass_emp_id"],
       });
     }
   });
@@ -85,7 +85,14 @@ export const RoleSchema = z.object({
 export const InventoryItemsSchema = z.object({
   title: z.string().trim().min(2, "At least 2 characters required"),
   authorOrCreator: z.string().trim().optional(),
-  isbnOrIdentifier: z.string().trim().min(1, "ISBN/Identifier is required"),
+  isbnOrIdentifier: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z
+      .string()
+      .trim()
+      .min(1, "ISBN/Identifier must not be empty if provided")
+      .optional()
+  ),
   description: z.string().trim().optional(),
   publisherOrManufacturer: z.string().trim().optional(),
   publicationYear: z.coerce.number().int().min(0, "Invalid year").optional(),
@@ -101,7 +108,10 @@ export const InventoryItemsSchema = z.object({
 
   categoryId: z.string().min(1, "CategoryId is required"),
   subcategoryId: z.string().optional(),
-  barcode: z.string().trim().min(1, "Barcode is required").optional(),
+  barcode: z.preprocess(
+    (val) => (val === "" ? undefined : val),
+    z.string().trim().min(1, "Barcode must not be empty if provided").optional()
+  ),
   defaultReturnPeriod: z.coerce.number().int().optional(),
   mediaUrl: z.string().optional(),
   status: z
@@ -112,14 +122,20 @@ export const InventoryItemsSchema = z.object({
 export const InventoryItemsUpdateSchema = InventoryItemsSchema.partial();
 
 export const CategorySchema = z.object({
-  name: z.string().trim().min(2, "atleast 2 character"),
-  description: z.string().trim(),
-  defaultReturnPeriod: z
-    .number()
-    .int()
-    .nonnegative("return period must be non-negative")
-    .optional(),
+  name: z
+    .string()
+    .min(1, "Category name is required")
+    .max(100, "Category name too long"),
+  description: z
+    .string()
+    .max(500, "Description too long")
+    .optional()
+    .default(""),
+  parentCategoryId: z.string().optional().nullable().default(null),
+  defaultReturnPeriod: z.number().int().min(1).max(365).optional().default(20),
 });
+
+export type CategoryInput = z.infer<typeof CategorySchema>;
 
 export const CategoryUpdateSchema = CategorySchema.partial();
 

@@ -62,7 +62,10 @@ const userSchema = new mongoose.Schema<IUser>(
     phoneNumber: String,
     dateOfBirth: Date,
     address: addressSchema,
-    lastLogin: Date,
+    lastLogin: {
+      type: Date,
+      default: null,
+    },
     accountLockedUntil: Date,
     profile: String,
     passwordResetRequired: {

@@ -1,5 +1,14 @@
 import { Schema, model, Document, Types } from "mongoose";
 
+export interface IPaymentDetail {
+  amountPaid: number;
+  paymentMethod: "Cash" | "Card" | "Online Transfer";
+  transactionId?: string;
+  paymentDate: Date;
+  notes?: string;
+  recordedBy?: Types.ObjectId;
+}
+
 export interface IFine extends Document {
   userId: Types.ObjectId;
   itemId: Types.ObjectId;
@@ -8,13 +17,10 @@ export interface IFine extends Document {
   amountPaid: number;
   outstandingAmount: number;
 
-  paymentDetails?: {
-    paymentMethod: "Cash" | "Card" | string;
-    transactionId?: string;
-  };
+  paymentDetails: IPaymentDetail[];
 
   dateIncurred: Date;
   dateSettled?: Date | null;
-  status: "Outstanding" | "Paid" | string;
+  status: "Outstanding" | "Paid" | "Waived";
   managedByAdminId?: Types.ObjectId;
 }

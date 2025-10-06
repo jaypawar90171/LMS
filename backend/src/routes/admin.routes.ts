@@ -40,7 +40,6 @@ import {
   updateItemController,
   deleteItemController,
   getCategoriesController,
-  createCatgoryController,
   updateCategoryController,
   deleteCategoryController,
   getAllFinesController,
@@ -56,6 +55,8 @@ import {
   fetchAllPermissionsController,
   recordPaymentController,
   waiveFineController,
+  createCategoryController,
+  getCategoryByIdController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
@@ -104,11 +105,7 @@ router.get(
   getUserDetailsController
 );
 
-router.put(
-  "/users/:userId",
-  authUser,
-  updateUserController
-);
+router.put("/users/:userId", authUser, updateUserController);
 
 router.put(
   "/users/:userId/reset-password",
@@ -153,7 +150,7 @@ router.delete(
   deleteRoleController
 );
 
-router.get('/permissions', authUser, fetchAllPermissionsController);
+router.get("/permissions", authUser, fetchAllPermissionsController);
 
 /* ========================= DASHBOARD ========================= */
 router.get(
@@ -174,8 +171,6 @@ router.get(
   // authorize(["admin:viewAllItems"]),
   fetchInventoryItemsController
 );
-
-
 
 router.post(
   "/inventory/items",
@@ -214,22 +209,24 @@ router.get(
   getCategoriesController
 );
 
+router.get("/inventory/categories/:id", authUser, getCategoryByIdController);
+
 router.post(
   "/inventory/categories",
   authUser,
   // authorize(["admin:addCategory"]),
-  createCatgoryController
+  createCategoryController
 );
 
 router.put(
-  "/inventory/categories/:categoryId",
+  "/inventory/categories/:id",
   authUser,
   // authorize(["admin:editCategory"]),
   updateCategoryController
 );
 
 router.delete(
-  "/inventory/categories/:categoryId",
+  "/inventory/categories/:id",
   authUser,
   // authorize(["admin:deleteCategory"]),
   deleteCategoryController
@@ -264,13 +261,16 @@ router.put(
   updateFineController
 );
 
-router.delete("/fines/:fineId", 
-  authUser, 
-  // authorize(["admin:manageRentals"]), 
-  deleteFinesController);
+router.delete(
+  "/fines/:fineId",
+  authUser,
+  // authorize(["admin:manageRentals"]),
+  deleteFinesController
+);
 
-router.post('/fines/:fineId/record-payment', recordPaymentController);
-router.post('/fines/:fineId/waive', waiveFineController);
+router.post("/fines/:fineId/record-payment", authUser, recordPaymentController);
+
+router.post("/fines/:fineId/waive", authUser, waiveFineController);
 
 /* ========================= REPORTS ========================= */
 router.get(
@@ -337,7 +337,10 @@ router.get(
   getNotificationTemplatesController
 );
 
-router.post("/settings/notofication-templates", addNotoficationTemplateController);
+router.post(
+  "/settings/notofication-templates",
+  addNotoficationTemplateController
+);
 
 router.put(
   "/settings/notification-templates/:templateKey",
@@ -357,7 +360,7 @@ router.put(
   "/settings/profile/:userId",
   authUser,
   // authorize(["admin:manageUsers"]),
-  upload.single('profile'),
+  upload.single("profile"),
   updateAdminController
 );
 

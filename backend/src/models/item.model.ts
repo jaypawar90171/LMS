@@ -15,7 +15,6 @@ const itemSchema = new mongoose.Schema<IInventoryItem>(
     isbnOrIdentifier: {
       type: String,
       unique: true,
-      required: true,
     },
     description: {
       type: String,

@@ -29,6 +29,12 @@ import { sendWhatsAppMessage } from "../config/whatsapp";
 import { sendEmail } from "../config/emailService";
 import { getNotificationTemplate } from "../utility/getNotificationTemplate";
 import { UserDefinedMessageInstance } from "twilio/lib/rest/api/v2010/account/call/userDefinedMessage";
+import {
+  IDefaulterListQuery,
+  IDefaulterReportItem,
+} from "../interfaces/report.interface";
+import { IInventoryItem } from "../interfaces/inventoryItems.interface";
+import type { Request as ExpressRequest } from "express";
 
 interface loginDTO {
   email: string;
@@ -74,6 +80,10 @@ export const loginService = async (data: loginDTOWithRemember) => {
   const refreshToken = jwt.sign(refreshTokenPayload, process.env.SECRET_KEY!, {
     expiresIn: "30d",
   });
+
+  //add the last login time
+  user.lastLogin = new Date();
+  await user.save();
 
   return {
     user: {
@@ -375,6 +385,7 @@ export const getAllUsersService = async (page = 1, limit = 10) => {
   const users = await User.find({})
     .select("-password")
     .populate("roles", "roleName")
+    .populate("permissions", "permissionKey")
     .limit(limit)
     .skip(skip);
 
@@ -769,66 +780,203 @@ export const deleteItemService = async (itemId: any) => {
   return deletedItem;
 };
 
-export const getCategoriesService = async () => {
-  const categories = await Category.find({}, "name description").lean();
+const buildCategoryTree = (categories: any[]) => {
+  const categoryMap = new Map();
+  const rootCategories: any[] = [];
 
-  if (!categories || categories.length === 0) {
-    const err: any = new Error("No categories found");
-    err.statusCode = 404;
-    throw err;
+  // Create a map of all categories
+  categories.forEach((category) => {
+    categoryMap.set(category._id.toString(), {
+      ...category.toObject(),
+      children: [],
+    });
+  });
+
+  // Build the tree structure
+  categories.forEach((category) => {
+    const node = categoryMap.get(category._id.toString());
+    if (
+      category.parentCategoryId &&
+      categoryMap.has(category.parentCategoryId._id?.toString())
+    ) {
+      const parent = categoryMap.get(category.parentCategoryId._id.toString());
+      parent.children.push(node);
+    } else {
+      rootCategories.push(node);
+    }
+  });
+
+  return rootCategories;
+};
+
+
+
+export const getCategoriesService = async (includeTree = false) => {
+  if (includeTree) {
+    // Return categories in tree structure
+    const allCategories = await Category.find({})
+      .populate('parentCategoryId', 'name description')
+      .sort({ name: 1 });
+    
+    return buildCategoryTree(allCategories);
   }
-
-  return categories;
+  
+  return await Category.find({})
+    .populate('parentCategoryId', 'name description')
+    .sort({ name: 1 });
 };
 
 export const createCategoryService = async (data: any) => {
-  const { name, description, defaultReturnPeriod } = data;
+  const { name, description, parentCategoryId, defaultReturnPeriod } = data;
 
-  const isExisting = await Category.findOne({ name });
-  if (isExisting) {
-    const err: any = new Error("Category already exists");
-    err.statusCode = 404;
+  const existingCategory = await Category.findOne({
+    name,
+    parentCategoryId: parentCategoryId || null,
+  });
+
+  if (existingCategory) {
+    const err: any = new Error(
+      "Category with this name already exists at this level"
+    );
+    err.statusCode = 409;
     throw err;
+  }
+
+  if (parentCategoryId) {
+    const parentCategory = await Category.findById(parentCategoryId);
+    if (!parentCategory) {
+      const err: any = new Error("Parent category not found");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    // Prevent circular reference (category cannot be its own parent)
+    if (parentCategoryId === data._id) {
+      const err: any = new Error("Category cannot be its own parent");
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Check if parent category has a parent (max 2 levels deep)
+    if (parentCategory.parentCategoryId) {
+      const err: any = new Error(
+        "Cannot add subcategory to a subcategory. Maximum hierarchy depth is 2 levels."
+      );
+      err.statusCode = 400;
+      throw err;
+    }
   }
 
   const category = new Category({
     name,
     description: description || "",
-    defaultReturnPeriod: defaultReturnPeriod ?? null,
+    parentCategoryId: parentCategoryId || null,
+    defaultReturnPeriod: defaultReturnPeriod || 20,
   });
 
   await category.save();
-  return category;
+  const populatedCategory = await Category.findById(category._id).populate(
+    "parentCategoryId",
+    "name description"
+  );
+
+  return populatedCategory;
 };
 
-export const updateCategoryService = async ({ categoryId, data }: any) => {
-  const isCategoryExists = await Category.findById(categoryId);
-  if (!isCategoryExists) {
-    const err: any = new Error("No such category exits");
+export const updateCategoryService = async (categoryId: string, data: any) => {
+  const { name, description, defaultReturnPeriod } = data;
+
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    const err: any = new Error("Category not found");
     err.statusCode = 404;
     throw err;
   }
 
-  const updatedCatgory = await Category.findByIdAndUpdate(
-    categoryId,
-    { $set: data },
-    { new: true, runValidators: true }
-  );
+  // Check if name is being changed and if it conflicts with existing category at same level
+  if (name && name !== category.name) {
+    const existingCategory = await Category.findOne({
+      name,
+      parentCategoryId: category.parentCategoryId,
+      _id: { $ne: categoryId }, // Exclude current category
+    });
 
-  return updatedCatgory;
+    if (existingCategory) {
+      const err: any = new Error(
+        "Category with this name already exists at this level"
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+  }
+
+  // Update category fields
+  if (name) category.name = name;
+  if (description !== undefined) category.description = description;
+  if (defaultReturnPeriod !== undefined)
+    category.defaultReturnPeriod = defaultReturnPeriod;
+
+  await category.save();
+
+  return await Category.findById(categoryId).populate(
+    "parentCategoryId",
+    "name description"
+  );
 };
 
 export const deleteCategoryService = async (categoryId: string) => {
   const category = await Category.findById(categoryId);
   if (!category) {
-    const err: any = new Error("No such category exists");
+    const err: any = new Error("Category not found");
     err.statusCode = 404;
     throw err;
   }
 
-  await Category.findByIdAndDelete(categoryId);
+  // Check if category has children
+  const childCategories = await Category.find({ parentCategoryId: categoryId });
+  if (childCategories.length > 0) {
+    const err: any = new Error(
+      "Cannot delete category that has child categories"
+    );
+    err.statusCode = 400;
+    throw err;
+  }
 
+  //Check if category has inventory items
+  const itemsCount = await InventoryItem.countDocuments({ categoryId });
+  if (itemsCount > 0) {
+    const err: any = new Error(
+      "Cannot delete category that has inventory items"
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  await Category.findByIdAndDelete(categoryId);
   return { message: "Category deleted successfully" };
+};
+
+export const getCategoryByIdService = async (categoryId: string) => {
+  const category = await Category.findById(categoryId).populate(
+    "parentCategoryId",
+    "name description"
+  );
+
+  if (!category) {
+    const err: any = new Error("Category not found");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  // Get child categories
+  const children = await Category.find({ parentCategoryId: categoryId }).sort({
+    name: 1,
+  });
+
+  return {
+    ...category.toObject(),
+    children,
+  };
 };
 
 export const getAllFinesService = async () => {
@@ -928,7 +1076,14 @@ export const deleteFineService = async (fineId: string) => {
 };
 
 export const recordPaymentService = async (data: any) => {
-  const { fineId, amountPaid, paymentMethod, referenceId, notes, managedByAdminId } = data;
+  const {
+    fineId,
+    amountPaid,
+    paymentMethod,
+    referenceId,
+    notes,
+    managedByAdminId,
+  } = data;
 
   const fine = await Fine.findById(fineId);
   if (!fine) {
@@ -937,42 +1092,41 @@ export const recordPaymentService = async (data: any) => {
     throw err;
   }
 
-  const newAmountPaid = fine.amountPaid + amountPaid;
-  const newOutstanding = fine.amountIncurred - newAmountPaid;
-  
-  const updateData: any = {
-    amountPaid: newAmountPaid,
-    outstandingAmount: newOutstanding,
-    status: newOutstanding > 0 ? "Outstanding" : "Paid",
-    dateSettled: newOutstanding === 0 ? new Date() : null,
-    managedByAdminId,
+  const newPayment = {
+    amountPaid: amountPaid,
+    paymentMethod: paymentMethod,
+    transactionId: referenceId,
+    notes: notes,
+    paymentDate: new Date(),
+    recordedBy: managedByAdminId,
   };
 
-  // Add payment details if this is the first payment
-  if (!fine.paymentDetails) {
-    updateData.paymentDetails = [];
+  console.log("DEBUG: Pushing this payment object:", newPayment);
+
+  fine.paymentDetails.push(newPayment);
+
+  fine.amountPaid += amountPaid;
+  fine.outstandingAmount = fine.amountIncurred - fine.amountPaid;
+
+  if (fine.outstandingAmount <= 0) {
+    fine.outstandingAmount = 0;
+    fine.status = "Paid";
+    fine.dateSettled = new Date();
   }
 
-  updateData.paymentDetails.push({
-    amount: amountPaid,
-    paymentMethod,
-    referenceId,
-    notes,
-    paymentDate: new Date(),
-  });
+  const updatedFine = await fine.save();
 
-  const updatedFine = await Fine.findByIdAndUpdate(
-    fineId,
-    { $set: updateData },
-    { new: true, runValidators: true }
-  );
-
-  // Send notification to user
   const user = await User.findById(fine.userId).lean();
   if (user && user.phoneNumber) {
-    const message = `Hi ${user.fullName}, payment of ₹${amountPaid} has been recorded for your fine. Outstanding amount: ₹${newOutstanding}`;
+    const message = `Hi ${
+      user.fullName
+    }, a payment of ₹${amountPaid} has been recorded for your fine. The new outstanding amount is ₹${fine.outstandingAmount.toFixed(
+      2
+    )}.`;
     sendWhatsAppMessage(user.phoneNumber, message);
   }
+
+  //send email
 
   return updatedFine;
 };
@@ -1227,6 +1381,103 @@ export const getIssuedReportService = async () => {
     status: record.status || "Issued",
   }));
 };
+
+// export const getDefaulterListService = async (
+//   filters: IDefaulterListQuery
+// ): Promise<IDefaulterReportItem[]> => {
+//   const queryConditions: any = {
+//     status: "Issued",
+//     dueDate: { $lt: new Date() },
+//   };
+
+//   if (filters.overdueSince) {
+//     queryConditions.dueDate = { $lte: new Date(filters.overdueSince) };
+//   }
+
+//   let overdueItems = await IssuedItem.find(queryConditions)
+//     .populate<{ userId: IUser }>({
+//       path: "userId",
+//       select: "fullName email employeeId phoneNumber roles",
+//     })
+//     .populate<{ itemId: IInventoryItem }>({
+//       path: "itemId",
+//       select: "title barcode categoryId",
+//     })
+//     .lean();
+
+//   if (filters.itemCategory) {
+//     overdueItems = overdueItems.filter((item) => {
+//       const inventoryItem = item.itemId as IInventoryItem;
+//       return inventoryItem.categoryId?.toString() === filters.itemCategory;
+//     });
+//   }
+
+//   if (filters.userRole) {
+//     overdueItems = overdueItems.filter((item) => {
+//       const user = item.userId as IUser;
+//       return user.roles?.some((roleId) => roleId.toString() === filters.userRole);
+//     });
+//   }
+
+//   const formattedReport = overdueItems.map((item): IDefaulterReportItem => {
+//     const user = item.userId as IUser;
+//     const inventoryItem = item.itemId as IInventoryItem;
+
+//     const today = new Date();
+//     const dueDate = new Date(item.dueDate);
+//     const timeDiff = today.getTime() - dueDate.getTime();
+//     const daysOverdue = Math.max(0, Math.floor(timeDiff / (1000 * 3600 * 24)));
+
+//     return {
+//       userName: user.fullName,
+//       identifier: user.employeeId || user.email,
+//       itemTitle: inventoryItem.title,
+//       barcode: inventoryItem.barcode,
+//       issuedDate: new Date(item.issuedDate).toISOString().split("T")[0],
+//       dueDate: new Date(item.dueDate).toISOString().split("T")[0],
+//       daysOverdue: daysOverdue,
+//       contact: {
+//         email: user.email,
+//         phone: user.phoneNumber || "N/A",
+//       },
+//       userId: user._id.toString(),
+//       issuedItemId: item._id.toString(),
+//     };
+//   });
+
+//   return formattedReport;
+// };
+
+// export const getDefaulterReportPDF = async (req: ExpressRequest, res: Response) => {
+//   try {
+//     const filters: IDefaulterListQuery = {
+//       overdueSince: req.query.overdueSince as string | undefined,
+//       itemCategory: req.query.itemCategory as string | undefined,
+//       userRole: req.query.userRole as string | undefined,
+//     };
+
+//     const reportData = await getDefaulterListService(filters);
+
+//     res.setHeader("Content-Type", "application/pdf");
+//     res.setHeader(
+//       "Content-Disposition",
+//       'attachment; filename="defaulter-list-report.pdf"'
+//     );
+
+//     // **TODO**: Call your PDF generation logic here, passing it the `reportData` and `res` stream
+//     // For example:
+//     // await generateDefaulterReportPDF(reportData, res);
+
+//     // For now, let's just send the data as JSON to confirm it works
+//     res.status(200).json(reportData);
+
+//   } catch (error: any) {
+//     console.error("Error generating defaulter report:", error.message);
+//     res
+//       .status(500)
+//       .json({ message: "Failed to generate report", error: error.message });
+//   }
+// };
 
 export const getSystemRestrictionsService = async () => {
   const settings = await Setting.findOne().lean();
@@ -1607,4 +1858,3 @@ export const fetchAllPermissionsService = async () => {
   }
   return permissions;
 };
-

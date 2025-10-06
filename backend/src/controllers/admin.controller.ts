@@ -23,6 +23,7 @@ import {
   generateIssuedItemsReportPDF,
   getAdminProfileService,
   getAllDonationService,
+  getCategoryByIdService,
   getFinesReportService,
   getInventoryReportService,
   getIssuedReportService,
@@ -249,90 +250,6 @@ export const getAllUsersController = async (req: Request, res: Response) => {
     });
   }
 };
-
-// export const createUserController = async (req: Request, res: Response) => {
-//   try {
-//     const { assignedRoles, permissions, ...userData } = req.body;
-//     const email = userData.email;
-
-//     const existingUser = await User.findOne({
-//       $or: [{ email }, { username: userData.username }],
-//     });
-
-//     if (existingUser) {
-//       throw new Error("User with this email or username already exists.");
-//     }
-
-//     let permissionsFromRoles: any[] = [];
-
-//     if (assignedRoles && assignedRoles.length > 0) {
-//       const roleDocs = await Role.find({ _id: { $in: assignedRoles } });
-
-//       if (roleDocs.length !== assignedRoles.length) {
-//         return res.status(400).json({
-//           error: "One or more invalid role IDs provided",
-//         });
-//       }
-
-//       userData.roles = roleDocs.map((role) => role._id);
-
-//       permissionsFromRoles = roleDocs.flatMap((role) => role.permissions || []);
-//     }
-
-//     let additionalPermissionIds: any[] = [];
-//     if (permissions && permissions.length > 0) {
-//       const permissionDocs = await Permission.find({
-//         permissionKey: { $in: permissions },
-//       });
-
-//       if (permissionDocs.length !== permissions.length) {
-//         return res.status(400).json({
-//           error: "One or more invalid permission keys provided",
-//         });
-//       }
-//       additionalPermissionIds = permissionDocs.map((p) => p._id);
-//     }
-
-//     const allPermissions = [
-//       ...new Set([...permissionsFromRoles, ...additionalPermissionIds]),
-//     ];
-//     userData.permissions = allPermissions;
-
-//     const user = await User.create({
-//       ...userData,
-//       roles: userData.roles,
-//     });
-
-//     const subject = "Welcome to the Library Management System!";
-//     const htmlBody = `
-//             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-//               <h2 style="color: #0056b3;">Welcome, ${userData.fullName}!</h2>
-//               <p>An account has been successfully created for you in our Library Management System (LMS).</p>
-//               <p>You can now log in using the following credentials:</p>
-//               <ul style="list-style-type: none; padding: 0;">
-//                 <li style="margin-bottom: 10px;"><strong>Username:</strong> ${
-//                   userData.username || "N/A"
-//                 }</li>
-//                 <li style="margin-bottom: 10px;"><strong>Temporary Password:</strong> <code style="background-color: #f4f4f4; padding: 3px 6px; border-radius: 4px; font-size: 1.1em;">${
-//                   userData.password
-//                 }</code></li>
-//               </ul>
-//               <p>For your security, you will be required to change this password after your first login.</p>
-//               <p>Thank you for joining us!</p>
-//             </div>
-//           `;
-
-//     await sendEmail(userData.email, subject, htmlBody);
-//     console.log("Welcome email sent successfully to:", userData.email);
-
-//     res.status(201).json(user);
-//   } catch (error) {
-//     console.error("Error creating user:", error);
-//     res.status(500).json({
-//       error: error instanceof Error ? error.message : "Failed to create user",
-//     });
-//   }
-// };
 
 export const createUserController = async (req: Request, res: Response) => {
   try {
@@ -880,6 +797,7 @@ export const fetchInventoryItemsController = async (
     });
   }
 };
+
 export const createInventoryItemsController = async (
   req: Request,
   res: Response
@@ -1028,31 +946,29 @@ export const deleteItemController = async (req: Request, res: Response) => {
 
 export const getCategoriesController = async (req: Request, res: Response) => {
   try {
-    const categories = await getCategoriesService();
+    const { tree } = req.query;
+    const includeTree = tree === "true";
 
+    const categories = await getCategoriesService(includeTree);
     return res.status(200).json({
       message: "Categories fetched successfully",
       data: categories,
     });
   } catch (error: any) {
-    if (error.statusCode === 404) {
-      return res.status(404).json({ message: "No categories found" });
-    }
-
     return res.status(500).json({
       message: error.message || "Internal Server Error",
     });
   }
 };
 
-export const createCatgoryController = async (req: Request, res: Response) => {
+export const createCategoryController = async (req: Request, res: Response) => {
   try {
     const validatedData = CategorySchema.parse(req.body);
 
     const category = await createCategoryService(validatedData);
     return res
       .status(200)
-      .json({ message: "Category created", category: category });
+      .json({ message: "Category created successfully", category: category });
   } catch (error: any) {
     if (error.name === "ZodError") {
       return res.status(400).json({
@@ -1061,9 +977,15 @@ export const createCatgoryController = async (req: Request, res: Response) => {
       });
     }
 
-    if (error.code === 404) {
+    if (error.statusCode === 409) {
       return res.status(409).json({
-        message: "Category already exists",
+        message: error.message || "Category already exists",
+      });
+    }
+
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: error.message || "Parent category not found",
       });
     }
 
@@ -1075,20 +997,13 @@ export const createCatgoryController = async (req: Request, res: Response) => {
 
 export const updateCategoryController = async (req: Request, res: Response) => {
   try {
-    const { categoryId } = req.params;
+    const { id } = req.params;
+    const validatedData = CategorySchema.partial().parse(req.body);
 
-    if (!Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: "Invalid categoryId" });
-    }
-    const validatedData = CategoryUpdateSchema.parse(req.body);
-    const updatedCatgory = await updateCategoryService({
-      categoryId,
-      data: validatedData,
-    });
-
+    const category = await updateCategoryService(id, validatedData);
     return res.status(200).json({
-      message: "Category updated succesfully",
-      category: updatedCatgory,
+      message: "Category updated successfully",
+      category: category,
     });
   } catch (error: any) {
     if (error.name === "ZodError") {
@@ -1098,9 +1013,15 @@ export const updateCategoryController = async (req: Request, res: Response) => {
       });
     }
 
-    if (error.code === 404) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: error.message || "Category not found",
+      });
+    }
+
+    if (error.statusCode === 409) {
       return res.status(409).json({
-        message: "No such category exits",
+        message: error.message || "Category name conflict",
       });
     }
 
@@ -1112,18 +1033,44 @@ export const updateCategoryController = async (req: Request, res: Response) => {
 
 export const deleteCategoryController = async (req: Request, res: Response) => {
   try {
-    const { categoryId } = req.params;
-
-    if (!Types.ObjectId.isValid(categoryId)) {
-      return res.status(400).json({ error: "Invalid categoryId" });
-    }
-
-    const result = await deleteCategoryService(categoryId);
-
+    const { id } = req.params;
+    const result = await deleteCategoryService(id);
     return res.status(200).json(result);
   } catch (error: any) {
     if (error.statusCode === 404) {
-      return res.status(404).json({ message: error.message });
+      return res.status(404).json({
+        message: error.message || "Category not found",
+      });
+    }
+
+    if (error.statusCode === 400) {
+      return res.status(400).json({
+        message: error.message || "Cannot delete category",
+      });
+    }
+
+    return res.status(500).json({
+      message: error.message || "Internal Server Error",
+    });
+  }
+};
+
+export const getCategoryByIdController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+    const category = await getCategoryByIdService(id);
+    return res.status(200).json({
+      message: "Category fetched successfully",
+      data: category,
+    });
+  } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: error.message || "Category not found",
+      });
     }
 
     return res.status(500).json({
@@ -1310,7 +1257,7 @@ export const recordPaymentController = async (req: Request, res: Response) => {
       paymentMethod,
       referenceId,
       notes,
-      managedByAdminId: req.user?.id, // Assuming you have user in request
+      managedByAdminId: req.user?.id,
     });
 
     return res.status(200).json({
@@ -1343,13 +1290,15 @@ export const waiveFineController = async (req: Request, res: Response) => {
     }
 
     if (fine.status !== "Outstanding") {
-      return res.status(400).json({ message: "Can only waive outstanding fines" });
+      return res
+        .status(400)
+        .json({ message: "Can only waive outstanding fines" });
     }
 
     const updatedFine = await waiveFineService({
       fineId,
       waiverReason,
-      managedByAdminId: req.user?.id
+      managedByAdminId: req.user?.id,
     });
 
     return res.status(200).json({
