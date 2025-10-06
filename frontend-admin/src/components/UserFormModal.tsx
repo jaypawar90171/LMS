@@ -73,15 +73,12 @@ const userFormSchema = z
     address: z
       .object({
         street: z.string().optional(),
-        country: z.string().min(1, "Country is required."),
-        state: z.string().min(1, "State/District is required."),
-        city: z.string().min(1, "City is required."),
+        country: z.string().optional(),
+        state: z.string().optional(),
+        city: z.string().optional(),
         postalCode: z.string().optional(),
       })
       .optional(),
-    relationshipType: z.enum(["Employee", "Family Member"], {
-      message: "Relationship type is required.",
-    }),
     employeeId: z.string().optional(),
     associatedEmployeeId: z.string().optional(),
     roles: z.array(z.string()).min(1, "At least one role must be selected."),
@@ -91,22 +88,22 @@ const userFormSchema = z
   })
   .refine(
     (data) => {
-      if (data.relationshipType === "Employee") return !!data.employeeId;
+      if (data.roles.includes("employee")) return !!data.employeeId;
       return true;
     },
     {
-      message: "Employee ID is required for this relationship type.",
+      message: "Employee ID is required when the Employee role is selected.",
       path: ["employeeId"],
     }
   )
   .refine(
     (data) => {
-      if (data.relationshipType === "Family Member")
-        return !!data.associatedEmployeeId;
+      if (data.roles.includes("family")) return !!data.associatedEmployeeId;
       return true;
     },
     {
-      message: "An associated employee must be selected for family members.",
+      message:
+        "An associated employee must be selected for the Family Member role.",
       path: ["associatedEmployeeId"],
     }
   );
@@ -128,6 +125,9 @@ export const UserFormModal = ({
   const [fetchedPermissions, setFetchedPermissions] = useState<Permission[]>(
     []
   );
+  const [manuallyAddedPermissions, setManuallyAddedPermissions] = useState<
+    Set<string>
+  >(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch permissions
@@ -170,7 +170,7 @@ export const UserFormModal = ({
     mode: "onChange",
   });
 
-  const relationshipType = useWatch({ control, name: "relationshipType" });
+  const selectedRoles = useWatch({ control, name: "roles" });
   const selectedCountry = useWatch({ control, name: "address.country" });
   const selectedState = useWatch({ control, name: "address.state" });
 
@@ -217,7 +217,7 @@ export const UserFormModal = ({
     const fetchEmployees = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/admin/users?role=Employee`,
+          `http://localhost:3000/api/admin/users?role=employee`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -225,38 +225,47 @@ export const UserFormModal = ({
           }
         );
         const validEmployees =
-          response.data.users?.filter(
-            (emp: User) => emp.employeeId || emp._id
+          response.data.users?.filter((emp: User) =>
+            emp.roles.some((role) => role.roleName === "employee")
           ) || [];
         setEmployees(validEmployees);
+        console.log("Fetched employees:", validEmployees);
       } catch (error) {
         console.error("Error fetching employees:", error);
         toast.error("Failed to fetch employees list.");
       }
     };
 
-    if (isOpen && relationshipType === "Family Member") {
+    if (isOpen && selectedRoles?.includes("family")) {
       fetchEmployees();
     }
-  }, [isOpen, relationshipType]);
+  }, [isOpen, selectedRoles, userData]);
 
-  // Reset form when modal opens/closes or mode changes
+  useEffect(() => {
+    if (!allRoles.length) return;
+
+    // 1. Get all permissions from the currently selected roles
+    const inheritedPermissionKeys = new Set(
+      allRoles
+        .filter((role) => selectedRoles?.includes(role.roleName))
+        .flatMap((role) => role.permissions.map((p) => p.permissionKey))
+    );
+
+    // 2. Combine inherited permissions with manually added ones
+    const newTotalPermissions = new Set([
+      ...inheritedPermissionKeys,
+      ...manuallyAddedPermissions,
+    ]);
+
+    // 3. Update the main form field with the combined list
+    setValue("permissions", Array.from(newTotalPermissions), {
+      shouldDirty: true,
+    });
+  }, [selectedRoles, manuallyAddedPermissions, allRoles, setValue]);
+
   useEffect(() => {
     if (isOpen) {
       if (mode === "edit" && userData) {
-        // Edit Mode - Pre-populate form with user data
-        const isEmployee = userData.roles?.some(
-          (r) => r.roleName === "Employee"
-        );
-        const isFamily = userData.roles?.some(
-          (r) => r.roleName === "Family Member"
-        );
-        const relationship = isEmployee
-          ? "Employee"
-          : isFamily
-          ? "Family Member"
-          : "Employee"; // Default to Employee
-
         // Pre-populate geographic data
         if (userData.address?.country) {
           const countryStates =
@@ -273,11 +282,24 @@ export const UserFormModal = ({
           }
         }
 
+        const userRoleKeys = new Set(
+          userData.roles?.flatMap(
+            (r) => r.permissions?.map((p) => p.permissionKey) || []
+          ) ?? []
+        );
+
+        const userManualKeys = new Set(
+          userData.permissions
+            ?.map((p) => p.permissionKey)
+            .filter((key) => !userRoleKeys.has(key))
+        );
+        setManuallyAddedPermissions(userManualKeys);
+
         const formData = {
           fullName: userData.fullName || "",
           username: userData.username || "",
           email: userData.email || "",
-          password: "", // Don't include password in edit mode
+          password: "",
           phoneNumber: userData.phoneNumber || "",
           dateOfBirth: userData.dateOfBirth
             ? new Date(userData.dateOfBirth).toISOString().split("T")[0]
@@ -289,7 +311,6 @@ export const UserFormModal = ({
             city: userData.address?.city || "",
             postalCode: userData.address?.postalCode || "",
           },
-          relationshipType: relationship as "Employee" | "Family Member",
           employeeId: userData.employeeId || "",
           associatedEmployeeId: userData.associatedEmployeeId || "",
           roles: userData.roles?.map((r) => r.roleName) || [],
@@ -301,7 +322,6 @@ export const UserFormModal = ({
         console.log("Resetting form with data:", formData);
         reset(formData);
       } else {
-        // Add Mode - Set up empty form with generated password
         const newPassword = generatePassword();
         const formData = {
           fullName: "",
@@ -317,7 +337,6 @@ export const UserFormModal = ({
             city: "",
             postalCode: "",
           },
-          relationshipType: "Employee" as const,
           employeeId: "",
           associatedEmployeeId: "",
           roles: [],
@@ -326,11 +345,11 @@ export const UserFormModal = ({
           passwordResetRequired: true,
         };
 
+        setManuallyAddedPermissions(new Set());
         console.log("Resetting form for add mode with password:", newPassword);
         reset(formData);
       }
     } else {
-      // Clear geographic data when modal closes
       setStates([]);
       setCities([]);
       setPermissionsVisible(false);
@@ -338,19 +357,18 @@ export const UserFormModal = ({
     }
   }, [isOpen, mode, userData, reset]);
 
-  // SIMPLIFIED SUBMISSION - This is the key fix
   const onSubmit = async (data: UserFormData) => {
-    console.log("🚀 FORM SUBMISSION STARTED - Mode:", mode);
+    console.log("FORM SUBMISSION STARTED - Mode:", mode);
 
     if (isSubmitting) {
-      console.log("❌ Already submitting, returning early");
+      console.log("Already submitting, returning early");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      console.log("📦 Form data received:", data);
+      console.log("Form data received:", data);
 
       // Validate form first
       const isValid = await trigger();
@@ -368,9 +386,8 @@ export const UserFormModal = ({
         })
         .filter(Boolean);
 
-      console.log("🎯 Mapped role IDs:", roleIds);
+      console.log("Mapped role IDs:", roleIds);
 
-      // Prepare payload - SIMPLIFIED
       const payload: any = {
         fullName: data.fullName,
         username: data.username,
@@ -381,20 +398,17 @@ export const UserFormModal = ({
         address: data.address,
         dateOfBirth: data.dateOfBirth,
         assignedRoles: roleIds,
-        permissions: data.permissions || [],
-        relationshipType: data.relationshipType,
+        permissions: Array.from(manuallyAddedPermissions),
         employeeId: data.employeeId,
         associatedEmployeeId: data.associatedEmployeeId,
       };
 
-      // Only include password in add mode
       if (mode === "add" && data.password) {
         payload.password = data.password;
       }
 
-      console.log("📤 Final payload:", payload);
+      console.log("Final payload:", payload);
 
-      // Use different approach for API call
       let response;
 
       if (mode === "add") {
@@ -421,17 +435,16 @@ export const UserFormModal = ({
         );
       }
 
-      console.log("✅ API Response:", response.data);
+      console.log("API Response:", response.data);
 
       toast.success(
         `User ${mode === "add" ? "created" : "updated"} successfully!`
       );
 
-      // Refresh data and close modal
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
-      console.error("❌ Submission error:", error);
+      console.error("Submission error:", error);
 
       let errorMessage = `Failed to ${
         mode === "add" ? "create" : "update"
@@ -451,12 +464,10 @@ export const UserFormModal = ({
     }
   };
 
-  // Direct form submission handler
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("🎯 Form submit event triggered");
+    console.log("Form submit event triggered");
 
-    // Use handleSubmit directly
     handleSubmit(onSubmit)(e);
   };
 
@@ -474,7 +485,6 @@ export const UserFormModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Use proper form wrapper */}
         <form onSubmit={handleFormSubmit} className="space-y-4">
           <Tabs defaultValue="core" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -726,33 +736,7 @@ export const UserFormModal = ({
 
             {/* Roles & Status Tab */}
             <TabsContent value="roles" className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Relationship Type *</Label>
-                <Controller
-                  control={control}
-                  name="relationshipType"
-                  render={({ field }) => (
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select relationship" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Employee">Employee</SelectItem>
-                        <SelectItem value="Family Member">
-                          Family Member
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.relationshipType && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.relationshipType.message}
-                  </p>
-                )}
-              </div>
-
-              {relationshipType === "Employee" && (
+              {selectedRoles?.includes("employee") && (
                 <div>
                   <Label htmlFor="employeeId">Employee ID *</Label>
                   <Input
@@ -768,7 +752,7 @@ export const UserFormModal = ({
                 </div>
               )}
 
-              {relationshipType === "Family Member" && (
+              {selectedRoles?.includes("family") && (
                 <div>
                   <Label>Select Associated Employee *</Label>
                   <Controller
@@ -848,11 +832,11 @@ export const UserFormModal = ({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => {
-                      setPermissionsVisible(!permissionsVisible);
-                    }}
+                    onClick={() => setPermissionsVisible(!permissionsVisible)}
                   >
-                    {permissionsVisible ? "Hide" : "Show"} Permissions
+                    {permissionsVisible
+                      ? "Hide Permissions"
+                      : "Show Permissions"}
                   </Button>
                 </div>
 
@@ -860,51 +844,87 @@ export const UserFormModal = ({
                   <Controller
                     control={control}
                     name="permissions"
-                    render={({ field }) => (
-                      <ScrollArea className="h-48 w-full rounded-md border p-4">
-                        <div className="space-y-2">
-                          {fetchedPermissions.map((permission) => (
-                            <div
-                              key={permission._id}
-                              className="flex items-start space-x-2 hover:bg-gray-50 p-2 rounded"
-                            >
-                              <Checkbox
-                                id={permission._id}
-                                checked={field.value?.includes(
-                                  permission.permissionKey
-                                )}
-                                onCheckedChange={(checked) => {
-                                  const currentPermissions = field.value || [];
-                                  const newPermissions = checked
-                                    ? [
-                                        ...currentPermissions,
-                                        permission.permissionKey,
-                                      ]
-                                    : currentPermissions.filter(
-                                        (key) =>
-                                          key !== permission.permissionKey
-                                      );
-                                  field.onChange(newPermissions);
-                                }}
-                              />
-                              <div className="grid gap-1.5 leading-none">
-                                <Label
-                                  htmlFor={permission._id}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    render={({ field }) => {
+                      // Calculate inherited keys right here for rendering
+                      const inheritedPermissionKeys = new Set(
+                        allRoles
+                          .filter((role) =>
+                            selectedRoles?.includes(role.roleName)
+                          )
+                          .flatMap((role) =>
+                            role.permissions.map((p) => p.permissionKey)
+                          )
+                      );
+
+                      return (
+                        <ScrollArea className="h-48 w-full rounded-md border p-4">
+                          <div className="space-y-2">
+                            {fetchedPermissions.map((permission) => {
+                              const isInherited = inheritedPermissionKeys.has(
+                                permission.permissionKey
+                              );
+
+                              return (
+                                <div
+                                  key={permission._id}
+                                  className="flex items-start space-x-2 hover:bg-gray-50 p-2 rounded"
                                 >
-                                  {permission.permissionKey}
-                                </Label>
-                                {permission.description && (
-                                  <p className="text-xs text-muted-foreground">
-                                    {permission.description}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    )}
+                                  <Checkbox
+                                    id={permission._id}
+                                    // A permission is checked if it's in the form's value array
+                                    checked={field.value?.includes(
+                                      permission.permissionKey
+                                    )}
+                                    // It's disabled if it's inherited from a role
+                                    disabled={isInherited}
+                                    onCheckedChange={(checked) => {
+                                      // This now ONLY manages the manual permissions state
+                                      const newManualPermissions = new Set(
+                                        manuallyAddedPermissions
+                                      );
+                                      if (checked) {
+                                        newManualPermissions.add(
+                                          permission.permissionKey
+                                        );
+                                      } else {
+                                        newManualPermissions.delete(
+                                          permission.permissionKey
+                                        );
+                                      }
+                                      setManuallyAddedPermissions(
+                                        newManualPermissions
+                                      );
+                                    }}
+                                  />
+                                  <div className="grid gap-1.5 leading-none">
+                                    <Label
+                                      htmlFor={permission._id}
+                                      className={`text-sm font-medium leading-none ${
+                                        isInherited
+                                          ? "text-muted-foreground"
+                                          : ""
+                                      }`}
+                                    >
+                                      {permission.permissionKey}
+                                    </Label>
+                                    {permission.description && (
+                                      <p className="text-xs text-muted-foreground">
+                                        {permission.description}
+                                      </p>
+                                    )}
+                                    {isInherited && (
+                                      <p className="text-xs text-primary/80">
+                                        (Inherited from role)
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </ScrollArea>
+                      );
+                    }}
                   />
                 )}
               </div>

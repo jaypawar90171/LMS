@@ -698,7 +698,7 @@ const Inventory = () => {
                   <TableRow className="bg-muted/50">
                     <TableHead className="font-semibold">Title</TableHead>
                     <TableHead className="font-semibold">
-                      Author/Creator
+                      Author/Publisher
                     </TableHead>
                     <TableHead className="font-semibold">Category</TableHead>
                     <TableHead className="font-semibold">
@@ -729,8 +729,10 @@ const Inventory = () => {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <p className="text-foreground hover:text-primary cursor-pointer">
-                          {item.authorOrCreator}
+                        <p className="text-foreground">
+                          {item.authorOrCreator ||
+                            item.publisherOrManufacturer ||
+                            "N/A"}
                         </p>
                         {item.publicationYear && (
                           <p className="text-xs text-muted-foreground">

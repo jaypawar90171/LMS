@@ -302,6 +302,35 @@ const UserManagementPage = () => {
     );
   };
 
+  const handleResetPassword = async () => {
+    console.log("Resetting password for user:", selectedUser);
+    if (!selectedUser) return;
+
+    const accessToken = localStorage.getItem("accessToken");
+    if (!accessToken) {
+      toast.error("No access token found. Please log in again.");
+      return;
+    }
+
+    toast.promise(
+      axios.put(
+        `http://localhost:3000/api/admin/users/${selectedUser._id}/reset-password`,
+        {},
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      ),
+      {
+        loading: "Sending password reset...",
+        success: () => {
+          setIsProfileModalOpen(false);
+          setSelectedUser(null);
+          return "Password reset successfully.";
+        },
+        error: (err) =>
+          err.response?.data?.message || "Failed to reset password.",
+      }
+    );
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -743,7 +772,12 @@ const UserManagementPage = () => {
                             Roles
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => {}}>
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setSelectedUser(user);
+                              handleResetPassword();
+                            }}
+                          >
                             <KeyRound className="h-4 w-4 mr-2" /> Reset Password
                           </DropdownMenuItem>
                           {user.status === "Locked" && (

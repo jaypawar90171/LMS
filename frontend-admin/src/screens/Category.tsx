@@ -9,6 +9,10 @@ import {
   MoreHorizontal,
   Edit,
   Trash2,
+  Folder,
+  FolderOpen,
+  ChevronRight,
+  ChevronDown,
 } from "lucide-react";
 import axios from "@/lib/axios";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,75 +29,133 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
 import { toast } from "sonner";
 import { DialogModal } from "@/components/Dialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Category {
   _id: string;
   name: string;
   description: string;
+  parentCategoryId: string | null;
+  defaultReturnPeriod: number;
+  children?: Category[];
+  parentCategory?: {
+    _id: string;
+    name: string;
+    description: string;
+  } | null;
+}
+
+interface Permissions {
+  canCreateCategory: boolean;
+  canEditCategory: boolean;
+  canDeleteCategory: boolean;
 }
 
 const CategoryPage = () => {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
-  const [filteredCategories, setFilteredCategories] = useState<Category[]>([]);
   const [search, setSearch] = useState("");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [selectedItem, setSelectedItem] = useState("");
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAddCategoryOpen, setIsAddCategoryOpen] = useState(false);
-  const [IsEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [item, setItem] = useState<Category | null>(null);
-  
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddChildOpen, setIsAddChildOpen] = useState(false);
+  const [currentItem, setCurrentItem] = useState<Category | null>(null);
+  const [parentCategory, setParentCategory] = useState<Category | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
+    () => {
+      // Load expanded categories from localStorage on initial render
+      const saved = localStorage.getItem("expandedCategories");
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    }
+  );
+  const [permissions] = useState<Permissions>({
+    canCreateCategory: true,
+    canEditCategory: true,
+    canDeleteCategory: true,
+  });
+
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`/inventory/categories?tree=true`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
+        },
+      });
+
+      // Backend now returns tree structure directly
+      const categoriesData = Array.isArray(response.data.data)
+        ? response.data.data
+        : [];
+      setCategories(categoriesData);
+    } catch (error) {
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to fetch categories");
+    }
+  };
 
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const response = await axios.get(`/inventory/categories`, {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        });
-        const uniqueCategories = Array.isArray(response.data.data)
-          ? response.data.data
-          : [];
-        setCategories(uniqueCategories);
-        setFilteredCategories(uniqueCategories);
-      } catch (error) {
-        console.error("Error fetching categories:", error);
-      }
-    };
     fetchCategories();
   }, []);
 
-  useEffect(() => {
-    let filtered = [...categories];
-
-    if (search) {
-      filtered = filtered.filter((cat) =>
-        cat.name.toLowerCase().includes(search.toLowerCase())
-      );
-    }
-
-    filtered.sort((a, b) => {
-      if (a.name < b.name) return sortOrder === "asc" ? -1 : 1;
-      if (a.name > b.name) return sortOrder === "asc" ? 1 : -1;
-      return 0;
+  const toggleCategory = (categoryId: string) => {
+    setExpandedCategories((prev) => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      // Save to localStorage whenever it changes
+      localStorage.setItem("expandedCategories", JSON.stringify([...newSet]));
+      return newSet;
     });
-
-    setFilteredCategories(filtered);
-  }, [categories, search, sortOrder]);
-
-  const toggleSortOrder = () => {
-    setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
   };
 
-  const handleDelete = (id: string) => {
-    setSelectedItem(id);
+  // Add a useEffect to expand parent categories of nested items on initial load
+  useEffect(() => {
+    const expandParentCategories = (categories: Category[]) => {
+      const parentIds = new Set<string>();
+
+      const findParents = (cats: Category[]) => {
+        cats.forEach((cat) => {
+          if (cat.children && cat.children.length > 0) {
+            parentIds.add(cat._id);
+            findParents(cat.children);
+          }
+        });
+      };
+
+      findParents(categories);
+
+      setExpandedCategories((prev) => {
+        const newSet = new Set([...prev, ...parentIds]);
+        localStorage.setItem("expandedCategories", JSON.stringify([...newSet]));
+        return newSet;
+      });
+    };
+
+    if (categories.length > 0) {
+      expandParentCategories(categories);
+    }
+  }, [categories]); // Only run when categories are loaded
+
+  const handleDelete = (category: Category) => {
+    // Check if category has children
+    const hasChildren = category.children && category.children.length > 0;
+    if (hasChildren) {
+      toast.error("Cannot delete category that has child categories");
+      return;
+    }
+
+    setSelectedItem(category._id);
     setIsDeleteModalOpen(true);
   };
 
@@ -107,21 +169,24 @@ const CategoryPage = () => {
         return;
       }
 
-      await axios.delete(
-        `http://localhost:3000/api/admin/inventory/categories/${selectedItem}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      await axios.delete(`/inventory/categories/${selectedItem}`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-      const deletedCategory = categories.find((c) => c._id === selectedItem);
+      const deletedCategory = findCategoryById(categories, selectedItem);
       toast.success(
         `${deletedCategory?.name || "Category"} has been deleted successfully.`
       );
 
-      setCategories((prev) => prev.filter((c) => c._id !== selectedItem));
+      // Refetch categories to get updated tree
+      const response = await axios.get(`/inventory/categories?tree=true`, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+      setCategories(response.data.data || []);
 
       setIsDeleteModalOpen(false);
       setSelectedItem("");
@@ -131,6 +196,21 @@ const CategoryPage = () => {
         error.response?.data?.message || "Failed to delete the category."
       );
     }
+  };
+
+  // Helper function to find category by ID in tree
+  const findCategoryById = (
+    categories: Category[],
+    id: string
+  ): Category | null => {
+    for (const category of categories) {
+      if (category._id === id) return category;
+      if (category.children) {
+        const found = findCategoryById(category.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
   };
 
   const handleAddSubmit = async (formData: Record<string, any>) => {
@@ -143,47 +223,96 @@ const CategoryPage = () => {
     const payload = {
       name: formData.category,
       description: formData.description,
+      parentCategoryId: parentCategory?._id || null,
+      defaultReturnPeriod: parseInt(formData.defaultReturnPeriod) || 20,
     };
 
     try {
-      const response = await axios.post(
-        `http://localhost:3000/api/admin/inventory/categories`,
-        payload,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
+      const response = await axios.post(`/inventory/categories`, payload, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      // Backend returns { message: "Category created successfully", category: category }
       const newCategory: Category = response.data.category;
 
       if (newCategory && newCategory._id && newCategory.name) {
-        setCategories((prev) => [...prev, newCategory]);
+        // Refetch categories to get updated tree structure
+        const categoriesResponse = await axios.get(
+          `/inventory/categories?tree=true`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        setCategories(categoriesResponse.data.data || []);
+
+        // Expand parent category and save to localStorage
+        if (parentCategory) {
+          setExpandedCategories((prev) => {
+            const newSet = new Set(prev);
+            newSet.add(parentCategory._id);
+            localStorage.setItem(
+              "expandedCategories",
+              JSON.stringify([...newSet])
+            );
+            return newSet;
+          });
+        }
+
         toast.success("Category added successfully.");
-        setIsAddCategoryOpen(false);
+
+        if (parentCategory) {
+          setIsAddChildOpen(false);
+          setParentCategory(null);
+          // Expand parent category when adding a child
+          setExpandedCategories((prev) =>
+            new Set(prev).add(parentCategory._id)
+          );
+        } else {
+          setIsAddCategoryOpen(false);
+        }
       } else {
         console.error("Unexpected response:", response.data);
         toast.error("Invalid response from server, could not add category.");
       }
     } catch (error: any) {
       console.error("Error adding category:", error);
-      toast.error(error.response?.data?.message || "Failed to add category.");
+
+      // Handle backend validation errors
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessage = validationErrors
+          .map((err: any) => err.message)
+          .join(", ");
+        toast.error(`Validation error: ${errorMessage}`);
+      } else {
+        toast.error(error.response?.data?.message || "Failed to add category.");
+      }
+    } finally {
+      setIsAddCategoryOpen(false);
+      setIsAddChildOpen(false);
+      setParentCategory(null);
     }
   };
 
-  const handleEditItem = (item: Category) => {
-    setItem(item);
+  const handleEditItem = (category: Category) => {
+    setCurrentItem(category);
     setIsEditModalOpen(true);
   };
 
   const handleEditSubmit = async (formData: Record<string, any>) => {
-    console.log(item?._id);
-    if (!item) return;
+    if (!currentItem) return;
 
     const dataToSend = {
       name: formData.category,
       description: formData.description,
+      defaultReturnPeriod:
+        parseInt(formData.defaultReturnPeriod) ||
+        currentItem.defaultReturnPeriod,
     };
 
     try {
@@ -194,7 +323,7 @@ const CategoryPage = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/api/admin/inventory/categories/${item._id}`,
+        `/inventory/categories/${currentItem._id}`,
         dataToSend,
         {
           headers: {
@@ -203,20 +332,188 @@ const CategoryPage = () => {
         }
       );
 
+      // Backend returns { message: "Category updated successfully", category: category }
       const updatedCategory: Category = response.data.category;
-      setCategories((prev) =>
-        prev.map((c) => (c._id === updatedCategory._id ? updatedCategory : c))
+
+      // Refetch categories to get updated tree
+      const categoriesResponse = await axios.get(
+        `/inventory/categories?tree=true`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
+      setCategories(categoriesResponse.data.data || []);
+
       toast.success(`${updatedCategory.name} updated successfully.`);
       setIsEditModalOpen(false);
-      setItem(null);
+      setCurrentItem(null);
     } catch (error: any) {
       console.error("Error editing category:", error);
-      toast.error(
-        error.response?.data?.message || "Failed to update the category."
-      );
+
+      // Handle backend validation errors
+      if (error.response?.data?.errors) {
+        const validationErrors = error.response.data.errors;
+        const errorMessage = validationErrors
+          .map((err: any) => err.message)
+          .join(", ");
+        toast.error(`Validation error: ${errorMessage}`);
+      } else {
+        toast.error(
+          error.response?.data?.message || "Failed to update the category."
+        );
+      }
     }
   };
+
+  const handleAddChildCategory = (parentCategory: Category) => {
+    setParentCategory(parentCategory);
+    setIsAddChildOpen(true);
+  };
+
+  // Flatten categories for search
+  const flattenCategories = (categories: Category[]): Category[] => {
+    let result: Category[] = [];
+    categories.forEach((category) => {
+      result.push(category);
+      if (category.children) {
+        result = result.concat(flattenCategories(category.children));
+      }
+    });
+    return result;
+  };
+
+  // Filter categories based on search
+  const getFilteredCategories = () => {
+    if (!search) return categories;
+
+    const flatCategories = flattenCategories(categories);
+    const filteredFlat = flatCategories.filter(
+      (category) =>
+        category.name.toLowerCase().includes(search.toLowerCase()) ||
+        category.description.toLowerCase().includes(search.toLowerCase())
+    );
+
+    // Rebuild tree structure from filtered flat categories
+    const rebuildTree = (
+      categories: Category[],
+      filteredIds: Set<string>
+    ): Category[] => {
+      return categories
+        .filter((category) => filteredIds.has(category._id))
+        .map((category) => ({
+          ...category,
+          children: category.children
+            ? rebuildTree(category.children, filteredIds)
+            : [],
+        }));
+    };
+
+    const filteredIds = new Set(filteredFlat.map((cat) => cat._id));
+    return rebuildTree(categories, filteredIds);
+  };
+
+  const renderCategoryTree = (categories: Category[], level = 0) => {
+    return categories.map((category) => {
+      const hasChildren = category.children && category.children.length > 0;
+      const isExpanded = expandedCategories.has(category._id);
+      const isRoot = level === 0;
+
+      return (
+        <React.Fragment key={category._id}>
+          <TableRow className="hover:bg-muted/30">
+            <TableCell className="font-medium">
+              <div
+                className="flex items-center gap-2"
+                style={{ paddingLeft: `${level * 24}px` }}
+              >
+                {hasChildren ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => toggleCategory(category._id)}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
+                  </Button>
+                ) : (
+                  <div className="w-6" />
+                )}
+                {isRoot ? (
+                  <FolderOpen className="h-4 w-4 text-blue-500" />
+                ) : (
+                  <Folder className="h-4 w-4 text-gray-500" />
+                )}
+                <span>{category.name}</span>
+                {isRoot && (
+                  <Badge variant="secondary" className="ml-2">
+                    Root
+                  </Badge>
+                )}
+              </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground">
+              {category.description}
+            </TableCell>
+            <TableCell>
+              <div className="flex items-center gap-2 justify-end">
+                <Badge variant="outline">
+                  {category.defaultReturnPeriod} days
+                </Badge>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {permissions.canCreateCategory && (
+                      <DropdownMenuItem
+                        onClick={() => handleAddChildCategory(category)}
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add Child Category
+                      </DropdownMenuItem>
+                    )}
+                    {permissions.canEditCategory && (
+                      <>
+                        <DropdownMenuItem
+                          onClick={() => handleEditItem(category)}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Category
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                      </>
+                    )}
+                    {permissions.canDeleteCategory && (
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(category)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete Category
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </TableCell>
+          </TableRow>
+          {hasChildren &&
+            isExpanded &&
+            renderCategoryTree(category.children!, level + 1)}
+        </React.Fragment>
+      );
+    });
+  };
+
+  const filteredCategories = getFilteredCategories();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
@@ -228,14 +525,16 @@ const CategoryPage = () => {
               Category Management
             </h1>
             <p className="text-muted-foreground">
-              Manage and organize your library categories
+              Manage and organize your library categories hierarchy
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={() => setIsAddCategoryOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add New Category
-            </Button>
+            {permissions.canCreateCategory && (
+              <Button size="sm" onClick={() => setIsAddCategoryOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add New Category
+              </Button>
+            )}
           </div>
         </div>
 
@@ -257,7 +556,13 @@ const CategoryPage = () => {
 
             {/* Sort + Clear */}
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={toggleSortOrder}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"))
+                }
+              >
                 <ArrowUpDown className="h-4 w-4 mr-2" />
                 {sortOrder === "asc" ? "A-Z" : "Z-A"}
               </Button>
@@ -284,38 +589,7 @@ const CategoryPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCategories.map((cat) => (
-                    <TableRow key={cat._id} className="hover:bg-muted/30">
-                      <TableCell className="font-medium">{cat.name}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {cat.description}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              onClick={() => handleEditItem(cat)}
-                            >
-                              <Edit className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => handleDelete(cat._id)}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {renderCategoryTree(filteredCategories)}
                   {filteredCategories.length === 0 && (
                     <TableRow>
                       <TableCell
@@ -333,46 +607,111 @@ const CategoryPage = () => {
         </Card>
       </div>
 
+      {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && selectedItem && (
         <DeleteConfirmationModal
           isOpen={isDeleteModalOpen}
           onOpenChange={setIsDeleteModalOpen}
           onConfirm={confirmDeleteItem}
-          itemName={categories.find((c) => c._id === selectedItem)?.name || ""}
+          itemName={findCategoryById(categories, selectedItem)?.name || ""}
         />
       )}
 
+      {/* Add Top-Level Category Modal */}
       {isAddCategoryOpen && (
         <DialogModal
           isOpen={isAddCategoryOpen}
           onOpenChange={setIsAddCategoryOpen}
           title="Add New Category"
-          description="Fill the details for the new category"
+          description="Fill the details for the new top-level category"
           fields={[
             { type: "text", name: "category", label: "Category Name" },
             { type: "text", name: "description", label: "Description" },
+            {
+              type: "text",
+              name: "defaultReturnPeriod",
+              label: "Default Return Period (days)",
+              renderAdornment: () => (
+                <Badge variant="outline" className="mr-2">
+                  days
+                </Badge>
+              ),
+            },
           ]}
           defaultValues={{
             category: "",
             description: "",
+            defaultReturnPeriod: "20",
           }}
           onSubmit={handleAddSubmit}
         />
       )}
 
-      {IsEditModalOpen && item && (
+      {/* Add Child Category Modal */}
+      {isAddChildOpen && parentCategory && (
         <DialogModal
-          isOpen={IsEditModalOpen}
+          isOpen={isAddChildOpen}
+          onOpenChange={setIsAddChildOpen}
+          title="Add Child Category"
+          description={`Add a subcategory under "${parentCategory.name}"`}
+          fields={[
+            {
+              type: "text",
+              name: "parentCategory",
+              label: "Parent Category",
+              renderAdornment: () => (
+                <span className="text-muted-foreground mr-2">(Read-only)</span>
+              ),
+            },
+            { type: "text", name: "category", label: "Category Name" },
+            { type: "text", name: "description", label: "Description" },
+            {
+              type: "text",
+              name: "defaultReturnPeriod",
+              label: "Default Return Period (days)",
+              renderAdornment: () => (
+                <Badge variant="outline" className="mr-2">
+                  days
+                </Badge>
+              ),
+            },
+          ]}
+          defaultValues={{
+            parentCategory: parentCategory.name,
+            category: "",
+            description: "",
+            defaultReturnPeriod: "20",
+          }}
+          onSubmit={handleAddSubmit}
+        />
+      )}
+
+      {/* Edit Category Modal */}
+      {isEditModalOpen && currentItem && (
+        <DialogModal
+          isOpen={isEditModalOpen}
           onOpenChange={setIsEditModalOpen}
           title="Edit Category"
-          description="Fill the details for edit category"
+          description="Update the category details"
           fields={[
             { type: "text", name: "category", label: "Category Name" },
             { type: "text", name: "description", label: "Description" },
+            {
+              type: "text",
+              name: "defaultReturnPeriod",
+              label: "Default Return Period (days)",
+              renderAdornment: () => (
+                <Badge variant="outline" className="mr-2">
+                  days
+                </Badge>
+              ),
+            },
           ]}
           defaultValues={{
-            category: item.name,
-            description: item.description,
+            category: currentItem.name,
+            description: currentItem.description,
+            defaultReturnPeriod:
+              currentItem.defaultReturnPeriod?.toString() || "20",
           }}
           onSubmit={handleEditSubmit}
         />

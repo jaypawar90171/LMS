@@ -32,7 +32,6 @@ export const UserRolesModal = ({
   allRoles,
   onSuccess,
 }: UserRolesModalProps) => {
-  const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [additionalPermissions, setAdditionalPermissions] = useState<string[]>(
     []
   );
@@ -62,47 +61,21 @@ export const UserRolesModal = ({
 
   useEffect(() => {
     if (user) {
-      const rolePermissionKeys = new Set(
-        user.roles.flatMap(
-          (role) =>
-            allRoles
-              .find((r) => r._id === role._id)
-              ?.permissions?.map((p) => p.permissionKey) || []
-        )
-      );
-
-      const userDirectPermissions =
-        user.permissions
-          ?.filter((p) => !rolePermissionKeys.has(p.permissionKey))
-          .map((p) => p.permissionKey) || [];
-
-      setAdditionalPermissions(userDirectPermissions);
+      const userDirectPermissionKeys =
+        user.permissions?.map((p) => p.permissionKey) || [];
+      setAdditionalPermissions(userDirectPermissionKeys);
     }
-  }, [user, allRoles]);
+  }, [user]);
 
   if (!user) return null;
 
-  const handlePermissionChange = (
-    permissionKey: string,
-    checked: boolean | "indeterminate"
-  ) => {
-    if (checked === true) {
+  const handlePermissionChange = (permissionKey: string, checked: boolean) => {
+    if (checked) {
       setAdditionalPermissions((prev) => [...prev, permissionKey]);
     } else {
       setAdditionalPermissions((prev) =>
         prev.filter((key) => key !== permissionKey)
       );
-    }
-  };
-
-  // Add this function to handle role assignment changes
-  const handleRoleChange = (role: Role, checked: boolean) => {
-    if (checked) {
-      toast.info(
-        `Role "${role.roleName}" assigned (implement backend update).`
-      );
-    } else {
-      toast.info(`Role "${role.roleName}" removed (implement backend update).`);
     }
   };
 
@@ -133,11 +106,13 @@ export const UserRolesModal = ({
   const userFullRoles = allRoles.filter((role) =>
     userRoleIds.includes(role._id)
   );
+
   const rolePermissionKeysSet = new Set(
-    userFullRoles.flatMap(
+    user.roles.flatMap(
       (role) => role.permissions?.map((p) => p.permissionKey) || []
     )
   );
+
   const directPermissionObjects = allPermissions.filter(
     (p) => !rolePermissionKeysSet.has(p.permissionKey)
   );
@@ -156,78 +131,98 @@ export const UserRolesModal = ({
         </DialogHeader>
 
         <ScrollArea className="max-h-[60vh] pr-4">
-          {/* Role Section (No changes needed here) */}
+          {/* Assigned Roles Section (displays roles the user has) */}
           <div className="space-y-4">
-            {userFullRoles.map((role) => (
-              <div key={role._id}>
-                <div className="flex items-center gap-3">
+            <h3 className="font-medium text-foreground">Assigned Roles</h3>
+            {user.roles.length > 0 ? (
+              user.roles.map((role) => (
+                <div key={role._id} className="flex items-center gap-3">
                   <ShieldCheck className="w-5 h-5 text-primary flex-shrink-0" />
                   <div>
-                    <h3 className="font-medium text-foreground capitalize">
+                    <h4 className="font-medium text-foreground capitalize">
                       {role.roleName}
-                    </h3>
+                    </h4>
                     <p className="text-sm text-muted-foreground">
                       {role.description}
                     </p>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No roles assigned to this user.
+              </p>
+            )}
           </div>
 
           <Separator className="my-6" />
 
-          {/* MODIFIED: Additional Permissions Section */}
+          {/* Permissions Section */}
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <UserCheck className="w-5 h-5 text-primary flex-shrink-0" />
               <div>
                 <h3 className="font-medium text-foreground">
-                  Additional Permissions
+                  User Permissions
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Permissions assigned directly to this user. These can be
-                  modified.
+                  A checkmark indicates a permission the user has, either
+                  directly or via a role.
                 </p>
               </div>
             </div>
 
-            {/* 1. ADDED ScrollArea with fixed height */}
             <ScrollArea className="h-48 rounded-md border p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* 2. MODIFIED to loop over 'directPermissionObjects' */}
-                {directPermissionObjects.map((permission) => (
-                  <div
-                    key={permission._id}
-                    className="flex items-start space-x-3"
-                  >
-                    <Checkbox
-                      id={`perm-${permission._id}`}
-                      // 3. MODIFIED to check against 'permissionKey'
-                      checked={additionalPermissions.includes(
-                        permission.permissionKey
-                      )}
-                      onCheckedChange={(checked) =>
-                        // 4. MODIFIED to pass 'permissionKey'
-                        handlePermissionChange(
-                          permission.permissionKey,
-                          !!checked
-                        )
-                      }
-                    />
-                    <div className="grid gap-1.5 leading-none">
-                      <Label
-                        htmlFor={`perm-${permission._id}`}
-                        className="font-medium"
-                      >
-                        {permission.permissionKey}
-                      </Label>
-                      <p className="text-xs text-muted-foreground">
-                        {permission.description}
-                      </p>
+                {/* CHANGED: Loop over ALL available permissions */}
+                {allPermissions.map((permission) => {
+                  // ADDED: Logic to determine the state of each checkbox
+                  const isInherited = rolePermissionKeysSet.has(
+                    permission.permissionKey
+                  );
+                  const isDirectlyAssigned = additionalPermissions.includes(
+                    permission.permissionKey
+                  );
+
+                  return (
+                    <div
+                      key={permission._id}
+                      className="flex items-start space-x-3"
+                    >
+                      <Checkbox
+                        id={`perm-${permission._id}`}
+                        // CHANGED: A permission is checked if inherited OR directly assigned
+                        checked={isInherited || isDirectlyAssigned}
+                        // ADDED: A permission is disabled if it's inherited from a role
+                        disabled={isInherited}
+                        onCheckedChange={(checked) =>
+                          handlePermissionChange(
+                            permission.permissionKey,
+                            !!checked
+                          )
+                        }
+                      />
+                      <div className="grid gap-1.5 leading-none">
+                        <Label
+                          htmlFor={`perm-${permission._id}`}
+                          className={`font-medium ${
+                            isInherited ? "text-muted-foreground" : ""
+                          }`}
+                        >
+                          {permission.permissionKey}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          {permission.description}
+                        </p>
+                        {isInherited && (
+                          <p className="text-xs text-primary/80">
+                            (Inherited from role)
+                          </p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
