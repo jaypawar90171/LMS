@@ -73,6 +73,25 @@ const navItems = [
     ),
   },
   {
+    name: "Queue Dashboard",
+    path: "/queue-dashboard",
+    icon: (
+      <svg
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 7h12m0 0l-3-3m3 3l-3 3m-3 1v5a2 2 0 002 2h4a2 2 0 002-2v-5m-9 0a2 2 0 00-2 2v5a2 2 0 002 2h4a2 2 0 002-2v-5M8 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2h-4"
+        />
+      </svg>
+    ),
+  },
+  {
     name: "Roles & Permissions",
     path: "/roles",
     icon: (
@@ -131,6 +150,7 @@ const navItems = [
       { name: "Inventory Report", path: "/reports/inventory" },
       { name: "Fine Report", path: "/reports/fines" },
       { name: "Issued Items Report", path: "/reports/issued-items" },
+      { name: "Queue Report", path: "/reports/queue" },
     ],
   },
   {

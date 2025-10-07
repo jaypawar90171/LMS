@@ -197,6 +197,20 @@ const categoryFieldConfig: Record<string, string[]> = {
   ],
 };
 
+const flattenCategories = (categories: Category[]): Category[] => {
+  let result: Category[] = [];
+  categories.forEach((category) => {
+    result.push({
+      _id: category._id,
+      name: category.name,
+    });
+    if ((category as any).children && (category as any).children.length > 0) {
+      result = result.concat(flattenCategories((category as any).children));
+    }
+  });
+  return result;
+};
+
 export const ItemFormModal = ({
   isOpen,
   onOpenChange,
@@ -205,6 +219,10 @@ export const ItemFormModal = ({
   categories = [],
   onSuccess,
 }: ItemFormModalProps) => {
+  const flatCategories = React.useMemo(() => {
+    return flattenCategories(categories);
+  }, [categories]);
+
   const {
     register,
     handleSubmit,
@@ -695,8 +713,8 @@ export const ItemFormModal = ({
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categories?.length > 0 ? (
-                      categories.map((cat) => (
+                    {flatCategories?.length > 0 ? (
+                      flatCategories.map((cat) => (
                         <SelectItem key={cat._id} value={cat._id}>
                           {cat.name}
                         </SelectItem>

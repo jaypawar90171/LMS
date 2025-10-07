@@ -112,7 +112,7 @@ const categoryBadgeColor = (category: string) => {
 const Inventory = () => {
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [filteredItems, setFilteredItems] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -176,9 +176,26 @@ const Inventory = () => {
         : [];
       setInventoryItems(items);
 
-      const uniqueCategories = Array.isArray(categoriesResponse.data.data)
-        ? categoriesResponse.data.data
+      let categoriesData = categoriesResponse.data.data || [];
+
+      const flattenCategories = (categories: any[]): any[] => {
+        let result: any[] = [];
+        categories.forEach((category) => {
+          result.push({
+            _id: category._id,
+            name: category.name,
+          });
+          if (category.children && category.children.length > 0) {
+            result = result.concat(flattenCategories(category.children));
+          }
+        });
+        return result;
+      };
+
+      const uniqueCategories = Array.isArray(categoriesData)
+        ? flattenCategories(categoriesData)
         : [];
+
       setCategories(uniqueCategories);
 
       const totalItems = items.length;
@@ -359,106 +376,6 @@ const Inventory = () => {
     }
   };
 
-  const handleSubmit = async (formData: Record<string, any>) => {
-    if (!selectedItem) return;
-
-    const categoryObject = categories.find(
-      (cat) => cat._id === formData.categoryId
-    );
-
-    const dataToSend = {
-      title: formData.title,
-      authorOrCreator: formData.authorOrCreator,
-      description: formData.description,
-      quantity: Number(formData.quantity),
-      availableCopies: Number(formData.availableCopies),
-      categoryId: formData.categoryId,
-      status: formData.status,
-    };
-
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        toast.error("No access token found. Please log in again.");
-        return;
-      }
-
-      await axios.put(
-        `http://localhost:3000/api/admin/inventory/items/${selectedItem._id}`,
-        dataToSend,
-        {
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      toast.success("Item has been updated");
-      fetchInventoryItems(currentPage);
-    } catch (error: any) {
-      console.error("Error in updating the item:", error);
-      toast.error(error.response?.data?.message || "Failed to update item.");
-    } finally {
-      setIsEditModalOpen(false);
-      setSelectedItem(null);
-    }
-  };
-
-  const handleAddSubmit = async (formData: Record<string, any>) => {
-    const dataToSend = new FormData();
-
-    for (const key in formData) {
-      if (formData[key] instanceof File) {
-        dataToSend.append(key, formData[key]);
-      } else {
-        dataToSend.append(key, String(formData[key]));
-      }
-    }
-
-    let barcode = "";
-    try {
-      const result = await axios.get(
-        "http://localhost:3000/api/admin/barcode/generate",
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-          },
-        }
-      );
-      barcode = result.data.barcode;
-      dataToSend.append("barcode", barcode);
-    } catch (error) {
-      console.error("Error generating barcode:", error);
-    }
-
-    try {
-      const accessToken = localStorage.getItem("accessToken");
-      if (!accessToken) {
-        toast.error("No access token found. Please log in again.");
-        return;
-      }
-
-      await axios.post(
-        "http://localhost:3000/api/admin/inventory/items",
-        dataToSend,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      toast.success("New item added successfully.");
-      fetchInventoryItems(currentPage);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to add new item.");
-    } finally {
-      setIsAddItemModalOpen(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -532,13 +449,19 @@ const Inventory = () => {
               <Filter className="h-4 w-4 mr-2" />
               Manage Categories
             </Button>
-            <Button variant="outline" size="sm">
-              <Clock className="h-4 w-4 mr-2" />
-              Return Requests
-            </Button>
-            <Button variant="outline" size="sm">
-              <Eye className="h-4 w-4 mr-2" />
+            <Button
+              onClick={() => Navigate("/issue-management")}
+              variant="outline"
+              size="sm"
+            >
+              <Package className="h-4 w-4 mr-2" />
               View Requests
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => {
+              Navigate('/issued-items');
+            }}>
+              <Eye className="h-4 w-4 mr-2" />
+              Issued Items Management
             </Button>
             <Button size="sm" onClick={() => setIsAddItemModalOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />

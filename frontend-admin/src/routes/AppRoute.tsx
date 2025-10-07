@@ -17,6 +17,10 @@ import NotificationSettings from "@/screens/NotificationSettings";
 import SystemRestrictions from "@/screens/SystemRestrictions";
 import Profile from "@/screens/Profile";
 import DonationManagement from "@/screens/Donations";
+import IssueManagement from "@/screens/IssueManagement";
+import IssuedItemsManagement from "@/screens/IssuedItemsManagement";
+import QueueDashboard from "@/screens/QueueDashboard";
+import AnalyticsDashboard from "@/screens/AnalyticsDashboard";
 
 const AppRoute = () => {
   return (
@@ -110,6 +114,14 @@ const AppRoute = () => {
             }
           />
           <Route
+            path="/reports/queue"
+            element={
+              <Layout>
+                <AnalyticsDashboard />
+              </Layout>
+            }
+          />
+          <Route
             path="/settings/notification"
             element={
               <Layout>
@@ -138,6 +150,30 @@ const AppRoute = () => {
             element={
               <Layout>
                 <DonationManagement />
+              </Layout>
+            }
+          />
+          <Route
+            path="/issue-management"
+            element={
+              <Layout>
+                <IssueManagement />
+              </Layout>
+            }
+          />
+          <Route
+            path="/issued-items"
+            element={
+              <Layout>
+                <IssuedItemsManagement />
+              </Layout>
+            }
+          />
+          <Route
+            path="/queue-dashboard"
+            element={
+              <Layout>
+                <QueueDashboard />
               </Layout>
             }
           />

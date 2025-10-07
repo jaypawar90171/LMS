@@ -73,7 +73,6 @@ export const DialogModal: React.FC<DialogProps> = ({
     }
   }, [defaultValues, isOpen]);
 
-  // FIX: Updated signature to accept boolean for checkboxes
   const handleChange = (name: string, value: string | File | boolean) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
