@@ -1,46 +1,40 @@
 import mongoose, { mongo, Schema } from "mongoose";
-import { IItemRequest } from "../interfaces/itemRequest.interface";
+import { IIssueRequest } from "../interfaces/itemRequest.interface";
 
-const itemRequestSchema: Schema = new Schema<IItemRequest>(
+const issueRequestSchema = new Schema<IIssueRequest>(
   {
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    authorOrCreator: {
-      type: String,
-      trim: true,
-    },
-    itemType: {
+    itemId: {
       type: Schema.Types.ObjectId,
-      ref: "Category",
+      ref: "InventoryItem",
       required: true,
-    },
-    reasonForRequest: {
-      type: String,
-      required: true,
-      trim: true,
     },
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
-      default: "Pending",
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+    requestedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    processedAt: {
+      type: Date,
+    },
+    processedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-const ItemRequest = mongoose.model<IItemRequest>(
-  "ItemRequest",
-  itemRequestSchema
+const IssueRequest = mongoose.model<IIssueRequest>(
+  "IssueRequest",
+  issueRequestSchema
 );
-
-export default ItemRequest;
+export default IssueRequest;

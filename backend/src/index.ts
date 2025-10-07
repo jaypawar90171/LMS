@@ -6,6 +6,7 @@ import connect from "./config/db";
 import UserRoutes from "./routes/user.routes";
 import AdminRoutes from "./routes/admin.routes";
 import rateLimiter from "./middleware/rateLimiter";
+import { startCronJobs } from "./config/cronJobs";
 
 dotenv.config();
 connect();
@@ -17,6 +18,7 @@ app.use(morgan("dev"));
 app.use(express.urlencoded({ extended: true }));
 app.use(rateLimiter);
 app.set("view engine", "ejs");
+startCronJobs();
 
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");

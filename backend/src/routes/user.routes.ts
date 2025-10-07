@@ -1,5 +1,6 @@
 import { Router } from "express";
 import {
+  createIssueRequestController,
   dashboardSummaryController,
   expressDonationInterestController,
   extendIssuedItemController,
@@ -9,11 +10,11 @@ import {
   getHistoryController,
   getIssuedItemsController,
   getItemController,
+  getMyIssueRequestsController,
   getNewArrivalsController,
   getProfileDetailsController,
   getQueuedItemsController,
   getRequestedItemsController,
-  issueOrQueueController,
   registerUserController,
   requestItemController,
   requestNewItemController,
@@ -44,10 +45,8 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 
 router.get("/logout", logoutController);
 
-
 /* ========================= DASHBOARD ========================= */
 router.get("/dashboard/:userId", authUser, dashboardSummaryController);
-
 
 /* ========================= INVENTORY ========================= */
 router.get("/items/issued/:userId", authUser, getIssuedItemsController);
@@ -64,9 +63,13 @@ router.get("/inventory/categories/items/:itemId", authUser, getItemController);
 
 router.get("/:userId/requests", authUser, getRequestedItemsController);
 
+router.post("/issue-requests", authUser, createIssueRequestController);
+
+router.get("/issue-requests/my-requests", authUser, getMyIssueRequestsController);
+
 router.post("/:userId/requests", authUser, requestItemController);
 
-router.get("/items/queud/:userId", authUser, getQueuedItemsController);
+router.get("/items/queued/:userId", authUser, getQueuedItemsController);
 
 router.get(
   "/items/:itemId/extend-period",
@@ -83,8 +86,6 @@ router.post(
 router.post("/items/request-item", authUser, requestNewItemController);
 
 router.get("/items/new-arrivals", authUser, getNewArrivalsController);
-
-router.post("/items/:itemId/issue-or-queue", authUser, issueOrQueueController);
 
 router.get("/history", authUser, getHistoryController);
 
@@ -103,7 +104,6 @@ router.put(
   authUser,
   updateNotificationPreferenceController
 );
-
 
 /* ========================= DONATION ========================= */
 router.post(

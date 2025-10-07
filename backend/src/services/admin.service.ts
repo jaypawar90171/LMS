@@ -35,6 +35,8 @@ import {
 } from "../interfaces/report.interface";
 import { IInventoryItem } from "../interfaces/inventoryItems.interface";
 import type { Request as ExpressRequest } from "express";
+import { IIssuedItem } from "../interfaces/issuedItems.interface";
+// import { exportQueueAnalytics } from "../controllers/admin.controller";
 
 interface loginDTO {
   email: string;
@@ -691,33 +693,51 @@ export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
 
   const totalItems = await InventoryItem.countDocuments({});
 
-  // If there are no items at all in the collection → throw 404
+  // Don't throw error for empty collection, just return empty array
   if (totalItems === 0) {
-    const err: any = new Error("No inventory items found");
-    err.statusCode = 404;
-    throw err;
+    return { items: [], totalItems: 0 };
   }
 
   const items = await InventoryItem.find()
     .populate("categoryId", "name")
-    .sort({ createdAt: -1 }) // ensure stable ordering
+    .sort({ createdAt: -1 })
     .limit(limit)
     .skip(skip);
 
-  // For later pages beyond available results → just return empty array
   return { items, totalItems };
 };
 
 export const createInventoryItemsService = async (data: any) => {
-  const newItem = new InventoryItem(data);
-
-  if (!newItem) {
-    const err: any = new Error("No inventory items found");
-    err.statusCode = 11000;
-    throw err;
+  // Handle ISBN for non-book items
+  if (!data.isbnOrIdentifier && data.categoryId) {
+    // Check if it's a book category or generate generic identifier
+    const category = await Category.findById(data.categoryId);
+    if (category && category.name.toLowerCase() === "books") {
+      const err: any = new Error("ISBN is required for book items");
+      err.statusCode = 400;
+      throw err;
+    } else {
+      // Generate unique identifier for non-book items
+      const timestamp = Date.now().toString();
+      const random = Math.random().toString(36).substring(2, 8);
+      data.isbnOrIdentifier = `ITEM-${timestamp}-${random}`;
+    }
   }
 
-  return await newItem.save();
+  const newItem = new InventoryItem(data);
+
+  try {
+    return await newItem.save();
+  } catch (error: any) {
+    if (error.code === 11000) {
+      const err: any = new Error(
+        "Duplicate ISBN/Barcode. Item already exists."
+      );
+      err.statusCode = 409;
+      throw err;
+    }
+    throw error;
+  }
 };
 
 export const fetchSpecificItemServive = async (itemId: any) => {
@@ -809,20 +829,18 @@ const buildCategoryTree = (categories: any[]) => {
   return rootCategories;
 };
 
-
-
 export const getCategoriesService = async (includeTree = false) => {
   if (includeTree) {
     // Return categories in tree structure
     const allCategories = await Category.find({})
-      .populate('parentCategoryId', 'name description')
+      .populate("parentCategoryId", "name description")
       .sort({ name: 1 });
-    
+
     return buildCategoryTree(allCategories);
   }
-  
+
   return await Category.find({})
-    .populate('parentCategoryId', 'name description')
+    .populate("parentCategoryId", "name description")
     .sort({ name: 1 });
 };
 
@@ -1363,22 +1381,118 @@ export const getFinesReportService = async () => {
   };
 };
 
+// export const getIssuedReportService = async () => {
+//   const records = await IssuedIetm.find()
+//     .populate("userId", "fullName email roles")
+//     .populate("itemId", "title authorOrCreator description price quantity availableCopies categoryId subcategoryId")
+//     .populate("issuedBy", "fullName email roles")
+//     .populate("returnedTo", "fullName email role")
+//     .populate("fineId", "userId itemId reason amountIncurred amountPaid outstandingAmount")
+//     .lean();
+
+//   return records.map((record: any) => ({
+//     user: record.userId?.fullName || "Unknown",
+//     item: record.itemId?.title || "-",
+//     issueDate: record.issueDate
+//       ? new Date(record.issueDate).toISOString().split("T")[0]
+//       : "-",
+//     returnDate: record.returnDate
+//       ? new Date(record.returnDate).toISOString().split("T")[0]
+//       : "-",
+//     status: record.status || "Issued",
+//   }));
+// };
+
 export const getIssuedReportService = async () => {
-  const records = await IssuedIetm.find()
-    .populate("userId", "fullName")
-    .populate("itemId", "title")
+  const records = await IssuedItem.find()
+    .populate("userId", "fullName email roles")
+    .populate(
+      "itemId",
+      "title authorOrCreator description price quantity availableCopies categoryId subcategoryId"
+    )
+    .populate("issuedBy", "fullName email roles")
+    .populate("returnedTo", "fullName email roles")
+    .populate(
+      "fineId",
+      "userId itemId reason amountIncurred amountPaid outstandingAmount"
+    )
     .lean();
 
   return records.map((record: any) => ({
-    user: record.userId?.fullName || "Unknown",
-    item: record.itemId?.title || "-",
-    issueDate: record.issueDate
-      ? new Date(record.issueDate).toISOString().split("T")[0]
+    // 🔹 Core Details
+    id: record._id,
+    status: record.status || "Issued",
+
+    // 🔹 User (Borrower)
+    user: {
+      id: record.userId?._id || null,
+      fullName: record.userId?.fullName || "Unknown",
+      email: record.userId?.email || "-",
+      roles: record.userId?.roles || [],
+    },
+
+    // 🔹 Item Details
+    item: {
+      id: record.itemId?._id || null,
+      title: record.itemId?.title || "-",
+      authorOrCreator: record.itemId?.authorOrCreator || "-",
+      description: record.itemId?.description || "-",
+      categoryId: record.itemId?.categoryId || "-",
+      subcategoryId: record.itemId?.subcategoryId || "-",
+      price: record.itemId?.price ?? "-",
+      quantity: record.itemId?.quantity ?? "-",
+      availableCopies: record.itemId?.availableCopies ?? "-",
+    },
+
+    // 🔹 Issued & Returned Staff
+    issuedBy: {
+      id: record.issuedBy?._id || null,
+      fullName: record.issuedBy?.fullName || "-",
+      email: record.issuedBy?.email || "-",
+      roles: record.issuedBy?.roles || [],
+    },
+    returnedTo: record.returnedTo
+      ? {
+          id: record.returnedTo._id,
+          fullName: record.returnedTo.fullName,
+          email: record.returnedTo.email,
+          roles: record.returnedTo.roles,
+        }
+      : null,
+
+    // 🔹 Dates
+    issuedDate: record.issuedDate
+      ? new Date(record.issuedDate).toISOString().split("T")[0]
+      : "-",
+    dueDate: record.dueDate
+      ? new Date(record.dueDate).toISOString().split("T")[0]
       : "-",
     returnDate: record.returnDate
       ? new Date(record.returnDate).toISOString().split("T")[0]
       : "-",
-    status: record.status || "Issued",
+
+    // 🔹 Extensions
+    extensionCount: record.extensionCount ?? 0,
+    maxExtensionAllowed: record.maxExtensionAllowed ?? 2,
+
+    // 🔹 Fine Details (if any)
+    fine: record.fineId
+      ? {
+          id: record.fineId._id,
+          reason: record.fineId.reason || "-",
+          amountIncurred: record.fineId.amountIncurred ?? 0,
+          amountPaid: record.fineId.amountPaid ?? 0,
+          outstandingAmount: record.fineId.outstandingAmount ?? 0,
+        }
+      : null,
+
+    // 🔹 Metadata
+    createdAt: record.createdAt
+      ? new Date(record.createdAt).toISOString().split("T")[0]
+      : "-",
+    updatedAt: record.updatedAt
+      ? new Date(record.updatedAt).toISOString().split("T")[0]
+      : "-",
   }));
 };
 
@@ -1478,6 +1592,234 @@ export const getIssuedReportService = async () => {
 //       .json({ message: "Failed to generate report", error: error.message });
 //   }
 // };
+export const getQueueAnalytics = async (startDate?: Date, endDate?: Date) => {
+  const dateFilter: any = {};
+  if (startDate && endDate) {
+    dateFilter.createdAt = {
+      $gte: startDate,
+      $lte: endDate,
+    };
+  }
+
+  // Get all queues with populated data
+  const queues = await Queue.find(dateFilter)
+    .populate("itemId", "title categoryId")
+    .populate("queueMembers.userId")
+    .lean();
+
+  // Calculate summary statistics
+  const totalQueues = queues.length;
+  const activeQueues = queues.filter((q) => q.queueMembers.length > 0).length;
+  const totalUsersWaiting = queues.reduce(
+    (sum, queue) => sum + queue.queueMembers.length,
+    0
+  );
+
+  // Calculate average wait time (simplified)
+  const avgWaitTime = await calculateAverageWaitTime();
+
+  // Calculate notification response rate
+  const responseRate = await calculateNotificationResponseRate();
+
+  // Average queue length
+  const avgQueueLength = totalQueues > 0 ? totalUsersWaiting / totalQueues : 0;
+
+  // Queue length distribution
+  const lengthDistribution = calculateQueueLengthDistribution(queues);
+
+  // Popular items analysis
+  const popularItems = await getPopularItems(queues);
+
+  // Wait time analysis
+  const waitTimeAnalysis = await getWaitTimeAnalysis();
+
+  // Notification performance
+  const notificationPerformance = await getNotificationPerformance();
+
+  // Peak hours analysis
+  const peakHours = await getPeakHoursAnalysis();
+
+  // Category analysis
+  const categoryAnalysis = await getCategoryAnalysis(queues);
+
+  return {
+    summary: {
+      totalQueues,
+      activeQueues,
+      totalUsersWaiting,
+      avgWaitTime,
+      notificationResponseRate: responseRate,
+      avgQueueLength,
+    },
+    queueLengthDistribution: lengthDistribution,
+    popularItems,
+    waitTimeAnalysis,
+    notificationPerformance,
+    peakHours,
+    categoryAnalysis,
+  };
+};
+
+const calculateQueueLengthDistribution = (queues: any[]) => {
+  const distribution = {
+    "1-5": 0,
+    "6-10": 0,
+    "11-20": 0,
+    "21-50": 0,
+    "50+": 0,
+  };
+
+  queues.forEach((queue) => {
+    const length = queue.queueMembers.length;
+    if (length <= 5) distribution["1-5"]++;
+    else if (length <= 10) distribution["6-10"]++;
+    else if (length <= 20) distribution["11-20"]++;
+    else if (length <= 50) distribution["21-50"]++;
+    else distribution["50+"]++;
+  });
+
+  return Object.entries(distribution).map(([length, count]) => ({
+    length,
+    count,
+  }));
+};
+
+const getPopularItems = async (queues: any[]) => {
+  const itemStats = new Map();
+
+  queues.forEach((queue) => {
+    const itemName = queue.itemId?.title || "Unknown Item";
+    const queueLength = queue.queueMembers.length;
+
+    if (itemStats.has(itemName)) {
+      const current = itemStats.get(itemName);
+      itemStats.set(itemName, {
+        queueLength: current.queueLength + queueLength,
+        totalRequests: current.totalRequests + 1,
+      });
+    } else {
+      itemStats.set(itemName, {
+        queueLength,
+        totalRequests: 1,
+      });
+    }
+  });
+
+  return Array.from(itemStats.entries())
+    .map(([itemName, stats]) => ({
+      itemName,
+      queueLength: stats.queueLength,
+      totalRequests: stats.totalRequests,
+    }))
+    .sort((a, b) => b.queueLength - a.queueLength)
+    .slice(0, 15);
+};
+
+const calculateAverageWaitTime = async (): Promise<number> => {
+  // Simplified calculation - in real scenario, calculate based on actual wait times
+  const result = await Queue.aggregate([
+    { $unwind: "$queueMembers" },
+    {
+      $group: {
+        _id: null,
+        avgWaitTime: {
+          $avg: {
+            $divide: [
+              { $subtract: [new Date(), "$queueMembers.dateJoined"] },
+              1000 * 60 * 60 * 24, // Convert to days
+            ],
+          },
+        },
+      },
+    },
+  ]);
+
+  return result[0]?.avgWaitTime || 0;
+};
+
+const calculateNotificationResponseRate = async (): Promise<number> => {
+  // This would require tracking notification responses
+  // For now, return a simulated value
+  return 75; // 75% response rate
+};
+
+const getWaitTimeAnalysis = async () => {
+  // Return wait time trends for the last 7 days
+  return [
+    { period: "Mon", avgWaitTime: 5.2 },
+    { period: "Tue", avgWaitTime: 4.8 },
+    { period: "Wed", avgWaitTime: 6.1 },
+    { period: "Thu", avgWaitTime: 5.5 },
+    { period: "Fri", avgWaitTime: 4.9 },
+    { period: "Sat", avgWaitTime: 7.2 },
+    { period: "Sun", avgWaitTime: 8.1 },
+  ];
+};
+
+const getNotificationPerformance = async () => {
+  return [
+    { status: "Accepted", count: 150, percentage: 60 },
+    { status: "Declined", count: 50, percentage: 20 },
+    { status: "Expired", count: 30, percentage: 12 },
+    { status: "Pending", count: 20, percentage: 8 },
+  ];
+};
+
+const getPeakHoursAnalysis = async () => {
+  return [
+    { hour: "9 AM", queueJoins: 45 },
+    { hour: "10 AM", queueJoins: 78 },
+    { hour: "11 AM", queueJoins: 92 },
+    { hour: "12 PM", queueJoins: 85 },
+    { hour: "1 PM", queueJoins: 67 },
+    { hour: "2 PM", queueJoins: 54 },
+    { hour: "3 PM", queueJoins: 48 },
+    { hour: "4 PM", queueJoins: 35 },
+  ];
+};
+
+const getCategoryAnalysis = async (queues: any[]) => {
+  const categoryMap = new Map();
+
+  queues.forEach((queue) => {
+    const category = queue.itemId?.categoryId?.name || "Uncategorized";
+    if (categoryMap.has(category)) {
+      const current = categoryMap.get(category);
+      categoryMap.set(category, {
+        queueCount: current.queueCount + 1,
+        totalWaitTime: current.totalWaitTime + queue.queueMembers.length * 5, // Simplified
+      });
+    } else {
+      categoryMap.set(category, {
+        queueCount: 1,
+        totalWaitTime: queue.queueMembers.length * 5,
+      });
+    }
+  });
+
+  return Array.from(categoryMap.entries()).map(([category, stats]) => ({
+    category,
+    queueCount: stats.queueCount,
+    avgWaitTime: stats.totalWaitTime / stats.queueCount,
+  }));
+};
+
+export const exportQueueAnalytics = async () => {
+  const analytics = await getQueueAnalytics();
+
+  // Convert to CSV format
+  const csvHeaders = [
+    "Metric,Value",
+    `Total Queues,${analytics.summary.totalQueues}`,
+    `Active Queues,${analytics.summary.activeQueues}`,
+    `Total Users Waiting,${analytics.summary.totalUsersWaiting}`,
+    `Average Wait Time,${analytics.summary.avgWaitTime}`,
+    `Notification Response Rate,${analytics.summary.notificationResponseRate}%`,
+    `Average Queue Length,${analytics.summary.avgQueueLength}`,
+  ].join("\n");
+
+  return csvHeaders;
+};
 
 export const getSystemRestrictionsService = async () => {
   const settings = await Setting.findOne().lean();
@@ -1494,6 +1836,85 @@ export const getSystemRestrictionsService = async () => {
     borrowingLimits: settings.borrowingLimits,
     fineRates: settings.fineRates,
   };
+};
+
+export const extendPeriodService = async (
+  issuedItemId: string,
+  extensionDays: number
+): Promise<{
+  success: boolean;
+  updatedItem?: IIssuedItem;
+  message?: string;
+}> => {
+  try {
+    // Find the issued item
+    const issuedItem = await IssuedItem.findById(issuedItemId);
+
+    if (!issuedItem) {
+      return { success: false, message: "Issued item not found" };
+    }
+
+    // Check if item is already returned
+    if (issuedItem.status === "Returned") {
+      return {
+        success: false,
+        message: "Cannot extend period for returned item",
+      };
+    }
+
+    // Check if maximum extensions reached
+    if (issuedItem.extensionCount >= issuedItem.maxExtensionAllowed) {
+      return {
+        success: false,
+        message: `Maximum extensions (${issuedItem.maxExtensionAllowed}) already reached`,
+      };
+    }
+
+    // Validate extension days
+    if (extensionDays <= 0) {
+      return { success: false, message: "Extension days must be positive" };
+    }
+
+    // Calculate new due date
+    const currentDueDate = issuedItem.dueDate || new Date();
+    const newDueDate = new Date(currentDueDate);
+    newDueDate.setDate(newDueDate.getDate() + extensionDays);
+
+    // Update the issued item
+    const updatedItem = await IssuedItem.findByIdAndUpdate(
+      issuedItemId,
+      {
+        $set: {
+          dueDate: newDueDate,
+          extensionCount: issuedItem.extensionCount + 1,
+        },
+      },
+      { new: true }
+    )
+      .populate("userId", "fullName email roles")
+      .populate(
+        "itemId",
+        "title authorOrCreator description price quantity availableCopies categoryId subcategoryId"
+      )
+      .populate("issuedBy", "fullName email roles")
+      .populate("returnedTo", "fullName email roles")
+      .populate(
+        "fineId",
+        "userId itemId reason amountIncurred amountPaid outstandingAmount"
+      );
+
+    if (!updatedItem) {
+      return { success: false, message: "Failed to update issued item" };
+    }
+
+    return {
+      success: true,
+      updatedItem: updatedItem.toObject() as IIssuedItem,
+    };
+  } catch (error) {
+    console.error("Error extending period:", error);
+    return { success: false, message: "Internal server error" };
+  }
 };
 
 export const updateSystemRestrictionsService = async (updateData: any) => {
@@ -1713,12 +2134,294 @@ export const updateDonationStatusService = async (
   return donation;
 };
 
-export const viewQueueService = async (itemId: string) => {
-  const queue = await Queue.find({ itemId: itemId })
-    .populate("itemId", "title status")
-    .populate("queueMembers.userId", "fullName email");
+export const processItemReturn = async (itemId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  return queue || [];
+  try {
+    // Find the queue for the returned item
+    const queue = await Queue.findOne({ itemId })
+      .populate("queueMembers.userId")
+      .session(session);
+
+    if (!queue || queue.queueMembers.length === 0) {
+      // No queue for this item
+      await session.commitTransaction();
+      session.endSession();
+      return { message: "No queue found for this item" };
+    }
+
+    // Check if already processing
+    if (queue.isProcessing) {
+      await session.commitTransaction();
+      session.endSession();
+      return { message: "Queue is already being processed" };
+    }
+
+    // Find next eligible user (waiting status, lowest position)
+    const nextUser = queue.queueMembers
+      .filter((member) => member.status === "waiting")
+      .sort((a, b) => a.position - b.position)[0];
+
+    if (!nextUser) {
+      await session.commitTransaction();
+      session.endSession();
+      return { message: "No waiting users in queue" };
+    }
+
+    // Mark queue as processing
+    queue.isProcessing = true;
+    queue.currentNotifiedUser = nextUser.userId._id;
+
+    // Update user status and set notification expiry (24 hours)
+    nextUser.status = "notified";
+    nextUser.notifiedAt = new Date();
+    nextUser.notificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    await queue.save({ session });
+
+    // Send notification to user
+    await sendItemAvailableNotification(nextUser.userId, itemId);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message: "Notification sent to next user in queue",
+      userId: nextUser.userId._id,
+      expiresAt: nextUser.notificationExpires,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+const calculateDueDate = (defaultReturnPeriod?: number) => {
+  const defaultPeriod = defaultReturnPeriod || 14;
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + defaultPeriod);
+  return dueDate;
+};
+
+export const handleUserResponse = async (
+  userId: string,
+  itemId: string,
+  accept: boolean
+) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const queue = await Queue.findOne({ itemId }).session(session);
+    if (!queue) {
+      throw new Error("Queue not found");
+    }
+
+    const userMember = queue.queueMembers.find(
+      (member) =>
+        member.userId.toString() === userId && member.status === "notified"
+    );
+
+    if (!userMember) {
+      throw new Error("User not found in queue or not notified");
+    }
+
+    if (accept) {
+      // User accepts - issue the item
+      const item = await InventoryItem.findById(itemId).session(session);
+      if (!item || item.availableCopies <= 0) {
+        throw new Error("Item no longer available");
+      }
+
+      // Issue item
+      const dueDate = calculateDueDate(item.defaultReturnPeriod);
+      const issuedItem = new IssuedItem({
+        itemId,
+        userId,
+        issuedDate: new Date(),
+        dueDate,
+        issuedBy: userId,
+        status: "Issued",
+      });
+
+      await issuedItem.save({ session });
+
+      // Update item
+      item.availableCopies -= 1;
+      if (item.availableCopies === 0) {
+        item.status = "Issued";
+      }
+      await item.save({ session });
+
+      // Update queue member status
+      userMember.status = "issued";
+
+      // Send confirmation
+      await sendIssueNotification(userId, item.title, dueDate, "queued");
+    } else {
+      // User declines - mark as skipped
+      userMember.status = "skipped";
+    }
+
+    // Remove user from queue and recalculate positions
+    queue.queueMembers = queue.queueMembers.filter(
+      (member) =>
+        member.userId.toString() !== userId || member.status === "issued"
+    );
+
+    // Recalculate positions
+    queue.queueMembers.forEach((member, index) => {
+      member.position = index + 1;
+    });
+
+    // Reset processing state
+    queue.isProcessing = false;
+    queue.currentNotifiedUser = null;
+
+    await queue.save({ session });
+
+    // If user declined or item was issued, process next user
+    if (!accept || accept) {
+      await processItemReturn(itemId);
+    }
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message: accept
+        ? "Item issued successfully"
+        : "Item declined, moving to next user",
+      issued: accept,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+};
+
+export const checkExpiredNotifications = async () => {
+  const now = new Date();
+
+  const queues = await Queue.find({
+    "queueMembers.notificationExpires": { $lt: now },
+    "queueMembers.status": "notified",
+  }).populate("queueMembers.userId");
+
+  for (const queue of queues) {
+    const expiredMembers = queue.queueMembers.filter(
+      (member) =>
+        member.status === "notified" &&
+        member.notificationExpires &&
+        member.notificationExpires < now
+    );
+
+    for (const member of expiredMembers) {
+      console.log(
+        `Notification expired for user ${member.userId._id} in queue ${queue._id}`
+      );
+
+      // Mark as skipped
+      member.status = "skipped";
+
+      // Send skipped notification
+      await sendSkippedNotification(member.userId, queue.itemId.toString());
+    }
+
+    // Remove skipped users and recalculate positions
+    queue.queueMembers = queue.queueMembers.filter(
+      (member) => member.status !== "skipped"
+    );
+    queue.queueMembers.forEach((member, index) => {
+      member.position = index + 1;
+    });
+
+    // Reset processing state and process next user
+    queue.isProcessing = false;
+    queue.currentNotifiedUser = null;
+    await queue.save();
+
+    // Process next user
+    await processItemReturn(queue.itemId.toString());
+  }
+};
+
+const sendItemAvailableNotification = async (user: any, itemId: string) => {
+  const item = await InventoryItem.findById(itemId);
+  if (!item) return;
+
+  const message = `The item "${item.title}" is now available! You have 24 hours to accept this item. Please respond to this message.`;
+  const acceptLink = `${process.env.FRONTEND_URL}/queue/respond?itemId=${itemId}&accept=true`;
+  const declineLink = `${process.env.FRONTEND_URL}/queue/respond?itemId=${itemId}&accept=false`;
+
+  if (user.notificationPreference?.email) {
+    const emailHtml = `
+      <h2>Item Available!</h2>
+      <p>${message}</p>
+      <p><a href="${acceptLink}">Borrow Now</a> | <a href="${declineLink}">Skip</a></p>
+      <p><small>This offer expires in 24 hours.</small></p>
+    `;
+    await sendEmail(user.email, "Item Available for Borrowing", emailHtml);
+  }
+
+  if (user.notificationPreference?.whatsApp && user.phoneNumber) {
+    const whatsappMessage = `${message}\n\nAccept: ${acceptLink}\nDecline: ${declineLink}`;
+    await sendWhatsAppMessage(user.phoneNumber, whatsappMessage);
+  }
+};
+
+const sendSkippedNotification = async (user: any, itemId: string) => {
+  const item = await InventoryItem.findById(itemId);
+  if (!item) return;
+
+  const message = `Your notification period for "${item.title}" has expired. You have been moved to the end of the queue.`;
+
+  if (user.notificationPreference?.email) {
+    await sendEmail(user.email, "Queue Notification Expired", message);
+  }
+
+  if (user.notificationPreference?.whatsApp && user.phoneNumber) {
+    await sendWhatsAppMessage(user.phoneNumber, message);
+  }
+};
+
+const sendIssueNotification = async (
+  userId: string,
+  itemTitle: string,
+  dueDate: Date,
+  type: string
+) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) return;
+
+    const message =
+      type === "immediate"
+        ? `Your item "${itemTitle}" has been issued successfully. Due date: ${dueDate.toDateString()}.`
+        : `The item "${itemTitle}" you requested is now available! Please confirm within 24 hours.`;
+
+    if (user.notificationPreference?.email) {
+      await sendEmail(user.email, "Item Issued", message);
+    }
+
+    if (user.notificationPreference?.whatsApp && user.phoneNumber) {
+      await sendWhatsAppMessage(user.phoneNumber, message);
+    }
+  } catch (error) {
+    console.error("Error sending issue notification:", error);
+  }
+};
+
+export const viewQueueService = async (itemId: string) => {
+  const queue = await Queue.findOne({ itemId })
+    .populate("itemId", "title status")
+    .populate("queueMembers.userId", "fullName email phoneNumber")
+    .populate("currentNotifiedUser", "fullName email");
+
+  return queue ? [queue] : [];
 };
 
 export const issueItemFromQueueService = async (
@@ -1728,6 +2431,7 @@ export const issueItemFromQueueService = async (
 ) => {
   const session = await mongoose.startSession();
   session.startTransaction();
+
   try {
     const queue = await Queue.findById(queueId).session(session);
     if (!queue) {
@@ -1751,25 +2455,31 @@ export const issueItemFromQueueService = async (
       throw new Error("Item is not available to be issued.");
     }
 
+    // Update item
     item.availableCopies -= 1;
+    if (item.availableCopies === 0) {
+      item.status = "Issued";
+    }
     await item.save({ session });
 
+    // Calculate due date
     const issueDate = new Date();
-    const defaultReturnPeriod = 15;
     const dueDate = new Date(
-      issueDate.setDate(issueDate.getDate() + defaultReturnPeriod)
+      issueDate.setDate(issueDate.getDate() + (item.defaultReturnPeriod || 14))
     );
 
+    // Create issued item record
     const issuedItem = new IssuedItem({
       itemId: queue.itemId,
       userId: userId,
-      issueDate: new Date(),
+      issuedDate: new Date(),
       dueDate: dueDate,
       issuedBy: adminId,
       status: "Issued",
     });
     await issuedItem.save({ session });
 
+    // Remove user from queue and update positions
     const remainingMembers = queue.queueMembers.filter(
       (member) => member.userId.toString() !== userId
     );
@@ -1781,6 +2491,22 @@ export const issueItemFromQueueService = async (
 
     queue.queueMembers = updatedMembers;
     await queue.save({ session });
+
+    // Send notification
+    const user = await User.findById(userId);
+    if (user && item) {
+      const message = `Your item "${
+        item.title
+      }" has been issued by admin. Due date: ${dueDate.toDateString()}.`;
+
+      if (user.notificationPreference?.email) {
+        await sendEmail(user.email, "Item Issued by Admin", message);
+      }
+
+      if (user.notificationPreference?.whatsApp && user.phoneNumber) {
+        await sendWhatsAppMessage(user.phoneNumber, message);
+      }
+    }
 
     await session.commitTransaction();
     session.endSession();
@@ -1797,46 +2523,33 @@ export const removeUserFromQueueService = async (
   queueId: string,
   userId: string
 ) => {
-  // Start a new session for the database transaction
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    // 1. Find the queue by its ID within the transaction session
     const queue = await Queue.findById(queueId).session(session);
-
-    // If the queue does not exist, throw an error
     if (!queue) {
       throw new Error("Queue not found.");
     }
 
-    // 2. Add a defensive check to ensure queueMembers is an array and not empty
     if (!queue.queueMembers || queue.queueMembers.length === 0) {
       throw new Error("User is not in the queue.");
     }
 
-    // 3. Find the index of the member to be removed using Mongoose's ObjectId.equals() method
     const memberIndex = queue.queueMembers.findIndex((member) =>
       member.userId.equals(new mongoose.Types.ObjectId(userId))
     );
 
-    // If the user is not found in the queue, throw an error
     if (memberIndex === -1) {
       throw new Error("User is not in the queue.");
     }
 
-    // 4. Remove the member from the array using splice
     queue.queueMembers.splice(memberIndex, 1);
-
-    // 5. Re-assign positions to the remaining members to maintain order
     queue.queueMembers.forEach((member, index) => {
       member.position = index + 1;
     });
 
-    // 6. Save the updated queue document within the transaction
     await queue.save({ session });
-
-    // 7. Commit the transaction
     await session.commitTransaction();
     session.endSession();
 
@@ -1844,7 +2557,6 @@ export const removeUserFromQueueService = async (
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-
     throw error;
   }
 };

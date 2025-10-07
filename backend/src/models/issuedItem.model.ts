@@ -30,7 +30,7 @@ const issuedItemSchema = new mongoose.Schema<IIssuedItem>(
     returnedTo: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      default: null, //default will be the librarians ID
+      default: null, 
     },
     returnDate: {
       type: Date,

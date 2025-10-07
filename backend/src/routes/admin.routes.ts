@@ -57,12 +57,24 @@ import {
   waiveFineController,
   createCategoryController,
   getCategoryByIdController,
+  getPendingIssueRequestsController,
+  issueItemController,
+  approveIssueRequestController,
+  rejectIssueRequestController,
+  extendPeriodController,
+  processReturnController,
+  userResponseController,
+  checkExpiredNotificationsController,
+  getAllQueuesController,
+  getQueueAnalyticsController,
+  exportQueueAnalyticsController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
 import { upload } from "../config/upload";
 import { fetchAllPermissionsService } from "../services/admin.service";
+
 const router = Router();
 
 /* ========================= AUTH ========================= */
@@ -201,6 +213,38 @@ router.delete(
   deleteItemController
 );
 
+router.get(
+  "/issue-requests/pending",
+  authUser,
+  getPendingIssueRequestsController
+);
+
+router.post("/issue-item", authUser, issueItemController);
+
+// router.post(
+//   "/issue-requests",
+//   authUser,
+//   createIssueRequestController
+// );
+
+router.put(
+  "/issue-requests/:requestId/approve",
+  authUser,
+  approveIssueRequestController
+);
+
+router.put(
+  "/issue-requests/:requestId/reject",
+  authUser,
+  rejectIssueRequestController
+);
+
+router.post(
+  "/issued-items/:issuedItemId/extend",
+  authUser,
+  extendPeriodController
+);
+
 /* ========================= CATEGORIES ========================= */
 router.get(
   "/inventory/categories",
@@ -313,6 +357,14 @@ router.get(
   authUser,
   // authorize(["admin:viewAllRentals"]),
   getIssuedItemsReportPDF
+);
+
+router.get("/analytics/queues", authUser, getQueueAnalyticsController);
+
+router.get(
+  "/analytics/queues/export",
+  authUser,
+  exportQueueAnalyticsController
 );
 
 /* ========================= SETTINGS ========================= */
@@ -428,5 +480,21 @@ router.put(
   // authorize(["admin:removeUserFromQueue"]),
   removeUserFromQueueController
 );
+
+router.post(
+  "/inventory/items/:itemId/process-return",
+  authUser,
+  processReturnController
+);
+
+router.post("/queue/:itemId/respond", authUser, userResponseController);
+
+router.post(
+  "/queue/check-expired",
+  authUser,
+  checkExpiredNotificationsController
+);
+
+router.get("/inventory/queues", authUser, getAllQueuesController);
 
 export default router;

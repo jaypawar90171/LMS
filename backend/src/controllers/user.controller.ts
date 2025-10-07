@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import {
+  createIssueRequestService,
   dashboardSummaryService,
   expressDonationInterestService,
   extendIssuedItemService,
@@ -9,11 +10,11 @@ import {
   getHistoryService,
   getIssueddItemsSerive,
   getItemService,
+  getMyIssueRequestsService,
   getNewArrivalsService,
   getProfileDetailsService,
   getQueuedItemsService,
   getRequestedItemsSerice,
-  issueOrQueueService,
   registerUserService,
   requestItemService,
   requestNewItemService,
@@ -248,11 +249,11 @@ export const getItemController = async (req: Request, res: Response) => {
     const items = await getItemService(itemId);
     return res.status(200).json({
       success: true,
-      message: "Items fetched succesfully",
+      message: "Items fetched successfully",
       data: items,
     });
   } catch (error: any) {
-    console.error("Error fetching fetching items data:", error);
+    console.error("Error fetching items data:", error);
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error." });
@@ -272,7 +273,7 @@ export const getRequestedItemsController = async (
     const requestedItems = await getRequestedItemsSerice(userId);
     return res.status(200).json({
       success: true,
-      message: "requestd items fetched succesfully",
+      message: "Requested items fetched successfully",
       data: requestedItems,
     });
   } catch (error: any) {
@@ -314,9 +315,10 @@ export const getQueuedItemsController = async (req: Request, res: Response) => {
     }
 
     const queuedItems = await getQueuedItemsService(userId);
-    return res.status(201).json({
+    return res.status(200).json({
+      // Changed from 201 to 200 for GET request
       success: true,
-      message: "queue items fetched successfully",
+      message: "Queue items fetched successfully",
       queuedItems,
     });
   } catch (error: any) {
@@ -333,8 +335,7 @@ export const extendIssuedItemController = async (
 ) => {
   try {
     const { itemId } = req.params;
-    const userId = req.user.id;
-    console.log(userId);
+    const userId = (req as any).user.id; // Fixed: use auth middleware user
 
     if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid itemId or userId" });
@@ -361,7 +362,7 @@ export const returnItemRequestController = async (
 ) => {
   try {
     const { itemId } = req.params;
-    const userId = req.user.id;
+    const userId = (req as any).user?.id; 
     const { status } = req.body;
 
     if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
@@ -391,7 +392,7 @@ export const returnItemRequestController = async (
 export const requestNewItemController = async (req: Request, res: Response) => {
   try {
     const validatedData = itemRequestUpdateSchema.parse(req.body);
-    const userId = req.user.id;
+    const userId = (req as any).user.id;
 
     const item = await requestNewItemService(userId, validatedData);
     return res.status(200).json({
@@ -418,7 +419,7 @@ export const getNewArrivalsController = async (req: Request, res: Response) => {
     const newArrivals = await getNewArrivalsService();
     return res.status(200).json({
       success: true,
-      message: "New Arrivals fetched succesfully",
+      message: "New Arrivals fetched successfully",
       items: newArrivals,
     });
   } catch (error: any) {
@@ -429,33 +430,9 @@ export const getNewArrivalsController = async (req: Request, res: Response) => {
   }
 };
 
-export const issueOrQueueController = async (req: Request, res: Response) => {
-  try {
-    const { itemId } = req.params;
-    const userId = req.user.id;
-
-    if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ message: "invalid user ir item ID" });
-    }
-
-    const result = await issueOrQueueService(userId, itemId);
-
-    return res.status(200).json({
-      success: true,
-      message: result?.message,
-      data: result?.data,
-    });
-  } catch (error: any) {
-    console.error("Error in issueOrQueueController:", error);
-    return res
-      .status(error.statusCode || 500)
-      .json({ error: error.message || "Internal server error" });
-  }
-};
-
 export const getHistoryController = async (req: Request, res: Response) => {
   try {
-    const userId = req.user.id;
+    const userId = (req as any).user.id; // Fixed: use auth middleware user
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
     }
@@ -468,6 +445,81 @@ export const getHistoryController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error in getHistoryController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const createIssueRequestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    const { itemId } = req.body;
+
+    if (!itemId) {
+      return res.status(400).json({
+        success: false,
+        message: "Item ID is required",
+      });
+    }
+
+    const result = await createIssueRequestService(userId.toString(), itemId);
+
+    // Proper type checking with type guards
+    if (result.type === "immediate" && "issuedItem" in result) {
+      return res.status(201).json({
+        success: true,
+        message: result.message,
+        data: {
+          issuedItem: result.issuedItem,
+          type: result.type,
+        },
+      });
+    } else if (result.type === "queued" && "queuePosition" in result) {
+      return res.status(201).json({
+        success: true,
+        message: result.message,
+        data: {
+          queuePosition: result.queuePosition,
+          type: result.type,
+        },
+      });
+    } else {
+      // Fallback for any other type
+      return res.status(201).json({
+        success: true,
+        message: result.message,
+        data: { type: result.type },
+      });
+    }
+  } catch (error: any) {
+    console.error("Error creating issue request:", error);
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getMyIssueRequestsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = (req as any).user?.id;
+
+    const requests = await getMyIssueRequestsService(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Issue requests fetched successfully",
+      data: requests,
+    });
+  } catch (error: any) {
+    console.error("Error in getMyIssueRequestsController:", error);
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error" });

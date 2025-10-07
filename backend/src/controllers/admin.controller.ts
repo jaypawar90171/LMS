@@ -1,5 +1,5 @@
 import User from "../models/user.model";
-import { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { Request, Response } from "express";
 import {
   CategorySchema,
@@ -15,8 +15,11 @@ import {
 } from "../validations/auth.validation";
 import {
   addTemplateService,
+  checkExpiredNotifications,
   deleteFineService,
   deleteUserService,
+  exportQueueAnalytics,
+  extendPeriodService,
   fetchAllPermissionsService,
   generateBarcodePDF,
   generateBarcodeString,
@@ -28,9 +31,12 @@ import {
   getInventoryReportService,
   getIssuedReportService,
   getNotificationTemplatesService,
+  getQueueAnalytics,
   getSystemRestrictionsService,
+  handleUserResponse,
   issueItemFromQueueService,
   loginService,
+  processItemReturn,
   recordPaymentService,
   removeUserFromQueueService,
   resetPasswordAdminService,
@@ -78,6 +84,10 @@ import { aw } from "@upstash/redis/zmscore-CgRD7oFR";
 import { Permission } from "../models/permission.model";
 import Fine from "../models/fine.model";
 import { Irole } from "../interfaces/role.interface";
+import IssuedItem from "../models/issuedItem.model";
+import IssueRequest from "../models/itemRequest.model";
+import InventoryItem from "../models/item.model";
+import Queue from "../models/queue.model";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -944,6 +954,359 @@ export const deleteItemController = async (req: Request, res: Response) => {
   }
 };
 
+const checkUserEligibility = async (userId: Types.ObjectId) => {
+  // Check if user has any overdue items
+  const overdueItems = await IssuedItem.find({
+    userId,
+    dueDate: { $lt: new Date() },
+    status: "Issued",
+  });
+
+  if (overdueItems.length > 0) {
+    return {
+      eligible: false,
+      reason: `User has ${overdueItems.length} overdue item(s)`,
+    };
+  }
+
+  // Check if user has reached maximum issue limit (e.g., 5 items)
+  const currentIssuedItems = await IssuedItem.countDocuments({
+    userId,
+    status: "Issued",
+  });
+
+  const maxIssuedItems = 5; // This could be configurable
+  if (currentIssuedItems >= maxIssuedItems) {
+    return {
+      eligible: false,
+      reason: `User has reached maximum issue limit of ${maxIssuedItems} items`,
+    };
+  }
+
+  return { eligible: true };
+};
+
+const calculateDueDate = (defaultReturnPeriod?: number) => {
+  const defaultPeriod = defaultReturnPeriod || 14; // Default 14 days
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + defaultPeriod);
+  return dueDate;
+};
+
+export const getPendingIssueRequestsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const accessToken = req.headers.authorization?.split(" ")[1];
+    if (!accessToken) {
+      return res.status(401).json({ message: "No access token provided" });
+    }
+
+    const requests = await IssueRequest.find({ status: "pending" })
+      .populate("userId", "fullName email employeeId")
+      .populate("itemId", "title authorOrCreator availableCopies categoryId")
+      .sort({ requestedAt: -1 });
+
+    res.json({ requests });
+  } catch (error: any) {
+    console.error("Error fetching pending requests:", error);
+    res.status(500).json({ message: "Error fetching pending requests" });
+  }
+};
+
+export const issueItemController = async (req: Request, res: Response) => {
+  try {
+    const { userId, itemId } = req.body;
+    const adminId = (req as any).user?.id;
+
+    if (!Types.ObjectId.isValid(userId) || !Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ message: "Invalid user ID or item ID" });
+    }
+
+    // Check if user exists and is active
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Check user eligibility
+    const eligibility = await checkUserEligibility(new Types.ObjectId(userId));
+    if (!eligibility.eligible) {
+      return res.status(400).json({ message: eligibility.reason });
+    }
+
+    // Check if item exists and is available
+    const item = await InventoryItem.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found" });
+    }
+
+    if (item.availableCopies <= 0) {
+      return res.status(400).json({ message: "Item not available" });
+    }
+
+    if (item.status !== "Available") {
+      return res.status(400).json({ message: `Item is ${item.status}` });
+    }
+
+    // Calculate due date
+    const dueDate = calculateDueDate(item.defaultReturnPeriod);
+
+    // Create issued item record
+    const issuedItem = new IssuedItem({
+      itemId,
+      userId,
+      issuedDate: new Date(),
+      dueDate,
+      issuedBy: adminId,
+      status: "Issued",
+    });
+
+    await issuedItem.save();
+
+    // Update item available copies
+    item.availableCopies -= 1;
+    if (item.availableCopies === 0) {
+      item.status = "Issued";
+    }
+    await item.save();
+
+    res.json({
+      message: "Item issued successfully",
+      issuedItem: {
+        _id: issuedItem._id,
+        itemTitle: item.title,
+        userName: user.fullName,
+        dueDate: issuedItem.dueDate,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error issuing item:", error);
+    res.status(500).json({ message: "Error issuing item" });
+  }
+};
+
+export const approveIssueRequestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { requestId } = req.params;
+    const adminId = (req as any).user?.id;
+
+    if (!Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+
+    const issueRequest = await IssueRequest.findById(requestId)
+      .populate("userId")
+      .populate("itemId");
+
+    if (!issueRequest) {
+      return res.status(404).json({ message: "Issue request not found" });
+    }
+
+    if (issueRequest.status !== "pending") {
+      return res.status(400).json({ message: "Request already processed" });
+    }
+
+    // Check user eligibility
+    const eligibility = await checkUserEligibility(issueRequest.userId._id);
+    if (!eligibility.eligible) {
+      return res.status(400).json({ message: eligibility.reason });
+    }
+
+    const item = await InventoryItem.findById(issueRequest.itemId._id);
+    if (!item || item.availableCopies <= 0) {
+      return res.status(400).json({ message: "Item no longer available" });
+    }
+
+    // Calculate due date
+    const dueDate = calculateDueDate(item.defaultReturnPeriod);
+
+    // Create issued item record
+    const issuedItem = new IssuedItem({
+      itemId: issueRequest.itemId._id,
+      userId: issueRequest.userId._id,
+      issuedDate: new Date(),
+      dueDate,
+      issuedBy: adminId,
+      status: "Issued",
+    });
+
+    await issuedItem.save();
+
+    // Update item available copies
+    item.availableCopies -= 1;
+    if (item.availableCopies === 0) {
+      item.status = "Issued";
+    }
+    await item.save();
+
+    // Update issue request status
+    issueRequest.status = "approved";
+    issueRequest.processedAt = new Date();
+    issueRequest.processedBy = adminId;
+    await issueRequest.save();
+
+    res.json({
+      message: "Issue request approved successfully",
+      issuedItem: {
+        _id: issuedItem._id,
+        itemTitle: item.title,
+        userName: (issueRequest.userId as any).fullName,
+        dueDate: issuedItem.dueDate,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error approving issue request:", error);
+    res.status(500).json({ message: "Error approving issue request" });
+  }
+};
+
+export const rejectIssueRequestController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { requestId } = req.params;
+    const adminId = (req as any).user?.id;
+
+    if (!Types.ObjectId.isValid(requestId)) {
+      return res.status(400).json({ message: "Invalid request ID" });
+    }
+
+    const issueRequest = await IssueRequest.findById(requestId);
+
+    if (!issueRequest) {
+      return res.status(404).json({ message: "Issue request not found" });
+    }
+
+    if (issueRequest.status !== "pending") {
+      return res.status(400).json({ message: "Request already processed" });
+    }
+
+    // Update issue request status
+    issueRequest.status = "rejected";
+    issueRequest.processedAt = new Date();
+    issueRequest.processedBy = adminId;
+    await issueRequest.save();
+
+    res.json({ message: "Issue request rejected" });
+  } catch (error: any) {
+    console.error("Error rejecting issue request:", error);
+    res.status(500).json({ message: "Error rejecting issue request" });
+  }
+};
+
+export const extendPeriodController = async (req: Request, res: Response) => {
+  try {
+    const { issuedItemId } = req.params;
+    const { extensionDays } = req.body;
+
+    // Validate input
+    if (!issuedItemId) {
+      return res.status(400).json({
+        success: false,
+        message: "Issued item ID is required",
+      });
+    }
+
+    if (
+      !extensionDays ||
+      typeof extensionDays !== "number" ||
+      extensionDays <= 0
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid extension days (positive number) is required",
+      });
+    }
+
+    // Call service to extend period
+    const result = await extendPeriodService(issuedItemId, extensionDays);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Due date extended successfully",
+    });
+  } catch (error) {
+    console.error("Error in extend period controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+// export const createIssueRequestController = async (req: Request, res: Response) => {
+//   try {
+//     const { itemId } = req.body;
+//     const userId = (req as any).user?.userId;
+//     console.log(userId);
+//     console.log(req.user.id);
+
+//     if (!Types.ObjectId.isValid(itemId)) {
+//       return res.status(400).json({ message: "Invalid item ID" });
+//     }
+
+//     // Check if item exists and is available
+//     const item = await InventoryItem.findById(itemId);
+//     if (!item) {
+//       return res.status(404).json({ message: "Item not found" });
+//     }
+
+//     if (item.availableCopies <= 0) {
+//       return res.status(400).json({ message: "Item not available" });
+//     }
+
+//     // Check if user already has a pending request for this item
+//     const existingRequest = await IssueRequest.findOne({
+//       userId,
+//       itemId,
+//       status: "pending"
+//     });
+
+//     if (existingRequest) {
+//       return res.status(400).json({ message: "You already have a pending request for this item" });
+//     }
+
+//     // Check user eligibility
+//     const eligibility = await checkUserEligibility(new Types.ObjectId(userId));
+//     if (!eligibility.eligible) {
+//       return res.status(400).json({ message: eligibility.reason });
+//     }
+
+//     // Create issue request
+//     const issueRequest = new IssueRequest({
+//       userId,
+//       itemId,
+//       status: "pending"
+//     });
+
+//     await issueRequest.save();
+
+//     // Populate the response
+//     await issueRequest.populate("itemId", "title authorOrCreator");
+
+//     res.status(201).json({
+//       message: "Issue request submitted successfully",
+//       request: issueRequest
+//     });
+//   } catch (error: any) {
+//     console.error("Error creating issue request:", error);
+//     res.status(500).json({ message: "Error creating issue request" });
+//   }
+// };
+
 export const getCategoriesController = async (req: Request, res: Response) => {
   try {
     const { tree } = req.query;
@@ -1807,7 +2170,7 @@ export const viewQueueController = async (req: Request, res: Response) => {
   try {
     const { itemId } = req.params;
 
-    if (!Types.ObjectId.isValid(itemId)) {
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ message: "Invalid itemId" });
     }
 
@@ -1834,8 +2197,6 @@ export const issueItemFromQueueController = async (
     const { queueId } = req.params;
     const { userId } = req.body;
 
-    console.log(req.user._id);
-    console.log(queueId, userId, adminId);
     if (!userId) {
       return res.status(400).json({ message: "User ID is required." });
     }
@@ -1847,7 +2208,7 @@ export const issueItemFromQueueController = async (
     );
     return res.status(200).json({
       success: true,
-      message: "item issued for the queue member successfully",
+      message: "Item issued for the queue member successfully",
       donation: issuedItem,
     });
   } catch (error: any) {
@@ -1867,9 +2228,7 @@ export const removeUserFromQueueController = async (
     const { userId } = req.body;
 
     if (!userId) {
-      return res
-        .status(400)
-        .json({ message: "User ID is required in the request body." });
+      return res.status(400).json({ message: "User ID is required." });
     }
 
     const result = await removeUserFromQueueService(queueId, userId);
@@ -1881,6 +2240,72 @@ export const removeUserFromQueueController = async (
     console.error("Error in removeUserFromQueueController:", error);
     return res
       .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const processReturnController = async (req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ message: "Invalid itemId" });
+    }
+
+    const result = await processItemReturn(itemId);
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error in processReturnController:", error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const userResponseController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user._id;
+    const { itemId } = req.params;
+    const { accept } = req.body;
+
+    if (typeof accept !== "boolean") {
+      return res
+        .status(400)
+        .json({ message: "Accept field is required and must be boolean" });
+    }
+
+    const result = await handleUserResponse(userId.toString(), itemId, accept);
+    return res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error in userResponseController:", error);
+    return res
+      .status(500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
+export const checkExpiredNotificationsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    await checkExpiredNotifications();
+    return res.status(200).json({
+      success: true,
+      message: "Expired notifications processed successfully",
+    });
+  } catch (error: any) {
+    console.error("Error in checkExpiredNotificationsController:", error);
+    return res
+      .status(500)
       .json({ error: error.message || "Internal server error" });
   }
 };
@@ -1900,6 +2325,77 @@ export const fetchAllPermissionsController = async (
     console.log("Error in fetching permissions");
     return res.status(500).json({
       message: "Internal server error",
+    });
+  }
+};
+
+export const getAllQueuesController = async (req: Request, res: Response) => {
+  try {
+    const queues = await Queue.find()
+      .populate("itemId", "title status availableCopies categoryId")
+      .populate("queueMembers.userId", "fullName email")
+      .populate("currentNotifiedUser", "fullName")
+      .sort({ updatedAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      message: "All queues fetched successfully",
+      data: queues,
+    });
+  } catch (error: any) {
+    console.error("Error in getAllQueuesController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getQueueAnalyticsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const start = startDate ? new Date(startDate as string) : undefined;
+    const end = endDate ? new Date(endDate as string) : undefined;
+
+    const analytics = await getQueueAnalytics(start, end);
+
+    return res.status(200).json({
+      success: true,
+      message: "Analytics fetched successfully",
+      data: analytics,
+    });
+  } catch (error: any) {
+    console.error("Error in getQueueAnalyticsController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const exportQueueAnalyticsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const csvData = await exportQueueAnalytics();
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=queue-analytics.csv"
+    );
+
+    return res.send(csvData);
+  } catch (error: any) {
+    console.error("Error in exportQueueAnalyticsController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
     });
   }
 };
