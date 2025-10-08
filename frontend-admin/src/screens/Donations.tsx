@@ -193,6 +193,19 @@ export default function DonationManagement() {
     }
   };
 
+  const getDonationType = (donation: Donation) => {
+    return donation.duration === 0 || !donation.duration
+      ? "Giveaway"
+      : "Duration-based";
+  };
+
+  const getDurationDisplay = (donation: Donation) => {
+    if (donation.duration === 0 || !donation.duration) {
+      return "Permanent";
+    }
+    return `${donation.duration} days`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -344,6 +357,7 @@ export default function DonationManagement() {
                   <TableHead>Donated By</TableHead>
                   <TableHead>Item Title</TableHead>
                   <TableHead>Category</TableHead>
+                  <TableHead>Donation Type</TableHead>
                   <TableHead>Duration</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -351,70 +365,65 @@ export default function DonationManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDonations.length > 0 ? (
-                  filteredDonations.map((donation) => (
-                    <TableRow key={donation._id}>
-                      <TableCell>
-                        <div className="font-medium">
-                          {donation?.userId?.fullName}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {donation?.userId?.email}
-                        </div>
-                      </TableCell>
-                      <TableCell>{donation.title}</TableCell>
-                      <TableCell>{donation.itemType.name}</TableCell>
-                      <TableCell>{donation.duration || "N/A"}</TableCell>{" "}
-                      <TableCell className="text-center">
-                        {getStatusBadge(donation.status)}
-                      </TableCell>
-                      <TableCell>
-                        {new Date(donation.createdAt).toLocaleDateString()}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {donation.status === "Pending" && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" className="h-8 w-8 p-0">
-                                <span className="sr-only">Open menu</span>
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                className="text-emerald-600 focus:text-emerald-700"
-                                onClick={() =>
-                                  handleUpdateStatus(donation._id, "Accepted")
-                                }
-                              >
-                                <ThumbsUp className="mr-2 h-4 w-4" />
-                                <span>Accept</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() =>
-                                  handleUpdateStatus(donation._id, "Rejected")
-                                }
-                              >
-                                <ThumbsDown className="mr-2 h-4 w-4" />
-                                <span>Reject</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8} // Corrected colSpan to 8
-                      className="py-10 text-center text-muted-foreground"
-                    >
-                      No donations found matching your criteria.
+                {filteredDonations.map((donation) => (
+                  <TableRow key={donation._id}>
+                    <TableCell>
+                      <div className="font-medium">
+                        {donation?.userId?.fullName}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {donation?.userId?.email}
+                      </div>
+                    </TableCell>
+                    <TableCell>{donation.title}</TableCell>
+                    <TableCell>{donation.itemType.name}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant= "outline"
+                      >
+                        {getDonationType(donation)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{getDurationDisplay(donation)}</TableCell>
+                    <TableCell className="text-center">
+                      {getStatusBadge(donation.status)}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(donation.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {donation.status === "Pending" && (
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem
+                              className="text-emerald-600"
+                              onClick={() =>
+                                handleUpdateStatus(donation._id, "Accepted")
+                              }
+                            >
+                              <ThumbsUp className="mr-2 h-4 w-4" />
+                              <span>Accept</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() =>
+                                handleUpdateStatus(donation._id, "Rejected")
+                              }
+                            >
+                              <ThumbsDown className="mr-2 h-4 w-4" />
+                              <span>Reject</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      )}
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </CardContent>
