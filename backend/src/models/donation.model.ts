@@ -25,8 +25,14 @@ const donationSchema = new Schema<IDonation>(
     photos: {
       type: String,
     },
-    duration :{
-      type: Number
+    duration: {
+      type: Number,
+      default: 0,
+    },
+    donationType: {
+      type: String,
+      enum: ["giveaway", "duration"],
+      default: "giveaway",
     },
     preferredContactMethod: {
       type: String,
@@ -37,6 +43,11 @@ const donationSchema = new Schema<IDonation>(
       type: String,
       enum: ["Pending", "Accepted", "Rejected"],
       default: "Pending",
+    },
+    inventoryItemId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "InventoryItem",
+      default: null,
     },
   },
   {

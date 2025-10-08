@@ -671,6 +671,9 @@ export const expressDonationInterestController = async (
     console.error("Error in expressDonationInterestController:", error);
     return res
       .status(error.statusCode || 500)
-      .json({ error: error.message || "Internal server error" });
+      .json({ 
+        success: false,
+        error: error.message || "Internal server error" 
+      });
   }
 };

@@ -346,11 +346,17 @@ export const getRequestedItemsSerice = async (userId: string) => {
     throw err;
   }
 
-  const requestedItems = await ItemRequest.find({ userId: userId }).populate("userId", "fullName email");
+  const requestedItems = await ItemRequest.find({ userId: userId }).populate(
+    "userId",
+    "fullName email"
+  );
   return requestedItems || [];
 };
 
-export const requestItemService = async (userId: string, validatedData: any) => {
+export const requestItemService = async (
+  userId: string,
+  validatedData: any
+) => {
   const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
 
   const existingRequest = await ItemRequest.findOne({
@@ -360,7 +366,9 @@ export const requestItemService = async (userId: string, validatedData: any) => 
   });
 
   if (existingRequest) {
-    const err: any = new Error("You have already requested this item and it's still pending");
+    const err: any = new Error(
+      "You have already requested this item and it's still pending"
+    );
     err.statusCode = 400;
     throw err;
   }
@@ -394,7 +402,10 @@ export const getQueuedItemsService = async (userId: any) => {
   return queueItems || [];
 };
 
-export const extendIssuedItemService = async (itemId: string, userId: string) => {
+export const extendIssuedItemService = async (
+  itemId: string,
+  userId: string
+) => {
   const issuedItem = await IssuedItem.findOne({
     itemId,
     userId,
@@ -432,7 +443,11 @@ export const extendIssuedItemService = async (itemId: string, userId: string) =>
   return issuedItem;
 };
 
-export const returnItemRequestService = async (itemId: string, userId: string, status: "Returned" | "Damaged" | "Lost") => {
+export const returnItemRequestService = async (
+  itemId: string,
+  userId: string,
+  status: "Returned" | "Damaged" | "Lost"
+) => {
   const issuedItem = await IssuedItem.findOne({
     itemId,
     userId: userId,
@@ -452,7 +467,12 @@ export const returnItemRequestService = async (itemId: string, userId: string, s
     throw err;
   }
 
-  const { overdueFineRatePerDay, lostItemBaseFine, damagedItemBaseFine, fineGracePeriodDays } = setting.fineRates;
+  const {
+    overdueFineRatePerDay,
+    lostItemBaseFine,
+    damagedItemBaseFine,
+    fineGracePeriodDays,
+  } = setting.fineRates;
 
   const now = new Date();
   let fineAmount = 0;
@@ -460,7 +480,9 @@ export const returnItemRequestService = async (itemId: string, userId: string, s
 
   if (status === "Returned") {
     if (issuedItem.dueDate && now > issuedItem.dueDate) {
-      const diffDays = Math.ceil((now.getTime() - issuedItem.dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      const diffDays = Math.ceil(
+        (now.getTime() - issuedItem.dueDate.getTime()) / (1000 * 60 * 60 * 24)
+      );
       if (diffDays > fineGracePeriodDays) {
         fineAmount = (diffDays - fineGracePeriodDays) * overdueFineRatePerDay;
         fineReason = "Overdue";
@@ -522,7 +544,10 @@ export const returnItemRequestService = async (itemId: string, userId: string, s
   };
 };
 
-export const requestNewItemService = async (userId: string, validatedData: any) => {
+export const requestNewItemService = async (
+  userId: string,
+  validatedData: any
+) => {
   const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
 
   const category = await Category.findOne({ name: itemType });
@@ -680,27 +705,27 @@ const checkUserEligibility = async (userId: Types.ObjectId) => {
   const overdueItems = await IssuedItem.find({
     userId,
     dueDate: { $lt: new Date() },
-    status: "Issued"
+    status: "Issued",
   });
 
   if (overdueItems.length > 0) {
-    return { 
-      eligible: false, 
-      reason: `User has ${overdueItems.length} overdue item(s)` 
+    return {
+      eligible: false,
+      reason: `User has ${overdueItems.length} overdue item(s)`,
     };
   }
 
   // Check if user has reached maximum issue limit (e.g., 5 items)
   const currentIssuedItems = await IssuedItem.countDocuments({
     userId,
-    status: "Issued"
+    status: "Issued",
   });
 
   const maxIssuedItems = 5; // This could be configurable
   if (currentIssuedItems >= maxIssuedItems) {
-    return { 
-      eligible: false, 
-      reason: `User has reached maximum issue limit of ${maxIssuedItems} items` 
+    return {
+      eligible: false,
+      reason: `User has reached maximum issue limit of ${maxIssuedItems} items`,
     };
   }
 
@@ -714,7 +739,11 @@ const calculateDueDate = (defaultReturnPeriod?: number) => {
   return dueDate;
 };
 
-const issueItemImmediately = async (userId: string, itemId: string, session: mongoose.ClientSession) => {
+const issueItemImmediately = async (
+  userId: string,
+  itemId: string,
+  session: mongoose.ClientSession
+) => {
   const item = await InventoryItem.findById(itemId).session(session);
   if (!item) throw new Error("Item not found");
 
@@ -751,27 +780,31 @@ const issueItemImmediately = async (userId: string, itemId: string, session: mon
     issuedItem: {
       _id: issuedItem._id,
       itemTitle: item.title,
-      dueDate: issuedItem.dueDate
+      dueDate: issuedItem.dueDate,
     },
-    type: "immediate"
+    type: "immediate",
   };
 };
 
-const addUserToQueue = async (userId: string, itemId: string, session: mongoose.ClientSession) => {
+const addUserToQueue = async (
+  userId: string,
+  itemId: string,
+  session: mongoose.ClientSession
+) => {
   // Find or create queue for the item
   let queue = await Queue.findOne({ itemId }).session(session);
-  
+
   if (!queue) {
     queue = new Queue({
       itemId,
       queueMembers: [],
-      isProcessing: false
+      isProcessing: false,
     });
   }
 
   // Check if user is already in queue
   const existingMember = queue.queueMembers.find(
-    member => member.userId.toString() === userId
+    (member) => member.userId.toString() === userId
   );
 
   if (existingMember) {
@@ -786,7 +819,7 @@ const addUserToQueue = async (userId: string, itemId: string, session: mongoose.
     userId: new mongoose.Types.ObjectId(userId),
     position,
     dateJoined: new Date(),
-    status: "waiting"
+    status: "waiting",
   });
 
   await queue.save({ session });
@@ -800,18 +833,24 @@ const addUserToQueue = async (userId: string, itemId: string, session: mongoose.
   return {
     message: `Item is currently unavailable. You have been added to the queue at position ${position}.`,
     queuePosition: position,
-    type: "queued"
+    type: "queued",
   };
 };
 
-const sendIssueNotification = async (userId: string, itemTitle: string, dueDate: Date, type: string) => {
+const sendIssueNotification = async (
+  userId: string,
+  itemTitle: string,
+  dueDate: Date,
+  type: string
+) => {
   try {
     const user = await User.findById(userId);
     if (!user) return;
 
-    const message = type === "immediate" 
-      ? `Your item "${itemTitle}" has been issued successfully. Due date: ${dueDate.toDateString()}.`
-      : `The item "${itemTitle}" you requested is now available! Please confirm within 24 hours.`;
+    const message =
+      type === "immediate"
+        ? `Your item "${itemTitle}" has been issued successfully. Due date: ${dueDate.toDateString()}.`
+        : `The item "${itemTitle}" you requested is now available! Please confirm within 24 hours.`;
 
     if (user.notificationPreference?.email) {
       await sendEmail(user.email, "Item Issued", message);
@@ -825,11 +864,15 @@ const sendIssueNotification = async (userId: string, itemTitle: string, dueDate:
   }
 };
 
-const sendQueuePositionNotification = async (userId: string, itemId: string, position: number) => {
+const sendQueuePositionNotification = async (
+  userId: string,
+  itemId: string,
+  position: number
+) => {
   try {
     const user = await User.findById(userId);
     const item = await InventoryItem.findById(itemId);
-    
+
     if (!user || !item) return;
 
     const message = `You have been added to the queue for "${item.title}". Your position: ${position}. You will be notified when the item becomes available.`;
@@ -846,8 +889,10 @@ const sendQueuePositionNotification = async (userId: string, itemId: string, pos
   }
 };
 
-
-export const createIssueRequestService = async (userId: string, itemId: string) => {
+export const createIssueRequestService = async (
+  userId: string,
+  itemId: string
+) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
@@ -861,7 +906,9 @@ export const createIssueRequestService = async (userId: string, itemId: string) 
     }
 
     // Check user eligibility
-    const eligibility = await checkUserEligibility(new mongoose.Types.ObjectId(userId));
+    const eligibility = await checkUserEligibility(
+      new mongoose.Types.ObjectId(userId)
+    );
     if (!eligibility.eligible) {
       const err: any = new Error(eligibility.reason);
       err.statusCode = 400;
@@ -1016,28 +1063,79 @@ export const updatePasswordService = async (
 
 export const expressDonationInterestService = async (
   userId: string,
-  data: any
+  data: {
+    itemType: string; 
+    title: string;
+    description?: string;
+    photos?: string[];
+    duration?: number; 
+    preferredContactMethod?: "Email" | "whatsApp";
+  }
 ) => {
-  const { itemType, title, description, photos, preferredContactMethod } = data;
+  const {
+    itemType,
+    title,
+    description,
+    photos,
+    duration = 0,
+    preferredContactMethod = "whatsApp",
+  } = data;
 
-  const category = await Category.findOne({ name: itemType });
-  if (!category) {
-    const err: any = new Error("Invalid category");
+  if (!title.trim()) {
+    const err: any = new Error("Title is required");
     err.statusCode = 400;
     throw err;
   }
 
+  if (!itemType) {
+    const err: any = new Error("Item type/category is required");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  // Validate duration
+  if (duration < 0) {
+    const err: any = new Error("Duration cannot be negative");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  let category;
+  if (Types.ObjectId.isValid(itemType)) {
+    category = await Category.findById(itemType);
+  } else {
+    category = await Category.findOne({
+      $or: [
+        { name: itemType },
+        { categoryName: itemType }, 
+      ],
+    });
+  }
+
+  if (!category) {
+    const err: any = new Error("Invalid category/item type");
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const donationType = duration === 0 ? "giveaway" : "duration";
+
   const donation = new Donation({
     userId: new Types.ObjectId(userId),
     itemType: category._id,
-    title,
-    description,
+    title: title.trim(),
+    description: description?.trim(),
     photos,
+    duration,
+    donationType,
     preferredContactMethod,
     status: "Pending",
   });
 
   await donation.save();
+
+  await donation.populate("itemType", "name description");
+  await donation.populate("userId", "fullName email");
 
   return donation;
 };
