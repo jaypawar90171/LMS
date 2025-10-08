@@ -36,7 +36,7 @@ import {
 import { IInventoryItem } from "../interfaces/inventoryItems.interface";
 import type { Request as ExpressRequest } from "express";
 import { IIssuedItem } from "../interfaces/issuedItems.interface";
-// import { exportQueueAnalytics } from "../controllers/admin.controller";
+import { DefaulterFilters, DefaulterItem } from "../interfaces/defaulter.interface";
 
 interface loginDTO {
   email: string;
@@ -1821,6 +1821,92 @@ export const exportQueueAnalytics = async () => {
   return csvHeaders;
 };
 
+export const exportIssuedItemsReport = async (
+  startDate?: string,
+  endDate?: string
+) => {
+  try {
+    // Build query with date filters
+    const query: any = {};
+
+    if (startDate || endDate) {
+      query.issuedDate = {};
+      if (startDate) query.issuedDate.$gte = new Date(startDate);
+      if (endDate) query.issuedDate.$lte = new Date(endDate);
+    }
+
+    const report = await IssuedItem.find(query)
+      .populate("userId", "fullName email")
+      .populate("itemId", "title authorOrCreator")
+      .populate("issuedBy", "fullName email")
+      .populate("returnedTo", "fullName email")
+      .sort({ issuedDate: -1 });
+
+    // CSV headers
+    const headers = [
+      "User Name",
+      "User Email",
+      "Item Title",
+      "Item Author",
+      "Status",
+      "Issue Date",
+      "Due Date",
+      "Return Date",
+      "Extensions Used",
+      "Max Extensions",
+      "Issued By",
+      "Returned To",
+    ];
+
+    // Convert data to CSV rows
+    const csvRows = report.map((item: IIssuedItem) => {
+      // Safely access populated fields
+      const userName = (item.userId as any)?.fullName || "-";
+      const userEmail = (item.userId as any)?.email || "-";
+      const itemTitle = (item.itemId as any)?.title || "-";
+      const itemAuthor = (item.itemId as any)?.authorOrCreator || "-";
+      const issuedByName = (item.issuedBy as any)?.fullName || "-";
+      const returnedToName = (item.returnedTo as any)?.fullName || "-";
+
+      // Format dates
+      const issueDate = item.issuedDate
+        ? new Date(item.issuedDate).toISOString().split("T")[0]
+        : "-";
+      const dueDate = item.dueDate
+        ? new Date(item.dueDate).toISOString().split("T")[0]
+        : "-";
+      const returnDate = item.returnDate
+        ? new Date(item.returnDate).toISOString().split("T")[0]
+        : "-";
+
+      return [
+        `"${userName}"`,
+        `"${userEmail}"`,
+        `"${itemTitle}"`,
+        `"${itemAuthor}"`,
+        `"${item.status}"`,
+        `"${issueDate}"`,
+        `"${dueDate}"`,
+        `"${returnDate}"`,
+        `"${item.extensionCount}"`,
+        `"${item.maxExtensionAllowed}"`,
+        `"${issuedByName}"`,
+        `"${returnedToName}"`,
+      ];
+    });
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    return csvContent;
+  } catch (error: any) {
+    throw new Error(`Failed to export issued items: ${error.message}`);
+  }
+};
+
 export const getSystemRestrictionsService = async () => {
   const settings = await Setting.findOne().lean();
 
@@ -2569,4 +2655,220 @@ export const fetchAllPermissionsService = async () => {
     throw err;
   }
   return permissions;
+};
+
+export const getDefaulterReport = async (filters: DefaulterFilters): Promise<DefaulterItem[]> => {
+  try {
+    const today = new Date();
+    
+    // Build base query for overdue items
+    let query: any = {
+      status: "Issued",
+      dueDate: { $lt: today }
+    };
+
+    // Apply overdue since filter
+    if (filters.overdueSince) {
+      const overdueSinceDate = new Date(filters.overdueSince);
+      query.dueDate.$lt = overdueSinceDate;
+    }
+
+    console.log("Query:", query); // Debug log
+
+    const issuedItems = await IssuedItem.find(query)
+      .populate('userId', 'fullName email employeeId phoneNumber roles')
+      .populate('itemId', 'title barcode categoryId')
+      .populate('issuedBy', 'fullName')
+      .sort({ dueDate: 1 });
+
+    console.log("Found issued items:", issuedItems.length); // Debug log
+
+    // Get additional user and category data
+    const defaultersPromises = issuedItems.map(async (item) => {
+      try {
+        const user = item.userId as any;
+        const inventoryItem = item.itemId as any;
+        
+        if (!user || !inventoryItem) {
+          console.log("Missing user or inventory item");
+          return null;
+        }
+
+        // Get user roles
+        const userRoles = await Role.find({ _id: { $in: user.roles } });
+        const roleNames = userRoles.map(role => role.roleName).join(', ');
+        
+        // Get category - fix field name from 'name' to 'categoryName'
+        const category = await Category.findById(inventoryItem.categoryId);
+        
+        // Apply category filter
+        if (filters.categoryId && category?._id.toString() !== filters.categoryId) {
+          return null;
+        }
+        
+        // Apply role filter
+        if (filters.roleId) {
+          const hasRole = user.roles.some((roleId: any) => roleId.toString() === filters.roleId);
+          if (!hasRole) {
+            return null;
+          }
+        }
+
+        // Calculate days overdue
+        const dueDate = new Date(item.dueDate);
+        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+
+        return {
+          issuedItemId: (item._id as Types.ObjectId).toString(),
+          userName: user.fullName,
+          userEmail: user.email,
+          employeeId: user.employeeId,
+          phoneNumber: user.phoneNumber,
+          roleName: roleNames,
+          itemTitle: inventoryItem.title,
+          barcode: inventoryItem.barcode,
+          issuedDate: item.issuedDate.toISOString().split('T')[0],
+          dueDate: item.dueDate.toISOString().split('T')[0],
+          daysOverdue,
+          categoryName: category?.name || 'Unknown', // Using 'name' from your interface
+          userId: user._id.toString(), // Add this for reminders
+          itemId: inventoryItem._id.toString(), // Add this for reminders
+        };
+      } catch (error) {
+        console.error("Error processing issued item:", error);
+        return null;
+      }
+    });
+
+    const defaulters = await Promise.all(defaultersPromises);
+
+    // Filter out null values and return
+    const result = defaulters.filter(item => item !== null) as DefaulterItem[];
+    console.log("Final defaulters count:", result.length); // Debug log
+    return result;
+  } catch (error: any) {
+    console.error("Error in getDefaulterReport:", error);
+    throw new Error(`Failed to fetch defaulter report: ${error.message}`);
+  }
+};
+
+export const sendReminderService = async (
+  issuedItemId: string,
+  userId: string,
+  itemId: string
+) => {
+  try {
+    const user = await User.findById(userId);
+    const item = await InventoryItem.findById(itemId);
+    const issuedItem = await IssuedItem.findById(issuedItemId);
+
+    if (!user || !item || !issuedItem) {
+      throw new Error("User, item, or issued item not found");
+    }
+
+    const dueDate = new Date(issuedItem.dueDate);
+    const today = new Date();
+    const daysOverdue = Math.floor(
+      (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+    );
+
+    // Email reminder
+    if (user.notificationPreference?.email) {
+      const emailSubject = `Overdue Item Reminder: ${item.title}`;
+      const emailBody = `
+        <h2>Overdue Item Reminder</h2>
+        <p>Dear ${user.fullName},</p>
+        <p>This is a reminder that the following item is overdue:</p>
+        <ul>
+          <li><strong>Item:</strong> ${item.title}</li>
+          <li><strong>Due Date:</strong> ${dueDate.toDateString()}</li>
+          <li><strong>Days Overdue:</strong> ${daysOverdue}</li>
+          <li><strong>Barcode:</strong> ${item.barcode}</li>
+        </ul>
+        <p>Please return the item as soon as possible to avoid additional penalties.</p>
+        <p>Thank you,<br>Library Management System</p>
+      `;
+
+      await sendEmail(user.email, emailSubject, emailBody);
+    }
+
+    // WhatsApp reminder
+    if (user.notificationPreference?.whatsApp && user.phoneNumber) {
+      const whatsappMessage = `
+          Overdue Item Reminder
+
+          Dear ${user.fullName},
+
+          This item is overdue:
+          📚 ${item.title}
+          📅 Due: ${dueDate.toDateString()} 
+          ⏰ Overdue: ${daysOverdue} days
+          📋 Barcode: ${item.barcode}
+
+          Please return it ASAP to avoid penalties.
+
+          Library Management System
+      `;
+
+      await sendWhatsAppMessage(user.phoneNumber, whatsappMessage);
+    }
+
+    return {
+      emailSent: user.notificationPreference?.email || false,
+      whatsappSent:
+        (user.notificationPreference?.whatsApp && user.phoneNumber) || false,
+    };
+  } catch (error: any) {
+    throw new Error(`Failed to send reminder: ${error.message}`);
+  }
+};
+
+export const exportDefaulterReport = async (filters: DefaulterFilters) => {
+  try {
+    const defaulters = await getDefaulterReport(filters);
+
+    // CSV headers
+    const headers = [
+      "User Name",
+      "Employee ID",
+      "Email",
+      "Phone Number",
+      "Role",
+      "Item Title",
+      "Barcode",
+      "Issued Date",
+      "Due Date",
+      "Days Overdue",
+      "Category",
+    ];
+
+    // Convert data to CSV rows
+    const csvRows = defaulters.map((defaulter) => [
+      `"${defaulter.userName}"`,
+      `"${defaulter.employeeId || "-"}"`,
+      `"${defaulter.userEmail}"`,
+      `"${
+        defaulter.phoneNumber
+          ? defaulter.phoneNumber.slice(-4).padStart(10, "*")
+          : "-"
+      }"`,
+      `"${defaulter.roleName}"`,
+      `"${defaulter.itemTitle}"`,
+      `"${defaulter.barcode}"`,
+      `"${defaulter.issuedDate}"`,
+      `"${defaulter.dueDate}"`,
+      `"${defaulter.daysOverdue}"`,
+      `"${defaulter.categoryName}"`,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    return csvContent;
+  } catch (error: any) {
+    throw new Error(`Failed to export defaulter report: ${error.message}`);
+  }
 };

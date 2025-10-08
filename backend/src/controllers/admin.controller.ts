@@ -18,6 +18,8 @@ import {
   checkExpiredNotifications,
   deleteFineService,
   deleteUserService,
+  exportDefaulterReport,
+  exportIssuedItemsReport,
   exportQueueAnalytics,
   extendPeriodService,
   fetchAllPermissionsService,
@@ -27,6 +29,7 @@ import {
   getAdminProfileService,
   getAllDonationService,
   getCategoryByIdService,
+  getDefaulterReport,
   getFinesReportService,
   getInventoryReportService,
   getIssuedReportService,
@@ -40,6 +43,7 @@ import {
   recordPaymentService,
   removeUserFromQueueService,
   resetPasswordAdminService,
+  sendReminderService,
   updateAdminPasswordServive,
   updateDonationStatusService,
   updateFineService,
@@ -2393,6 +2397,123 @@ export const exportQueueAnalyticsController = async (
     return res.send(csvData);
   } catch (error: any) {
     console.error("Error in exportQueueAnalyticsController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const exportIssuedItemsController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { startDate, endDate } = req.query;
+
+    const csvData = await exportIssuedItemsReport(
+      startDate as string,
+      endDate as string
+    );
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=issued-items-${
+        new Date().toISOString().split("T")[0]
+      }.csv`
+    );
+
+    return res.send(csvData);
+  } catch (error: any) {
+    console.error("Error in exportIssuedItemsController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getDefaulterReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { overdueSince, categoryId, roleId } = req.query;
+
+    console.log("Defaulters request received:", {
+      overdueSince,
+      categoryId,
+      roleId,
+    });
+
+    const filters = {
+      overdueSince: overdueSince as string,
+      categoryId: categoryId as string,
+      roleId: roleId as string,
+    };
+
+    const defaulters = await getDefaulterReport(filters);
+
+    return res.status(200).json({
+      success: true,
+      data: defaulters,
+    });
+  } catch (error: any) {
+    console.error("Error in getDefaulterReportController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const sendReminderController = async (req: Request, res: Response) => {
+  try {
+    const { issuedItemId, userId, itemId } = req.body;
+
+    const result = await sendReminderService(issuedItemId, userId, itemId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Reminder sent successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error in sendReminderController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to send reminder",
+    });
+  }
+};
+
+export const exportDefaulterReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { overdueSince, categoryId, roleId } = req.query;
+
+    const filters = {
+      overdueSince: overdueSince as string,
+      categoryId: categoryId as string,
+      roleId: roleId as string,
+    };
+
+    const csvData = await exportDefaulterReport(filters);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=defaulter-report-${
+        new Date().toISOString().split("T")[0]
+      }.csv`
+    );
+
+    return res.send(csvData);
+  } catch (error: any) {
+    console.error("Error in exportDefaulterReportController:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",

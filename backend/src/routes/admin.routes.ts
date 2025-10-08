@@ -68,6 +68,10 @@ import {
   getAllQueuesController,
   getQueueAnalyticsController,
   exportQueueAnalyticsController,
+  exportIssuedItemsController,
+  getDefaulterReportController,
+  sendReminderController,
+  exportDefaulterReportController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
@@ -366,6 +370,14 @@ router.get(
   authUser,
   exportQueueAnalyticsController
 );
+
+router.get("/reports/issued/export", authUser, exportIssuedItemsController);
+
+router.get("/reports/defaulters", authUser, getDefaulterReportController);
+
+router.post("/reports/defaulters/send-reminder", authUser, sendReminderController);
+
+router.get("/reports/defaulters/export", authUser, exportDefaulterReportController);
 
 /* ========================= SETTINGS ========================= */
 router.get(
