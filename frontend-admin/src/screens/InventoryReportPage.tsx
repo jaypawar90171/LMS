@@ -34,7 +34,6 @@ import {
 } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
 
-
 ChartJS.register(
   CategoryScale,
   LinearScale,

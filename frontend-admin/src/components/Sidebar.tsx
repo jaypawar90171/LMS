@@ -149,6 +149,7 @@ const navItems = [
     subItems: [
       { name: "Inventory Report", path: "/reports/inventory" },
       { name: "Fine Report", path: "/reports/fines" },
+      { name: "Defaulter User Report", path: "/reports/defaulter" },
       { name: "Issued Items Report", path: "/reports/issued-items" },
       { name: "Queue Report", path: "/reports/queue" },
     ],
@@ -214,13 +215,18 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     <aside
       className={`fixed top-0 left-0 h-screen w-64 bg-white z-50 transform transition-transform duration-300 ease-in-out ${
         isOpen ? "translate-x-0" : "-translate-x-full"
-      } flex flex-col justify-between p-6 border-r border-gray-200`}
+      } flex flex-col border-r border-gray-200`}
     >
-      <div>
-        <h2 className="text-xl font-bold text-gray-800 mb-8">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 p-6 border-b border-gray-200">
+        <h2 className="text-xl font-bold text-gray-800">
           Library Management System
         </h2>
-        <nav>
+      </div>
+
+      {/* Scrollable Navigation */}
+      <div className="flex-1 overflow-y-auto scrollbar-hide">
+        <nav className="p-6">
           <ul className="space-y-1">
             {navItems.map((item) => (
               <li key={item.name}>
@@ -276,7 +282,8 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
         </nav>
       </div>
 
-      <div className="mt-auto pt-6 border-t border-gray-200">
+      {/* Fixed Footer */}
+      <div className="flex-shrink-0 p-6 border-t border-gray-200">
         <button
           onClick={handleLogout}
           className="flex items-center w-full px-4 py-3 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors duration-200"

@@ -21,6 +21,7 @@ import IssueManagement from "@/screens/IssueManagement";
 import IssuedItemsManagement from "@/screens/IssuedItemsManagement";
 import QueueDashboard from "@/screens/QueueDashboard";
 import AnalyticsDashboard from "@/screens/AnalyticsDashboard";
+import DefaulterReport from "@/screens/DefaulterReport";
 
 const AppRoute = () => {
   return (
@@ -94,6 +95,14 @@ const AppRoute = () => {
             element={
               <Layout>
                 <IssuedItemsReportPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports/defaulter"
+            element={
+              <Layout>
+                <DefaulterReport />
               </Layout>
             }
           />

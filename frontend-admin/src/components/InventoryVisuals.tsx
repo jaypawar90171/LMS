@@ -14,7 +14,6 @@ import {
 } from "chart.js";
 import { Bar, Doughnut } from "react-chartjs-2";
 
-// Register the necessary components for Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -25,10 +24,40 @@ ChartJS.register(
   Legend
 );
 
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  roles: string[];
+}
+
+interface Item {
+  id: string;
+  title: string;
+  authorOrCreator: string;
+  description: string;
+  categoryId: string;
+  subcategoryId: string;
+  price: { $numberDecimal: string };
+  quantity: number;
+  availableCopies: number;
+}
+
 interface ReportItem {
-  user: string;
-  item: string;
+  id: string;
   status: "Issued" | "Returned";
+  user: User;
+  item: Item;
+  issuedBy: User;
+  returnedTo: User | null;
+  issuedDate: string;
+  dueDate: string;
+  returnDate: string;
+  extensionCount: number;
+  maxExtensionAllowed: number;
+  fine: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface InventoryVisualsProps {
@@ -39,7 +68,9 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
   // Memoized calculation for Status Distribution (Issued vs. Returned)
   const statusData = useMemo(() => {
     const issuedCount = data.filter((item) => item.status === "Issued").length;
-    const returnedCount = data.length - issuedCount;
+    const returnedCount = data.filter(
+      (item) => item.status === "Returned"
+    ).length;
     return {
       labels: ["Issued", "Returned"],
       datasets: [
@@ -57,7 +88,8 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
   // Memoized calculation for Top 5 Most Borrowed Items
   const topItemsData = useMemo(() => {
     const itemCounts = data.reduce((acc, { item }) => {
-      acc[item] = (acc[item] || 0) + 1;
+      const itemTitle = item.title;
+      acc[itemTitle] = (acc[itemTitle] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -82,7 +114,8 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
     const userCounts = data
       .filter((item) => item.status === "Issued")
       .reduce((acc, { user }) => {
-        acc[user] = (acc[user] || 0) + 1;
+        const userName = user.fullName;
+        acc[userName] = (acc[userName] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
@@ -102,13 +135,53 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
     };
   }, [data]);
 
+  // Memoized calculation for Monthly Issue Trends
+  const monthlyTrendsData = useMemo(() => {
+    const monthlyCounts = data.reduce((acc, { issuedDate }) => {
+      const month = new Date(issuedDate).toLocaleString("default", {
+        month: "short",
+        year: "numeric",
+      });
+      acc[month] = (acc[month] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const sortedMonths = Object.entries(monthlyCounts)
+      .sort(([a], [b]) => new Date(a).getTime() - new Date(b).getTime())
+      .slice(-6); // Last 6 months
+
+    return {
+      labels: sortedMonths.map(([month]) => month),
+      datasets: [
+        {
+          label: "Items Issued",
+          data: sortedMonths.map(([, count]) => count),
+          backgroundColor: "#EF4444", // Red
+          borderColor: "#DC2626",
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [data]);
+
   const barOptions = {
     responsive: true,
-    plugins: { legend: { display: false } },
+    plugins: {
+      legend: {
+        display: false,
+      },
+    },
+  };
+
+  const horizontalBarOptions = {
+    ...barOptions,
+    indexAxis: "y" as const,
+    maintainAspectRatio: false,
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Transaction Status Doughnut Chart */}
       <Card>
         <CardHeader>
           <CardTitle className="text-center">Transaction Status</CardTitle>
@@ -116,11 +189,20 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
         <CardContent className="h-80 flex justify-center items-center">
           <Doughnut
             data={statusData}
-            options={{ responsive: true, maintainAspectRatio: false }}
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: "bottom" as const,
+                },
+              },
+            }}
           />
         </CardContent>
       </Card>
 
+      {/* Top 5 Most Borrowed Items */}
       <Card>
         <CardHeader>
           <CardTitle className="text-center">
@@ -128,27 +210,37 @@ export const InventoryVisuals: FC<InventoryVisualsProps> = ({ data }) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="h-80 flex justify-center items-center">
-          <Bar
-            data={topItemsData}
-            options={{
-              ...barOptions,
-              indexAxis: "y" as const,
-              maintainAspectRatio: false,
-            }}
-          />
+          <Bar data={topItemsData} options={horizontalBarOptions} />
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-2">
+      {/* Top 5 Active Users */}
+      <Card>
         <CardHeader>
-          <CardTitle className="text-center">
-            Top 5 Users (Currently Borrowing)
-          </CardTitle>
+          <CardTitle className="text-center">Top 5 Active Users</CardTitle>
+        </CardHeader>
+        <CardContent className="h-80 flex justify-center items-center">
+          <Bar data={topUsersData} options={horizontalBarOptions} />
+        </CardContent>
+      </Card>
+
+      {/* Monthly Trends */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-center">Monthly Issue Trends</CardTitle>
         </CardHeader>
         <CardContent className="h-80 flex justify-center items-center">
           <Bar
-            data={topUsersData}
-            options={{ ...barOptions, maintainAspectRatio: false }}
+            data={monthlyTrendsData}
+            options={{
+              ...barOptions,
+              maintainAspectRatio: false,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                },
+              },
+            }}
           />
         </CardContent>
       </Card>

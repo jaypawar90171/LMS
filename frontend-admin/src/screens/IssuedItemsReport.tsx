@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -21,15 +21,52 @@ import {
   ArrowRightLeft,
   CheckCircle,
   PackageOpen,
+  Download,
+  Users,
+  Clock,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import { InventoryVisuals } from "@/components/InventoryVisuals";
 
+interface User {
+  id: string;
+  fullName: string;
+  email: string;
+  roles: string[];
+}
+
+interface Item {
+  id: string;
+  title: string;
+  authorOrCreator: string;
+  description: string;
+  categoryId: string;
+  subcategoryId: string;
+  price: { $numberDecimal: string };
+  quantity: number;
+  availableCopies: number;
+}
+
 interface ReportItem {
-  user: string;
-  item: string;
-  issueDate: string;
-  returnDate: string;
+  id: string;
   status: "Issued" | "Returned";
+  user: User;
+  item: Item;
+  issuedBy: User;
+  returnedTo: User | null;
+  issuedDate: string;
+  dueDate: string;
+  returnDate: string;
+  extensionCount: number;
+  maxExtensionAllowed: number;
+  fine: any;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ApiResponse {
+  report: ReportItem[];
 }
 
 const IssuedItemsReportPage = () => {
@@ -43,7 +80,7 @@ const IssuedItemsReportPage = () => {
     setError(null);
     try {
       const accessToken = localStorage.getItem("accessToken");
-      const response = await axios.get(
+      const response = await axios.get<ApiResponse>(
         "http://localhost:3000/api/admin/reports/issued",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
@@ -51,7 +88,11 @@ const IssuedItemsReportPage = () => {
       );
       setData(response.data.report || []);
     } catch (err: any) {
+      console.error("Error fetching report:", err);
       setError(err.response?.data?.message || "Failed to fetch report data.");
+      toast.error(
+        err.response?.data?.message || "Failed to fetch report data."
+      );
     } finally {
       setLoading(false);
     }
@@ -62,42 +103,95 @@ const IssuedItemsReportPage = () => {
   }, []);
 
   const handlePrint = async () => {
-    const promise = axios.get(
-      "http://localhost:3000/api/admin/reports/issued/pdf",
-      {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
-        },
-        responseType: "blob",
-      }
-    );
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await axios.get(
+        "http://localhost:3000/api/admin/reports/issued/pdf",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          responseType: "blob",
+        }
+      );
 
-    toast.promise(promise, {
-      loading: "Generating PDF...",
-      success: (response) => {
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "Issued-items.pdf");
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-        return "PDF downloaded successfully!";
-      },
-      error: "Failed to download PDF.",
-    });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "issued-items-report.pdf");
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("PDF exported successfully!");
+    } catch (error: any) {
+      console.error("Error exporting PDF:", error);
+      toast.error("Failed to export PDF.");
+    }
+  };
+
+  const exportToCSV = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      const response = await axios.get(
+        "http://localhost:3000/api/admin/reports/issued/export",
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute(
+        "download",
+        `issued-items-report-${new Date().toISOString().split("T")[0]}.csv`
+      );
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      toast.success("CSV exported successfully!");
+    } catch (error: any) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Failed to export CSV.");
+    }
   };
 
   const stats = useMemo(() => {
     if (!data || data.length === 0) {
-      return { total: 0, issued: 0, returned: 0, mostIssued: "N/A" };
+      return {
+        total: 0,
+        issued: 0,
+        returned: 0,
+        mostIssued: "N/A",
+        overdue: 0,
+        avgExtensions: 0,
+      };
     }
+
     const issued = data.filter((d) => d.status === "Issued").length;
-    const returned = data.length - issued;
+    const returned = data.filter((d) => d.status === "Returned").length;
+
+    // Calculate overdue items (issued items where due date has passed)
+    const today = new Date();
+    const overdue = data.filter((d) => {
+      if (d.status !== "Issued") return false;
+      const dueDate = new Date(d.dueDate);
+      return dueDate < today;
+    }).length;
+
+    // Calculate average extensions
+    const avgExtensions =
+      data.reduce((acc, curr) => acc + curr.extensionCount, 0) / data.length;
 
     const itemCounts = data.reduce((acc, curr) => {
-      acc[curr.item] = (acc[curr.item] || 0) + 1;
+      acc[curr.item.title] = (acc[curr.item.title] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
 
@@ -108,7 +202,14 @@ const IssuedItemsReportPage = () => {
           )
         : "N/A";
 
-    return { total: data.length, issued, returned, mostIssued };
+    return {
+      total: data.length,
+      issued,
+      returned,
+      mostIssued,
+      overdue,
+      avgExtensions: Math.round(avgExtensions * 10) / 10,
+    };
   }, [data]);
 
   const statusBadgeColor = (status: string) => {
@@ -124,28 +225,15 @@ const IssuedItemsReportPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-          </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">
-              Loading Report Data
-            </h3>
-            <p className="text-muted-foreground">
-              Fetching your latest records...
-            </p>
-          </div>
-        </div>
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg text-gray-500">Loading report data...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
           <CardContent className="pt-6">
             <div className="text-center space-y-4">
@@ -170,74 +258,95 @@ const IssuedItemsReportPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">
-      <div className="container mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      <div className="container mx-auto space-y-6 p-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-foreground">
               Inventory Issue/Return Report
             </h1>
             <p className="text-muted-foreground">
-              View analytics and detailed transaction records.
+              View analytics and detailed transaction records
             </p>
           </div>
-          <Button onClick={handlePrint}>
-            <Printer className="h-4 w-4 mr-2" />
-            Print Report (PDF)
-          </Button>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={fetchData}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              <Printer className="h-4 w-4 mr-2" />
+              Export PDF
+            </Button>
+            <Button onClick={exportToCSV}>
+              <Download className="h-4 w-4 mr-2" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Section */}
+        {/* Summary Stats */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Total Transactions
-                </p>
-                <p className="text-2xl font-bold">{stats.total}</p>
-              </div>
-              <ArrowRightLeft className="h-8 w-8 text-muted-foreground" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-blue-700 flex items-center">
+                <ArrowRightLeft className="h-4 w-4 mr-2" />
+                Total Transactions
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+              <p className="text-xs text-gray-500">
+                All inventory transactions
+              </p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Currently Issued
-                </p>
-                <p className="text-2xl font-bold text-amber-600">
-                  {stats.issued}
-                </p>
-              </div>
-              <PackageOpen className="h-8 w-8 text-muted-foreground" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-amber-700 flex items-center">
+                <PackageOpen className="h-4 w-4 mr-2" />
+                Currently Issued
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-amber-900">
+                {stats.issued}
+              </p>
+              <p className="text-xs text-gray-500">
+                {stats.overdue} overdue • {stats.avgExtensions} avg extensions
+              </p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Items Returned
-                </p>
-                <p className="text-2xl font-bold text-emerald-600">
-                  {stats.returned}
-                </p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-muted-foreground" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-emerald-700 flex items-center">
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Items Returned
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-emerald-900">
+                {stats.returned}
+              </p>
+              <p className="text-xs text-gray-500">Successfully returned</p>
             </CardContent>
           </Card>
+
           <Card>
-            <CardContent className="p-6 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Most Frequent Item
-                </p>
-                <p className="text-2xl font-bold truncate">
-                  {stats.mostIssued}
-                </p>
-              </div>
-              <Package className="h-8 w-8 text-muted-foreground" />
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-purple-700 flex items-center">
+                <Package className="h-4 w-4 mr-2" />
+                Most Frequent Item
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl font-bold text-purple-900 truncate">
+                {stats.mostIssued}
+              </p>
+              <p className="text-xs text-gray-500">Most requested item</p>
             </CardContent>
           </Card>
         </div>
@@ -247,7 +356,10 @@ const IssuedItemsReportPage = () => {
 
         {/* Table section */}
         <Card>
-          <CardContent className="p-0">
+          <CardHeader>
+            <CardTitle className="text-lg">Transaction Details</CardTitle>
+          </CardHeader>
+          <CardContent>
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -256,17 +368,35 @@ const IssuedItemsReportPage = () => {
                     <TableHead>Item</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Issue Date</TableHead>
+                    <TableHead>Due Date</TableHead>
                     <TableHead>Return Date</TableHead>
+                    <TableHead>Extensions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {data.length > 0 ? (
-                    data.map((row, index) => (
-                      <TableRow key={index}>
+                    data.map((row) => (
+                      <TableRow key={row.id}>
                         <TableCell className="font-medium">
-                          {row.user}
+                          <div>
+                            <p className="font-medium text-sm">
+                              {row.user.fullName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {row.user.email}
+                            </p>
+                          </div>
                         </TableCell>
-                        <TableCell>{row.item}</TableCell>
+                        <TableCell>
+                          <div>
+                            <p className="font-medium text-sm">
+                              {row.item.title}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {row.item.authorOrCreator}
+                            </p>
+                          </div>
+                        </TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -275,14 +405,31 @@ const IssuedItemsReportPage = () => {
                             {row.status}
                           </Badge>
                         </TableCell>
-                        <TableCell>{row.issueDate}</TableCell>
+                        <TableCell>{row.issuedDate}</TableCell>
+                        <TableCell>{row.dueDate}</TableCell>
                         <TableCell>{row.returnDate}</TableCell>
+                        <TableCell>
+                          <div className="text-center">
+                            <span
+                              className={`inline-flex items-center justify-center px-2 py-1 text-xs font-bold rounded-full ${
+                                row.extensionCount > 0
+                                  ? "bg-blue-100 text-blue-800"
+                                  : "bg-gray-100 text-gray-800"
+                              }`}
+                            >
+                              {row.extensionCount}/{row.maxExtensionAllowed}
+                            </span>
+                          </div>
+                        </TableCell>
                       </TableRow>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={5} className="h-24 text-center">
-                        No transaction records found.
+                      <TableCell colSpan={7} className="h-24 text-center">
+                        <div className="flex flex-col items-center justify-center text-gray-500">
+                          <Package className="h-8 w-8 mb-2" />
+                          <p>No transaction records found.</p>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )}
