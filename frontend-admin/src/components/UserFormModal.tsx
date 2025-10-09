@@ -579,158 +579,170 @@ export const UserFormModal = ({
 
             {/* Contact Tab */}
             <TabsContent value="contact" className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="phoneNumber">Phone Number</Label>
-                <Controller
-                  name="phoneNumber"
-                  control={control}
-                  render={({ field }) => (
-                    <PhoneInput
-                      id="phoneNumber"
-                      placeholder="Enter phone number"
-                      international
-                      defaultCountry={(selectedCountry as CountryCode) || "US"}
-                      countryCallingCodeEditable={false}
-                      className="input flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      {...field}
+              {/* Address Section - Moved to top */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Address Information</h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="country">Country *</Label>
+                    <Controller
+                      name="address.country"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setValue("address.state", "");
+                            setValue("address.city", "");
+                          }}
+                          value={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select Country" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Country.getAllCountries().map((country) => (
+                              <SelectItem
+                                key={country.isoCode}
+                                value={country.isoCode}
+                              >
+                                {country.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     />
-                  )}
-                />
-                {errors.phoneNumber && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.phoneNumber.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                <Input
-                  id="dateOfBirth"
-                  type="date"
-                  {...register("dateOfBirth")}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="country">Country *</Label>
-                  <Controller
-                    name="address.country"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setValue("address.state", "");
-                          setValue("address.city", "");
-                        }}
-                        value={field.value}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Country" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Country.getAllCountries().map((country) => (
-                            <SelectItem
-                              key={country.isoCode}
-                              value={country.isoCode}
-                            >
-                              {country.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                    {errors.address?.country && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.address.country.message}
+                      </p>
                     )}
-                  />
-                  {errors.address?.country && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.address.country.message}
-                    </p>
-                  )}
+                  </div>
+                  <div>
+                    <Label htmlFor="state">State / District *</Label>
+                    <Controller
+                      name="address.state"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            setValue("address.city", "");
+                          }}
+                          value={field.value}
+                          disabled={!selectedCountry}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select State/District" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {states.map((state) => (
+                              <SelectItem
+                                key={state.isoCode}
+                                value={state.isoCode}
+                              >
+                                {state.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.address?.state && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.address.state.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="city">City *</Label>
+                    <Controller
+                      name="address.city"
+                      control={control}
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={!selectedState}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select City" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {cities.map((city) => (
+                              <SelectItem key={city.name} value={city.name}>
+                                {city.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    {errors.address?.city && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {errors.address.city.message}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label htmlFor="postalCode">Postal Code</Label>
+                    <Input
+                      id="postalCode"
+                      {...register("address.postalCode")}
+                      placeholder="Enter postal code"
+                    />
+                  </div>
                 </div>
                 <div>
-                  <Label htmlFor="state">State / District *</Label>
-                  <Controller
-                    name="address.state"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setValue("address.city", "");
-                        }}
-                        value={field.value}
-                        disabled={!selectedCountry}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select State/District" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {states.map((state) => (
-                            <SelectItem
-                              key={state.isoCode}
-                              value={state.isoCode}
-                            >
-                              {state.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.address?.state && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.address.state.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="city">City *</Label>
-                  <Controller
-                    name="address.city"
-                    control={control}
-                    render={({ field }) => (
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value}
-                        disabled={!selectedState}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select City" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {cities.map((city) => (
-                            <SelectItem key={city.name} value={city.name}>
-                              {city.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                  {errors.address?.city && (
-                    <p className="text-red-500 text-xs mt-1">
-                      {errors.address.city.message}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="postalCode">Postal Code</Label>
+                  <Label htmlFor="street">Street Address</Label>
                   <Input
-                    id="postalCode"
-                    {...register("address.postalCode")}
-                    placeholder="Enter postal code"
+                    id="street"
+                    {...register("address.street")}
+                    placeholder="e.g., A-14 Aditi Residency"
                   />
                 </div>
               </div>
-              <div>
-                <Label htmlFor="street">Street Address</Label>
-                <Input
-                  id="street"
-                  {...register("address.street")}
-                  placeholder="e.g., A-14 Aditi Residency"
-                />
+
+              {/* Contact Details Section */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Contact Details</h3>
+
+                <div>
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Controller
+                    name="phoneNumber"
+                    control={control}
+                    render={({ field }) => (
+                      <PhoneInput
+                        id="phoneNumber"
+                        placeholder="Enter phone number"
+                        international
+                        defaultCountry={
+                          (selectedCountry as CountryCode) || "US"
+                        }
+                        countryCallingCodeEditable={false}
+                        className="input flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        {...field}
+                      />
+                    )}
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-red-500 text-xs mt-1">
+                      {errors.phoneNumber.message}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                  <Input
+                    id="dateOfBirth"
+                    type="date"
+                    {...register("dateOfBirth")}
+                  />
+                </div>
               </div>
             </TabsContent>
 

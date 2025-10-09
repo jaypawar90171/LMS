@@ -693,13 +693,13 @@ export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
 
   const totalItems = await InventoryItem.countDocuments({});
 
-  // Don't throw error for empty collection, just return empty array
   if (totalItems === 0) {
     return { items: [], totalItems: 0 };
   }
 
   const items = await InventoryItem.find()
     .populate("categoryId", "name")
+    .populate("subcategoryId", "name")
     .sort({ createdAt: -1 })
     .limit(limit)
     .skip(skip);
@@ -708,7 +708,6 @@ export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
 };
 
 export const createInventoryItemsService = async (data: any) => {
-  // Handle ISBN for non-book items
   if (!data.isbnOrIdentifier && data.categoryId) {
     // Check if it's a book category or generate generic identifier
     const category = await Category.findById(data.categoryId);
@@ -743,6 +742,7 @@ export const createInventoryItemsService = async (data: any) => {
 export const fetchSpecificItemServive = async (itemId: any) => {
   const item = await InventoryItem.findById(itemId)
     .populate("categoryId", "name")
+    .populate("subcategoryId", "name")
     .lean();
 
   if (!item) {
@@ -830,18 +830,23 @@ const buildCategoryTree = (categories: any[]) => {
 };
 
 export const getCategoriesService = async (includeTree = false) => {
-  if (includeTree) {
-    // Return categories in tree structure
-    const allCategories = await Category.find({})
-      .populate("parentCategoryId", "name description")
-      .sort({ name: 1 });
+  const allCategories = await Category.find({})
+    .populate("parentCategoryId", "name description")
+    .sort({ name: 1 });
 
+  if (includeTree) {
+    // Return categories in tree structure with children array
     return buildCategoryTree(allCategories);
   }
 
-  return await Category.find({})
-    .populate("parentCategoryId", "name description")
-    .sort({ name: 1 });
+  // Return flat array but with additional field to identify parent/child relationships
+  const categoriesWithType = allCategories.map(category => ({
+    ...category.toObject(),
+    isParent: !category.parentCategoryId,
+    isChild: !!category.parentCategoryId
+  }));
+
+  return categoriesWithType;
 };
 
 export const createCategoryService = async (data: any) => {
@@ -1356,14 +1361,24 @@ export const getFinesReportService = async () => {
     outstanding = 0;
 
   const fineDetails = fines.map((fine: any) => {
-    total += fine.amount;
-    if (fine.status === "Paid") paid += fine.amount;
-    else outstanding += fine.amount;
+    // Use amountIncurred instead of amount
+    const fineAmount = fine.amountIncurred || 0;
+    
+    total += fineAmount;
+    
+    if (fine.status === "Paid") {
+      paid += fineAmount;
+    } else if (fine.status === "Waived") {
+      // Waived fines might be considered as paid/cleared
+      paid += fineAmount;
+    } else {
+      outstanding += fineAmount;
+    }
 
     return {
       user: fine.userId?.fullName || "Unknown",
       item: fine.itemId?.title || "-",
-      fineAmount: `$${fine.amount}`,
+      fineAmount: `$${fineAmount}`,
       status: fine.status,
       date: fine.createdAt
         ? new Date(fine.createdAt).toISOString().split("T")[0]

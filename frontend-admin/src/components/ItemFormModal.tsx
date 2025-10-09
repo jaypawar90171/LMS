@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import {
   Dialog,
@@ -22,11 +22,16 @@ import {
 } from "./ui/select";
 import { toast } from "sonner";
 import axios from "axios";
-import z from "zod";
 
 interface Category {
   _id: string;
   name: string;
+  isParent?: boolean;
+  isChild?: boolean;
+  parentCategoryId?:
+    | string
+    | null
+    | { _id: string; name: string; description: string };
 }
 
 interface InventoryItem {
@@ -34,6 +39,10 @@ interface InventoryItem {
   title: string;
   authorOrCreator: string;
   categoryId: {
+    _id: string;
+    name: string;
+  };
+  subcategoryId?: {
     _id: string;
     name: string;
   };
@@ -66,6 +75,7 @@ type ItemFormData = {
   publisherOrManufacturer?: string;
   publicationYear?: number;
   categoryId: string;
+  subcategoryId?: string;
   price: number;
   quantity: number;
   availableCopies: number;
@@ -183,7 +193,6 @@ const categoryFieldConfig: Record<string, string[]> = {
     "status",
     "defaultReturnPeriod",
   ],
-  //add default types if no one is satisfies
   Default: [
     "title",
     "description",
@@ -197,20 +206,6 @@ const categoryFieldConfig: Record<string, string[]> = {
   ],
 };
 
-const flattenCategories = (categories: Category[]): Category[] => {
-  let result: Category[] = [];
-  categories.forEach((category) => {
-    result.push({
-      _id: category._id,
-      name: category.name,
-    });
-    if ((category as any).children && (category as any).children.length > 0) {
-      result = result.concat(flattenCategories((category as any).children));
-    }
-  });
-  return result;
-};
-
 export const ItemFormModal = ({
   isOpen,
   onOpenChange,
@@ -219,8 +214,10 @@ export const ItemFormModal = ({
   categories = [],
   onSuccess,
 }: ItemFormModalProps) => {
-  const flatCategories = React.useMemo(() => {
-    return flattenCategories(categories);
+  const [subcategories, setSubcategories] = useState<Category[]>([]);
+
+  const parentCategories = React.useMemo(() => {
+    return categories.filter((cat) => cat.isParent);
   }, [categories]);
 
   const {
@@ -232,6 +229,7 @@ export const ItemFormModal = ({
     setError,
     clearErrors,
     watch,
+    setValue,
   } = useForm<ItemFormData>({
     defaultValues: {
       title: "",
@@ -241,6 +239,7 @@ export const ItemFormModal = ({
       publisherOrManufacturer: "",
       publicationYear: undefined,
       categoryId: "",
+      subcategoryId: "",
       price: 0,
       quantity: 1,
       availableCopies: 1,
@@ -257,9 +256,46 @@ export const ItemFormModal = ({
     ? categoryFieldConfig[selectedCategory.name] || categoryFieldConfig.Default
     : [];
 
+  // Update subcategories when category changes
+  useEffect(() => {
+    if (selectedCategoryId) {
+      const subs = categories.filter(
+        (cat) =>
+          cat.isChild &&
+          cat.parentCategoryId &&
+          (typeof cat.parentCategoryId === "string"
+            ? cat.parentCategoryId === selectedCategoryId
+            : cat.parentCategoryId._id === selectedCategoryId)
+      );
+      setSubcategories(subs);
+      // Reset subcategory when main category changes
+      setValue("subcategoryId", "");
+    } else {
+      setSubcategories([]);
+      setValue("subcategoryId", "");
+    }
+  }, [selectedCategoryId, categories, setValue]);
+
   useEffect(() => {
     if (isOpen) {
       if (mode === "edit" && itemData) {
+        // For edit mode, set both category and subcategory
+        const categoryId = itemData.categoryId?._id || "";
+        const subcategoryId = itemData.subcategoryId?._id || "";
+
+        // Get subcategories for the selected category
+        if (categoryId) {
+          const subs = categories.filter(
+            (cat) =>
+              cat.isChild &&
+              cat.parentCategoryId &&
+              (typeof cat.parentCategoryId === "string"
+                ? cat.parentCategoryId === categoryId
+                : cat.parentCategoryId._id === categoryId)
+          );
+          setSubcategories(subs);
+        }
+
         reset({
           title: itemData.title || "",
           authorOrCreator: itemData.authorOrCreator || "",
@@ -267,7 +303,8 @@ export const ItemFormModal = ({
           isbnOrIdentifier: itemData.isbnOrIdentifier || "",
           publisherOrManufacturer: itemData.publisherOrManufacturer || "",
           publicationYear: itemData.publicationYear,
-          categoryId: itemData.categoryId?._id || "",
+          categoryId: categoryId,
+          subcategoryId: subcategoryId || "no-subcategory",
           price: safeParsePrice(itemData.price),
           quantity: itemData.quantity || 0,
           availableCopies: itemData.availableCopies || 0,
@@ -285,15 +322,17 @@ export const ItemFormModal = ({
           publisherOrManufacturer: "",
           publicationYear: undefined,
           categoryId: "",
+          subcategoryId: "no-subcategory",
           price: 0,
           quantity: 1,
           availableCopies: 1,
           defaultReturnPeriod: 30,
           status: "Available",
         });
+        setSubcategories([]);
       }
     }
-  }, [isOpen, mode, itemData, reset]);
+  }, [isOpen, mode, itemData, reset, categories]);
 
   const validateForm = (data: ItemFormData) => {
     let valid = true;
@@ -361,7 +400,13 @@ export const ItemFormModal = ({
   const onSubmit = async (data: ItemFormData) => {
     if (!validateForm(data)) return;
 
-    const payload: Partial<ItemFormData> = { categoryId: data.categoryId };
+    const payload: Partial<ItemFormData> = {
+      categoryId: data.categoryId,
+      subcategoryId:
+        data.subcategoryId === "no-subcategory"
+          ? undefined
+          : data.subcategoryId,
+    };
     fieldsToShow.forEach((field) => {
       (payload as any)[field] = (data as any)[field];
     });
@@ -431,307 +476,77 @@ export const ItemFormModal = ({
           </DialogDescription>
         </DialogHeader>
 
-        {/* <form onSubmit={handleSubmit(onSubmit)}>
-          <Tabs defaultValue="core" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="core">Core Info</TabsTrigger>
-              <TabsTrigger value="publication">Publication & ID</TabsTrigger>
-              <TabsTrigger value="stock">Stock & Status</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="core" className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="title">Title</Label>
-                <Input
-                  id="title"
-                  {...register("title", {
-                    required: "Title is required",
-                    minLength: 2,
-                  })}
-                />
-                {errors.title && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.title.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="authorOrCreator">Author / Creator</Label>
-                <Input id="authorOrCreator" {...register("authorOrCreator")} />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea id="description" {...register("description")} />
-              </div>
-              <div>
-                <Label htmlFor="mediaUrl">Item Image</Label>
-                <Input id="mediaUrl" type="file" {...register("mediaUrl")} />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="publication" className="space-y-4 py-4">
-              <div>
-                <Label htmlFor="isbnOrIdentifier">ISBN / Identifier</Label>
-                <Input
-                  id="isbnOrIdentifier"
-                  {...register("isbnOrIdentifier", {
-                    // required: "ISBN or Identifier is required",
-                    minLength: { value: 5, message: "Minimum length is 5" },
-                  })}
-                />
-                {errors.isbnOrIdentifier && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.isbnOrIdentifier.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="publisherOrManufacturer">
-                  Publisher / Manufacturer
-                </Label>
-                <Input
-                  id="publisherOrManufacturer"
-                  {...register("publisherOrManufacturer")}
-                />
-              </div>
-              <div>
-                <Label htmlFor="publicationYear">Publication Year</Label>
-                <Controller
-                  control={control}
-                  name="publicationYear"
-                  render={({ field }) => (
-                    <Input
-                      id="publicationYear"
-                      type="number"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value)
-                        )
-                      }
-                    />
-                  )}
-                />
-              </div>
-            </TabsContent>
-
-            <TabsContent value="stock" className="grid grid-cols-2 gap-4 py-4">
-              <div className="col-span-2">
-                <Label>Category</Label>
-                <Controller
-                  control={control}
-                  name="categoryId"
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories?.length > 0 ? (
-                          categories.map((cat) => (
-                            <SelectItem key={cat._id} value={cat._id}>
-                              {cat.name}
-                            </SelectItem>
-                          ))
-                        ) : (
-                          <SelectItem value="" disabled>
-                            No categories available
-                          </SelectItem>
-                        )}
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-                {errors.categoryId && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.categoryId.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="price">Price ($)</Label>
-                <Controller
-                  control={control}
-                  name="price"
-                  render={({ field }) => (
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value)
-                        )
-                      }
-                    />
-                  )}
-                />
-                {errors.price && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.price.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="status">Status</Label>
-                <Controller
-                  control={control}
-                  name="status"
-                  render={({ field }) => (
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="Available">Available</SelectItem>
-                        <SelectItem value="Issued">Issued</SelectItem>
-                        <SelectItem value="Damaged">Damaged</SelectItem>
-                        <SelectItem value="Lost">Lost</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  )}
-                />
-              </div>
-              <div>
-                <Label htmlFor="quantity">Total Quantity</Label>
-                <Controller
-                  control={control}
-                  name="quantity"
-                  render={({ field }) => (
-                    <Input
-                      id="quantity"
-                      type="number"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value)
-                        )
-                      }
-                    />
-                  )}
-                />
-                {errors.quantity && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.quantity.message}
-                  </p>
-                )}
-              </div>
-              <div>
-                <Label htmlFor="availableCopies">Available Copies</Label>
-                <Controller
-                  control={control}
-                  name="availableCopies"
-                  render={({ field }) => (
-                    <Input
-                      id="availableCopies"
-                      type="number"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value)
-                        )
-                      }
-                    />
-                  )}
-                />
-                {errors.availableCopies && (
-                  <p className="text-red-500 text-xs mt-1">
-                    {errors.availableCopies.message}
-                  </p>
-                )}
-              </div>
-              <div className="col-span-2">
-                <Label htmlFor="defaultReturnPeriod">
-                  Default Return Period (Days)
-                </Label>
-                <Controller
-                  control={control}
-                  name="defaultReturnPeriod"
-                  render={({ field }) => (
-                    <Input
-                      id="defaultReturnPeriod"
-                      type="number"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(
-                          e.target.value === ""
-                            ? undefined
-                            : Number(e.target.value)
-                        )
-                      }
-                    />
-                  )}
-                />
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter className="pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit">
-              {mode === "add" ? "Create Item" : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </form> */}
         <form onSubmit={handleSubmit(onSubmit)}>
-          {/* --- ALWAYS VISIBLE CATEGORY SELECTOR --- */}
-          <div className="space-y-2 py-4">
-            <Label>Category</Label>
-            <Controller
-              control={control}
-              name="categoryId"
-              rules={{ required: "Please select a category" }}
-              render={({ field }) => (
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value}
-                  defaultValue={field.value}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {flatCategories?.length > 0 ? (
-                      flatCategories.map((cat) => (
-                        <SelectItem key={cat._id} value={cat._id}>
-                          {cat.name}
+          {/* --- CATEGORY SELECTION --- */}
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Category *</Label>
+              <Controller
+                control={control}
+                name="categoryId"
+                rules={{ required: "Please select a category" }}
+                render={({ field }) => (
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    defaultValue={field.value}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {parentCategories?.length > 0 ? (
+                        parentCategories.map((cat) => (
+                          <SelectItem key={cat._id} value={cat._id}>
+                            {cat.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No categories available
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem value="" disabled>
-                        No categories available
-                      </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                      )}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {errors.categoryId && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.categoryId.message}
+                </p>
               )}
-            />
-            {errors.categoryId && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.categoryId.message}
-              </p>
+            </div>
+
+            {/* --- SUBCATEGORY SELECTION (only show if category has subcategories) --- */}
+            {subcategories.length > 0 && (
+              <div className="space-y-2">
+                <Label>Subcategory</Label>
+                <Controller
+                  control={control}
+                  name="subcategoryId"
+                  render={({ field }) => (
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value}
+                      defaultValue={field.value}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subcategory (optional)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="no-subcategory">
+                          No subcategory
+                        </SelectItem>
+                        {subcategories.map((subcat) => (
+                          <SelectItem key={subcat._id} value={subcat._id}>
+                            {subcat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+              </div>
             )}
           </div>
 
@@ -996,7 +811,6 @@ export const ItemFormModal = ({
             >
               Cancel
             </Button>
-            {/* Disable submit button if no category is selected */}
             <Button type="submit" disabled={!selectedCategoryId}>
               {mode === "add" ? "Create Item" : "Save Changes"}
             </Button>

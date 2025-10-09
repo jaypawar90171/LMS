@@ -22,6 +22,7 @@ import IssuedItemsManagement from "@/screens/IssuedItemsManagement";
 import QueueDashboard from "@/screens/QueueDashboard";
 import AnalyticsDashboard from "@/screens/AnalyticsDashboard";
 import DefaulterReport from "@/screens/DefaulterReport";
+import Notifications from "@/screens/Notifications";
 
 const AppRoute = () => {
   return (
@@ -183,6 +184,14 @@ const AppRoute = () => {
             element={
               <Layout>
                 <QueueDashboard />
+              </Layout>
+            }
+          />
+          <Route
+            path="/notifications"
+            element={
+              <Layout>
+                <Notifications />
               </Layout>
             }
           />

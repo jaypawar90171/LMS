@@ -99,6 +99,8 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     </div>
   );
 
+  console.log(itemData);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 p-6 space-y-8">
@@ -130,6 +132,10 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   <Field
                     label="Category"
                     value={itemData.categoryId?.name || "N/A"}
+                  />
+                  <Field
+                    label="Subcategory"
+                    value={itemData.subcategoryId?.name || "N/A"}
                   />
                   <Field label="ISBN" value={itemData.isbnOrIdentifier} />
                   <Field

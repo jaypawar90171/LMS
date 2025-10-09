@@ -11,7 +11,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings } from "lucide-react";
+import { User, Settings, LogOut, BellRing } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface NavbarProps {
   isSidebarOpen: boolean;
@@ -22,6 +23,15 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
   const [user] = useAtom(userAtom);
   console.log("email: " + user?.email);
   console.log("fullname: " + user?.fullName);
+
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      localStorage.removeItem("accessToken");
+      navigate("/login");
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-30">
@@ -89,9 +99,25 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
               <DropdownMenuContent className="w-56" align="end">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    navigate("/settings/profile");
+                  }}
+                >
                   <Settings className="mr-2 h-4 w-4" />
-                  <span>Settings</span>
+                  <span>Profile Settings</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    navigate("/notifications");
+                  }}
+                >
+                  <BellRing className="mr-2 h-4 w-4" />
+                  <span>View Notifications</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  <span>Logout</span>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

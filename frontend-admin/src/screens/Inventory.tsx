@@ -178,25 +178,7 @@ const Inventory = () => {
 
       let categoriesData = categoriesResponse.data.data || [];
 
-      const flattenCategories = (categories: any[]): any[] => {
-        let result: any[] = [];
-        categories.forEach((category) => {
-          result.push({
-            _id: category._id,
-            name: category.name,
-          });
-          if (category.children && category.children.length > 0) {
-            result = result.concat(flattenCategories(category.children));
-          }
-        });
-        return result;
-      };
-
-      const uniqueCategories = Array.isArray(categoriesData)
-        ? flattenCategories(categoriesData)
-        : [];
-
-      setCategories(uniqueCategories);
+      setCategories(categoriesData);
 
       const totalItems = items.length;
       const availableItems = items.filter(
@@ -208,7 +190,7 @@ const Inventory = () => {
         totalItems,
         availableItems,
         unavailableItems,
-        totalCategories: uniqueCategories.length,
+        totalCategories: categoriesData.length,
       });
     } catch (error: any) {
       setError(
@@ -457,9 +439,13 @@ const Inventory = () => {
               <Package className="h-4 w-4 mr-2" />
               View Requests
             </Button>
-            <Button variant="outline" size="sm" onClick={() => {
-              Navigate('/issued-items');
-            }}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                Navigate("/issued-items");
+              }}
+            >
               <Eye className="h-4 w-4 mr-2" />
               Issued Items Management
             </Button>

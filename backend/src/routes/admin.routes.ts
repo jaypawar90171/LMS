@@ -72,6 +72,10 @@ import {
   getDefaulterReportController,
   sendReminderController,
   exportDefaulterReportController,
+  getNotificationsController,
+  markAsReadController,
+  markAllAsReadController,
+  deleteNotificationController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
@@ -508,5 +512,15 @@ router.post(
 );
 
 router.get("/inventory/queues", authUser, getAllQueuesController);
+
+
+/* ========================= Notifications ========================= */
+router.get("/notifications", authUser, getNotificationsController);
+
+router.patch("/notifications/:notificationId/read", authUser, markAsReadController);
+
+router.patch("/notifications/mark-all-read", authUser, markAllAsReadController);
+
+router.delete("/notifications/:notificationId", authUser, deleteNotificationController);
 
 export default router;

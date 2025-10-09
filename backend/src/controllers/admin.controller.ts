@@ -92,6 +92,7 @@ import IssuedItem from "../models/issuedItem.model";
 import IssueRequest from "../models/itemRequest.model";
 import InventoryItem from "../models/item.model";
 import Queue from "../models/queue.model";
+import { NotificationService } from "../utility/notificationService";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -2517,6 +2518,117 @@ export const exportDefaulterReportController = async (
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getNotificationsController = async (req: Request, res: Response) => {
+  try {
+    const {
+      startDate,
+      endDate,
+      type,
+      level,
+      read,
+      page = 1,
+      limit = 20
+    } = req.query;
+
+    const filters = {
+      startDate: startDate ? new Date(startDate as string) : undefined,
+      endDate: endDate ? new Date(endDate as string) : undefined,
+      type: type as string,
+      level: level as string,
+      read: read !== undefined ? read === 'true' : undefined,
+      page: parseInt(page as string),
+      limit: parseInt(limit as string)
+    };
+
+    const result = await NotificationService.getAdminNotifications(filters);
+
+    return res.status(200).json({
+      success: true,
+      data: result.notifications,
+      pagination: result.pagination
+    });
+  } catch (error: any) {
+    console.error("Error in getNotificationsController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+};
+
+export const markAsReadController = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    const notification = await NotificationService.markAsRead(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification marked as read",
+      data: notification
+    });
+  } catch (error: any) {
+    console.error("Error in markAsReadController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+};
+
+export const markAllAsReadController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+
+    const result = await NotificationService.markAllAsRead(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "All notifications marked as read",
+      data: { modifiedCount: result.modifiedCount }
+    });
+  } catch (error: any) {
+    console.error("Error in markAllAsReadController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
+    });
+  }
+};
+
+export const deleteNotificationController = async (req: Request, res: Response) => {
+  try {
+    const { notificationId } = req.params;
+
+    const notification = await NotificationService.deleteNotification(notificationId);
+
+    if (!notification) {
+      return res.status(404).json({
+        success: false,
+        message: "Notification not found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Notification deleted successfully"
+    });
+  } catch (error: any) {
+    console.error("Error in deleteNotificationController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error"
     });
   }
 };

@@ -87,6 +87,7 @@ const FinesReportPage = () => {
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setDetails(response.data.details || []);
+      console.log(response.data.details);
       setSummary(response.data.summary || null);
     } catch (err: any) {
       setError(err.response?.data?.message || "Failed to fetch report data.");
@@ -133,51 +134,51 @@ const FinesReportPage = () => {
   };
 
   if (loading) {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="relative">
-              <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
-              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary absolute top-0 left-1/2 transform -translate-x-1/2"></div>
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-foreground">
-                Loading Report Data
-              </h3>
-              <p className="text-muted-foreground">
-                Fetching your latest records...
-              </p>
-            </div>
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="relative">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+          </div>
+          <div className="space-y-2">
+            <h3 className="text-lg font-semibold text-foreground">
+              Loading Report Data
+            </h3>
+            <p className="text-muted-foreground">
+              Fetching your latest records...
+            </p>
           </div>
         </div>
-      );
-    }
-  
-    if (error) {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="pt-6">
-              <div className="text-center space-y-4">
-                <div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
-                  <Package className="h-6 w-6 text-destructive" />
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-lg font-semibold text-foreground">
-                    Error Loading Report
-                  </h3>
-                  <p className="text-muted-foreground">{error}</p>
-                </div>
-                <Button onClick={fetchData} variant="outline">
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Try Again
-                </Button>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="text-center space-y-4">
+              <div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
+                <Package className="h-6 w-6 text-destructive" />
               </div>
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold text-foreground">
+                  Error Loading Report
+                </h3>
+                <p className="text-muted-foreground">{error}</p>
+              </div>
+              <Button onClick={fetchData} variant="outline">
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Try Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-4 sm:p-6 lg:p-8">

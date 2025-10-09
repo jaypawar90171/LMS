@@ -164,6 +164,7 @@ const FinesManagement = () => {
         ? response.data.fines
         : [];
       setFines(finesData);
+      console.log(finesData);
 
       // Calculate statistics
       const totalFines = finesData.length;

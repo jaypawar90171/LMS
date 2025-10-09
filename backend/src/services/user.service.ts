@@ -19,6 +19,7 @@ import nodemailer from "nodemailer";
 import IssueRequest from "../models/itemRequest.model";
 import { sendEmail } from "../config/emailService";
 import { sendWhatsAppMessage } from "../config/whatsapp";
+import { NotificationService } from "../utility/notificationService";
 
 interface RegisterDTO {
   fullName: string;
@@ -70,6 +71,15 @@ export const registerUserService = async (data: RegisterDTO) => {
   });
 
   await newUser.save();
+
+  await NotificationService.createNotification({
+    recipientId: newUser.id,
+    title: "New User Registration",
+    message: `New user ${fullName} (${email}) has registered.`,
+    level: "Info",
+    type: "user_registered",
+    metadata: { userId: newUser.id.toString() },
+  });
   return newUser;
 };
 
@@ -1064,11 +1074,11 @@ export const updatePasswordService = async (
 export const expressDonationInterestService = async (
   userId: string,
   data: {
-    itemType: string; 
+    itemType: string;
     title: string;
     description?: string;
     photos?: string[];
-    duration?: number; 
+    duration?: number;
     preferredContactMethod?: "Email" | "whatsApp";
   }
 ) => {
@@ -1105,10 +1115,7 @@ export const expressDonationInterestService = async (
     category = await Category.findById(itemType);
   } else {
     category = await Category.findOne({
-      $or: [
-        { name: itemType },
-        { categoryName: itemType }, 
-      ],
+      $or: [{ name: itemType }, { categoryName: itemType }],
     });
   }
 
@@ -1132,7 +1139,42 @@ export const expressDonationInterestService = async (
     status: "Pending",
   });
 
+  console.log("Donation" + donation);
   await donation.save();
+
+  const roleNames = ["Admin", "librarian", "superAdmin"];
+  const roles = await Role.find({ roleName: { $in: roleNames } });
+  const roleIds = roles.map((role) => role._id);
+
+  const adminUsers = await User.find({
+    roles: { $in: roleIds },
+  });
+
+  const adminNotificationPromises = adminUsers.map((admin) =>
+    NotificationService.createNotification({
+      recipientId: admin._id.toString(),
+      title: "New Donation Submission",
+      message: `User ${userId} submitted a ${donationType} donation: "${donation.title}".`,
+      level: "Success",
+      type: "donation_submitted",
+      metadata: {
+        userId: userId.toString(),
+        donationId: donation.id.toString(),
+        donationType: donationType,
+      },
+    })
+  );
+
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: userId,
+    title: "Donation Submitted Successfully",
+    message: `Your ${donationType} donation "${donation.title}" has been submitted successfully and is under review.`,
+    level: "Success",
+    type: "donation_submitted",
+    metadata: { donationId: donation.id.toString() },
+  });
+
+  await Promise.all([...adminNotificationPromises, userNotificationPromise]);
 
   await donation.populate("itemType", "name description");
   await donation.populate("userId", "fullName email");
