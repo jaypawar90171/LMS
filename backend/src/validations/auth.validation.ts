@@ -6,7 +6,7 @@ export const registrationSchema = z
   .object({
     fullName: z.string().trim().min(1, "Full name is required."),
     email: z.string().email("Invalid email address.").trim().toLowerCase(),
-    userName: z.string().trim().min(1, "Username is required........"),
+    userName: z.string().trim().min(1, "Username is required"),
     password: z.string().min(8, "Password must be at least 8 characters long."),
     role: z.enum(["employee", "familyMember"]),
     emp_id: z.string().optional(),
@@ -117,6 +117,16 @@ export const InventoryItemsSchema = z.object({
   status: z
     .enum(["Available", "Issued", "Lost", "Damaged"])
     .default("Available"),
+  size: z.enum(["XS", "S", "M", "L", "XL", "XXL"]).optional(),
+  color: z.string().optional(),
+  genderType: z.enum(["Men", "Women", "Unisex", "Kids"]).optional(),
+  warrantyPeriod: z.string().optional(),
+  features: z.array(z.string()).optional(),
+  dimensions: z.string().optional(),
+  usageType: z.string().optional(),
+  usage: z.string().optional(),
+  ageGroup: z.enum(["0-3", "4-7", "8-12", "13+"]).optional(),
+  powerSource: z.string().optional(),
 });
 
 export const InventoryItemsUpdateSchema = InventoryItemsSchema.partial();

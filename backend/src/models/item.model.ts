@@ -15,7 +15,7 @@ const itemSchema = new mongoose.Schema<IInventoryItem>(
     isbnOrIdentifier: {
       type: String,
       unique: true,
-      sparse: true //allows multiple null values
+      sparse: true, //allows multiple null values
     },
     description: {
       type: String,
@@ -63,6 +63,26 @@ const itemSchema = new mongoose.Schema<IInventoryItem>(
       enum: ["Available", "Issued", "Lost", "Damaged"],
       default: "Available",
     },
+    // Category-specific fields
+    size: {
+      type: String,
+      enum: ["XS", "S", "M", "L", "XL", "XXL"],
+    },
+    color: { type: String },
+    genderType: {
+      type: String,
+      enum: ["Men", "Women", "Unisex", "Kids"],
+    },
+    warrantyPeriod: { type: String },
+    features: [{ type: String }],
+    dimensions: { type: String },
+    usageType: { type: String },
+    usage: { type: String },
+    ageGroup: {
+      type: String,
+      enum: ["0-3", "4-7", "8-12", "13+"],
+    },
+    powerSource: { type: String },
   },
   { timestamps: true }
 );

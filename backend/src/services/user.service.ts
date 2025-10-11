@@ -20,6 +20,7 @@ import IssueRequest from "../models/itemRequest.model";
 import { sendEmail } from "../config/emailService";
 import { sendWhatsAppMessage } from "../config/whatsapp";
 import { NotificationService } from "../utility/notificationService";
+import { logActivity } from "./activity.service";
 
 interface RegisterDTO {
   fullName: string;
@@ -44,6 +45,7 @@ export const registerUserService = async (data: RegisterDTO) => {
   const existingUser = await User.findOne({
     $or: [{ email }, { username: userName }],
   });
+
   if (existingUser) {
     const err: any = new Error(
       "A user with this email or username already exists."
@@ -80,6 +82,13 @@ export const registerUserService = async (data: RegisterDTO) => {
     type: "user_registered",
     metadata: { userId: newUser.id.toString() },
   });
+
+  await logActivity(
+    { userId: newUser.id, name: newUser.fullName, role: role },
+    "USER_CREATED",
+    { userId: newUser.id, name: newUser.fullName, role: role },
+    `${fullName} logged in successfully`
+  );
   return newUser;
 };
 
@@ -92,11 +101,11 @@ export const loginUserService = async (data: loginDTO) => {
     throw err;
   }
 
-  const user = await User.findOne({
-    email: email,
-  })
+  const user = await User.findOne({ email: email })
+    .populate("roles")
     .select("+password")
     .exec();
+
   if (!user) {
     const err: any = new Error(`email '${email}' not found.`);
     err.statusCode = 404;
@@ -118,6 +127,9 @@ export const loginUserService = async (data: loginDTO) => {
     throw err;
   }
 
+  user.lastLogin = new Date();
+  await user.save({ validateBeforeSave: false }); // Skip validation to avoid hashing password again
+
   const payload = {
     id: user._id,
     email: user.email,
@@ -127,6 +139,15 @@ export const loginUserService = async (data: loginDTO) => {
   const token = jwt.sign(payload, process.env.SECRET_KEY!, {
     expiresIn: "10d",
   });
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "LOGIN",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} logged in successfully`
+  );
+
   return {
     user: {
       id: user._id,
@@ -135,6 +156,7 @@ export const loginUserService = async (data: loginDTO) => {
       roles: user.roles,
       fullName: user.fullName,
       status: user.status,
+      lastLogin: new Date(),
     },
     token: token,
   };
@@ -244,7 +266,10 @@ export const verifyResetPasswordService = async (data: any) => {
 export const resetPasswordService = async (data: any) => {
   const { id, token, newPassword, confirmPassword } = data;
   try {
-    const oldUser = await User.findOne({ _id: id }).select("+password").exec();
+    const oldUser = await User.findOne({ _id: id })
+      .select("+password")
+      .populate("roles")
+      .exec();
     if (!oldUser) {
       const err: any = new Error("User does not exists");
       err.statusCode = 403;
@@ -262,6 +287,17 @@ export const resetPasswordService = async (data: any) => {
       {
         $set: { password: encryptedPassword },
       }
+    ).populate("roles");
+
+    const roleNames = oldUser.roles
+      .map((role: any) => role.roleName)
+      .join(", ");
+
+    await logActivity(
+      { userId: oldUser.id, name: oldUser.fullName, role: roleNames },
+      "PASSWORD_RESET",
+      { userId: oldUser.id, name: oldUser.fullName, role: roleNames },
+      `Password for ${oldUser.fullName} has been reset sucessfully`
     );
     return verify;
   } catch (error) {}
@@ -369,6 +405,13 @@ export const requestItemService = async (
 ) => {
   const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
 
+  const user = await User.findById(userId).populate("roles");
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
   const existingRequest = await ItemRequest.findOne({
     userId,
     title: title,
@@ -394,13 +437,22 @@ export const requestItemService = async (
 
   await newRequest.save();
 
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "ITEM_REQUESTED",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `Password for ${user.fullName} has been reset sucessfully`
+  );
+
   return newRequest;
 };
 
 export const getQueuedItemsService = async (userId: any) => {
-  const isExistingUser = await User.findById(userId);
+  const user = await User.findById(userId).populate("roles");
 
-  if (!isExistingUser) {
+  if (!user) {
     const err: any = new Error("No user found");
     err.statusCode = 404;
     throw err;
@@ -409,6 +461,7 @@ export const getQueuedItemsService = async (userId: any) => {
   const queueItems = await Queue.find({ "queueMembers.userId": userId })
     .populate("itemId", "title description")
     .populate("queueMembers.userId", "fullName email");
+
   return queueItems || [];
 };
 
@@ -421,6 +474,14 @@ export const extendIssuedItemService = async (
     userId,
     status: "Issued",
   });
+
+  const user = await User.findById(userId).populate("roles");
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
   if (!issuedItem) {
     const err: any = new Error("No active issued item found for this user");
     err.statusCode = 404;
@@ -450,6 +511,14 @@ export const extendIssuedItemService = async (
 
   await issuedItem.save();
 
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "EXTEND_PERIOD",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} requested for extend period for the item ${itemId}`
+  );
+
   return issuedItem;
 };
 
@@ -466,6 +535,14 @@ export const returnItemRequestService = async (
 
   if (!issuedItem) {
     const err: any = new Error("No active issued item found for this user");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const user = await User.findById(userId).populate("roles");
+
+  if (!user) {
+    const err: any = new Error("User not found.");
     err.statusCode = 404;
     throw err;
   }
@@ -548,6 +625,14 @@ export const returnItemRequestService = async (
     await issuedItem.save();
   }
 
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "ITEM_RETURN_REQUEST",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} requested for item return for the item ${itemId}`
+  );
+
   return {
     issuedItem,
     fine: fineRecord,
@@ -559,6 +644,14 @@ export const requestNewItemService = async (
   validatedData: any
 ) => {
   const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
+
+  const user = await User.findById(userId).populate("roles");
+
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
 
   const category = await Category.findOne({ name: itemType });
 
@@ -577,6 +670,14 @@ export const requestNewItemService = async (
   });
 
   await item.save();
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "REQUEST_NEW_ITEM",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} requested for new item ${title}`
+  );
 
   return item;
 };
@@ -757,16 +858,22 @@ const issueItemImmediately = async (
   const item = await InventoryItem.findById(itemId).session(session);
   if (!item) throw new Error("Item not found");
 
-  // Calculate due date
+  const user = await User.findById(userId).populate("roles");
+
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
+
   const dueDate = calculateDueDate(item.defaultReturnPeriod);
 
-  // Create issued item record
   const issuedItem = new IssuedItem({
     itemId,
     userId,
     issuedDate: new Date(),
     dueDate,
-    issuedBy: userId, // Self-issued for immediate requests
+    issuedBy: userId,
     status: "Issued",
   });
 
@@ -784,6 +891,14 @@ const issueItemImmediately = async (
 
   await session.commitTransaction();
   session.endSession();
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "ITEM_ISSUED",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} has issued an item ${issuedItem.itemId}`
+  );
 
   return {
     message: "Item issued successfully",
@@ -810,6 +925,14 @@ const addUserToQueue = async (
       queueMembers: [],
       isProcessing: false,
     });
+  }
+
+  const user = await User.findById(userId).populate("roles");
+
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
   }
 
   // Check if user is already in queue
@@ -840,6 +963,14 @@ const addUserToQueue = async (
   await session.commitTransaction();
   session.endSession();
 
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "USER_ADDED_TO_QUEUE",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} has been added to queue for an item ${itemId}`
+  );
+
   return {
     message: `Item is currently unavailable. You have been added to the queue at position ${position}.`,
     queuePosition: position,
@@ -854,7 +985,7 @@ const sendIssueNotification = async (
   type: string
 ) => {
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate("roles");
     if (!user) return;
 
     const message =
@@ -869,6 +1000,14 @@ const sendIssueNotification = async (
     if (user.notificationPreference?.whatsApp && user.phoneNumber) {
       await sendWhatsAppMessage(user.phoneNumber, message);
     }
+
+    const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+    await logActivity(
+      { userId: user.id, name: user.fullName, role: roleNames },
+      "NOTIFICATION",
+      { userId: user.id, name: user.fullName, role: roleNames },
+      `Item Issued notification is send to the ${user.fullName}`
+    );
   } catch (error) {
     console.error("Error sending issue notification:", error);
   }
@@ -880,7 +1019,12 @@ const sendQueuePositionNotification = async (
   position: number
 ) => {
   try {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId).populate("roles");
+    if (!user) {
+      const err: any = new Error("User not found.");
+      err.statusCode = 404;
+      throw err;
+    }
     const item = await InventoryItem.findById(itemId);
 
     if (!user || !item) return;
@@ -894,6 +1038,14 @@ const sendQueuePositionNotification = async (
     if (user.notificationPreference?.whatsApp && user.phoneNumber) {
       await sendWhatsAppMessage(user.phoneNumber, message);
     }
+
+    const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+    await logActivity(
+      { userId: user.id, name: user.fullName, role: roleNames },
+      "NOTIFICATION",
+      { userId: user.id, name: user.fullName, role: roleNames },
+      `Queue notification is send to the ${user.fullName}`
+    );
   } catch (error) {
     console.error("Error sending queue notification:", error);
   }
@@ -1016,13 +1168,21 @@ export const updateProfileService = async (
     userId,
     { $set: updates },
     { new: true, runValidators: true }
-  );
+  ).populate("roles");
 
   if (!user) {
     const err: any = new Error("User not found");
     err.statusCode = 404;
     throw err;
   }
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "USER_UPDATED",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `Profile updated for the user ${user.fullName}`
+  );
 
   return user;
 };
@@ -1035,13 +1195,21 @@ export const updateNotificationPreferenceService = async (
     userId,
     { $set: { notificationPreference: preferences } },
     { new: true, runValidators: true }
-  );
+  ).populate("roles");
 
   if (!user) {
     const err: any = new Error("User not found");
     err.statusCode = 404;
     throw err;
   }
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "USER_UPDATED",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `Notification settings updated for the user ${user.fullName}`
+  );
 
   return user;
 };
@@ -1051,7 +1219,9 @@ export const updatePasswordService = async (
   currentPassword: string,
   newPassword: string
 ) => {
-  const user = await User.findById(userId).select("+password");
+  const user = await User.findById(userId)
+    .select("+password")
+    .populate("roles");
   if (!user) {
     const err: any = new Error("User not found");
     err.statusCode = 404;
@@ -1067,6 +1237,14 @@ export const updatePasswordService = async (
 
   user.password = newPassword;
   await user.save();
+
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "PASSWORD_CHANGED",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `Password changed for the user ${user.fullName}`
+  );
 
   return true;
 };
@@ -1090,6 +1268,14 @@ export const expressDonationInterestService = async (
     duration = 0,
     preferredContactMethod = "whatsApp",
   } = data;
+
+  const user = await User.findById(userId).populate("roles");
+
+  if (!user) {
+    const err: any = new Error("User not found.");
+    err.statusCode = 404;
+    throw err;
+  }
 
   if (!title.trim()) {
     const err: any = new Error("Title is required");
@@ -1178,6 +1364,14 @@ export const expressDonationInterestService = async (
 
   await donation.populate("itemType", "name description");
   await donation.populate("userId", "fullName email");
+
+  const roleName = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleName },
+    "ITEM_DONATION",
+    { userId: user.id, name: user.fullName, role: roleName },
+    `${user.fullName} has request for the new item ${title}`
+  );
 
   return donation;
 };

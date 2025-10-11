@@ -36,7 +36,10 @@ import {
 import { IInventoryItem } from "../interfaces/inventoryItems.interface";
 import type { Request as ExpressRequest } from "express";
 import { IIssuedItem } from "../interfaces/issuedItems.interface";
-import { DefaulterFilters, DefaulterItem } from "../interfaces/defaulter.interface";
+import {
+  DefaulterFilters,
+  DefaulterItem,
+} from "../interfaces/defaulter.interface";
 
 interface loginDTO {
   email: string;
@@ -394,104 +397,6 @@ export const getAllUsersService = async (page = 1, limit = 10) => {
   return { users, totalUsers };
 };
 
-// export const createUserService = async ({
-//   fullName,
-//   email,
-//   userName,
-//   password,
-//   role,
-//   assignedRoles,
-//   emp_id,
-//   ass_emp_id,
-//   passwordResetRequired,
-// }: any) => {
-//   try {
-//     // Check for existing user
-//     const existingUser = await User.findOne({
-//       $or: [{ email }, { username: userName }],
-//     });
-
-//     if (existingUser) {
-//       throw new Error("User with this email or username already exists.");
-//     }
-
-//     // Find and validate roles
-//     const rolesToFind =
-//       assignedRoles && assignedRoles.length > 0 ? assignedRoles : [role];
-//     const userRoleDocuments = await Role.find({ _id: { $in: rolesToFind } });
-
-//     if (userRoleDocuments.length !== rolesToFind.length) {
-//       throw new Error("One or more specified roles could not be found.");
-//     }
-
-//     // Handle employee/family member logic
-//     let employeeIdValue = emp_id;
-//     let associatedEmployeeIdValue = undefined;
-
-//     if (role === "Family Member") {
-//       if (!ass_emp_id) {
-//         throw new Error(
-//           "Associated employee ID is required for a family member."
-//         );
-//       }
-//       const associatedEmployee = await User.findOne({ employeeId: ass_emp_id });
-//       if (!associatedEmployee) {
-//         throw new Error(`Employee with ID '${ass_emp_id}' not found.`);
-//       }
-//       associatedEmployeeIdValue = associatedEmployee._id;
-//       employeeIdValue = undefined;
-//     }
-
-//     // Create new user
-//     const newUser = new User({
-//       fullName,
-//       email,
-//       username: userName,
-//       password,
-//       roles: userRoleDocuments.map((r) => r._id),
-//       employeeId: employeeIdValue,
-//       associatedEmployeeId: associatedEmployeeIdValue,
-//       passwordResetRequired,
-//       status: "Inactive",
-//     });
-
-//     // Save user first
-//     const savedUser = await newUser.save();
-//     if (!savedUser) {
-//       throw new Error("Failed to create user");
-//     }
-
-//     console.log("start to sending an email");
-//     try {
-//       const subject = "Welcome to the Library Management System!";
-//       const htmlBody = `
-//         <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-//           <h2 style="color: #0056b3;">Welcome, ${fullName}!</h2>
-//           <p>An account has been successfully created for you in our Library Management System (LMS).</p>
-//           <p>You can now log in using the following credentials:</p>
-//           <ul style="list-style-type: none; padding: 0;">
-//             <li style="margin-bottom: 10px;"><strong>Username:</strong> ${userName}</li>
-//             <li style="margin-bottom: 10px;"><strong>Temporary Password:</strong> <code style="background-color: #f4f4f4; padding: 3px 6px; border-radius: 4px; font-size: 1.1em;">${password}</code></li>
-//           </ul>
-//           <p>For your security, you will be required to change this password after your first login.</p>
-//           <p>Thank you for joining us!</p>
-//         </div>
-//       `;
-
-//       await sendEmail(email, subject, htmlBody);
-//       console.log("Welcome email sent successfully to:", email);
-//     } catch (emailError) {
-//       console.error("Failed to send welcome email:", emailError);
-//       // Don't throw here - we still want to return the created user
-//     }
-
-//     return savedUser;
-//   } catch (error) {
-//     console.error("Error in createUserService:", error);
-//     throw error; // Re-throw to be handled by the controller
-//   }
-// };
-
 export const getUserDetailsService = async (userId: any) => {
   const user = await User.findOne({ _id: userId });
   return user;
@@ -709,18 +614,20 @@ export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
 
 export const createInventoryItemsService = async (data: any) => {
   if (!data.isbnOrIdentifier && data.categoryId) {
-    // Check if it's a book category or generate generic identifier
     const category = await Category.findById(data.categoryId);
     if (category && category.name.toLowerCase() === "books") {
       const err: any = new Error("ISBN is required for book items");
       err.statusCode = 400;
       throw err;
     } else {
-      // Generate unique identifier for non-book items
       const timestamp = Date.now().toString();
       const random = Math.random().toString(36).substring(2, 8);
       data.isbnOrIdentifier = `ITEM-${timestamp}-${random}`;
     }
+  }
+
+  if (Array.isArray(data.features) && data.features.length === 0) {
+    delete data.features;
   }
 
   const newItem = new InventoryItem(data);
@@ -768,24 +675,47 @@ export const fetchSpecificItemServive = async (itemId: any) => {
 };
 
 export const updateItemService = async ({ itemId, validatedData }: any) => {
+  // Check if item exists first
   const existingItem = await InventoryItem.findById(itemId);
-
   if (!existingItem) {
-    const err: any = new Error("No such item exits");
+    const err: any = new Error("No such item exists");
     err.statusCode = 404;
     throw err;
   }
 
-  const updatedData = await InventoryItem.findByIdAndUpdate(
-    itemId,
-    validatedData,
-    {
-      new: true,
-      runValidators: true,
-    }
+  // Remove undefined values to avoid overwriting with undefined
+  const cleanData = Object.fromEntries(
+    Object.entries(validatedData).filter(([_, value]) => value !== undefined && value !== null)
   );
 
-  return updatedData;
+  // Handle Decimal128 conversion for price - with null check
+  if (cleanData.price !== undefined && cleanData.price !== null) {
+    cleanData.price = new mongoose.Types.Decimal128(cleanData.price.toString());
+  }
+
+  try {
+    const updatedData = await InventoryItem.findByIdAndUpdate(
+      itemId,
+      cleanData,
+      {
+        new: true,
+        runValidators: true,
+      }
+    ).populate("categoryId", "name")
+     .populate("subcategoryId", "name");
+
+    return updatedData;
+  } catch (error: any) {
+    console.error("Error in updateItemService:", error);
+    
+    if (error.name === "CastError") {
+      const err: any = new Error(`Invalid data format: ${error.message}`);
+      err.statusCode = 400;
+      throw err;
+    }
+    
+    throw error;
+  }
 };
 
 export const deleteItemService = async (itemId: any) => {
@@ -840,10 +770,10 @@ export const getCategoriesService = async (includeTree = false) => {
   }
 
   // Return flat array but with additional field to identify parent/child relationships
-  const categoriesWithType = allCategories.map(category => ({
+  const categoriesWithType = allCategories.map((category) => ({
     ...category.toObject(),
     isParent: !category.parentCategoryId,
-    isChild: !!category.parentCategoryId
+    isChild: !!category.parentCategoryId,
   }));
 
   return categoriesWithType;
@@ -1363,9 +1293,9 @@ export const getFinesReportService = async () => {
   const fineDetails = fines.map((fine: any) => {
     // Use amountIncurred instead of amount
     const fineAmount = fine.amountIncurred || 0;
-    
+
     total += fineAmount;
-    
+
     if (fine.status === "Paid") {
       paid += fineAmount;
     } else if (fine.status === "Waived") {
@@ -2672,14 +2602,16 @@ export const fetchAllPermissionsService = async () => {
   return permissions;
 };
 
-export const getDefaulterReport = async (filters: DefaulterFilters): Promise<DefaulterItem[]> => {
+export const getDefaulterReport = async (
+  filters: DefaulterFilters
+): Promise<DefaulterItem[]> => {
   try {
     const today = new Date();
-    
+
     // Build base query for overdue items
     let query: any = {
       status: "Issued",
-      dueDate: { $lt: today }
+      dueDate: { $lt: today },
     };
 
     // Apply overdue since filter
@@ -2691,9 +2623,9 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
     console.log("Query:", query); // Debug log
 
     const issuedItems = await IssuedItem.find(query)
-      .populate('userId', 'fullName email employeeId phoneNumber roles')
-      .populate('itemId', 'title barcode categoryId')
-      .populate('issuedBy', 'fullName')
+      .populate("userId", "fullName email employeeId phoneNumber roles")
+      .populate("itemId", "title barcode categoryId")
+      .populate("issuedBy", "fullName")
       .sort({ dueDate: 1 });
 
     console.log("Found issued items:", issuedItems.length); // Debug log
@@ -2703,7 +2635,7 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
       try {
         const user = item.userId as any;
         const inventoryItem = item.itemId as any;
-        
+
         if (!user || !inventoryItem) {
           console.log("Missing user or inventory item");
           return null;
@@ -2711,19 +2643,24 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
 
         // Get user roles
         const userRoles = await Role.find({ _id: { $in: user.roles } });
-        const roleNames = userRoles.map(role => role.roleName).join(', ');
-        
+        const roleNames = userRoles.map((role) => role.roleName).join(", ");
+
         // Get category - fix field name from 'name' to 'categoryName'
         const category = await Category.findById(inventoryItem.categoryId);
-        
+
         // Apply category filter
-        if (filters.categoryId && category?._id.toString() !== filters.categoryId) {
+        if (
+          filters.categoryId &&
+          category?._id.toString() !== filters.categoryId
+        ) {
           return null;
         }
-        
+
         // Apply role filter
         if (filters.roleId) {
-          const hasRole = user.roles.some((roleId: any) => roleId.toString() === filters.roleId);
+          const hasRole = user.roles.some(
+            (roleId: any) => roleId.toString() === filters.roleId
+          );
           if (!hasRole) {
             return null;
           }
@@ -2731,7 +2668,9 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
 
         // Calculate days overdue
         const dueDate = new Date(item.dueDate);
-        const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+        const daysOverdue = Math.floor(
+          (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
 
         return {
           issuedItemId: (item._id as Types.ObjectId).toString(),
@@ -2742,10 +2681,10 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
           roleName: roleNames,
           itemTitle: inventoryItem.title,
           barcode: inventoryItem.barcode,
-          issuedDate: item.issuedDate.toISOString().split('T')[0],
-          dueDate: item.dueDate.toISOString().split('T')[0],
+          issuedDate: item.issuedDate.toISOString().split("T")[0],
+          dueDate: item.dueDate.toISOString().split("T")[0],
           daysOverdue,
-          categoryName: category?.name || 'Unknown', // Using 'name' from your interface
+          categoryName: category?.name || "Unknown", // Using 'name' from your interface
           userId: user._id.toString(), // Add this for reminders
           itemId: inventoryItem._id.toString(), // Add this for reminders
         };
@@ -2758,7 +2697,9 @@ export const getDefaulterReport = async (filters: DefaulterFilters): Promise<Def
     const defaulters = await Promise.all(defaultersPromises);
 
     // Filter out null values and return
-    const result = defaulters.filter(item => item !== null) as DefaulterItem[];
+    const result = defaulters.filter(
+      (item) => item !== null
+    ) as DefaulterItem[];
     console.log("Final defaulters count:", result.length); // Debug log
     return result;
   } catch (error: any) {

@@ -818,17 +818,54 @@ export const createInventoryItemsController = async (
   res: Response
 ) => {
   try {
+    console.log("Received body:", req.body);
+    console.log("Received file:", req.file);
+
+    // Process features field if it's a string
+    if (typeof req.body.features === "string") {
+      try {
+        req.body.features = JSON.parse(req.body.features);
+      } catch (e) {
+        // If it's comma-separated, convert to array
+        req.body.features = req.body.features
+          .split(",")
+          .map((f: string) => f.trim())
+          .filter(Boolean);
+      }
+    }
+
+    // Convert string numbers to actual numbers
+    const numericFields = [
+      "publicationYear",
+      "price",
+      "quantity",
+      "availableCopies",
+      "defaultReturnPeriod",
+      "warrantyPeriod",
+    ];
+    numericFields.forEach((field) => {
+      if (req.body[field] !== undefined && req.body[field] !== "") {
+        req.body[field] = Number(req.body[field]);
+      }
+    });
+
+    // Handle empty subcategoryId
+    if (
+      req.body.subcategoryId === "" ||
+      req.body.subcategoryId === "no-subcategory"
+    ) {
+      delete req.body.subcategoryId;
+    }
+
     const validatedData = InventoryItemsSchema.parse(req.body);
     const file = req.file;
     let mediaUrl;
 
     if (file) {
       const result = await uploadFile(file.path);
-
       if (result) {
         mediaUrl = result.secure_url;
       }
-
       fs.unlinkSync(file.path);
     }
 
@@ -839,6 +876,7 @@ export const createInventoryItemsController = async (
       mediaUrl: mediaUrl,
       barcode: barcode,
     };
+
     const newItem = await createInventoryItemsService(dataToSave);
 
     return res.status(201).json({
@@ -846,6 +884,8 @@ export const createInventoryItemsController = async (
       data: newItem,
     });
   } catch (error: any) {
+    console.error("Error in createInventoryItemsController:", error);
+
     if (error.name === "ZodError") {
       return res.status(400).json({
         message: "Validation error in createInventoryItemsController",
@@ -899,7 +939,43 @@ export const updateItemController = async (req: Request, res: Response) => {
       return res.status(400).json({ error: "Invalid itemId" });
     }
 
-    const validatedData = InventoryItemsUpdateSchema.parse(req.body);
+    // Process the data before validation
+    const processedData = { ...req.body };
+
+    // Handle empty subcategoryId
+    if (processedData.subcategoryId === "" || processedData.subcategoryId === "no-subcategory") {
+      delete processedData.subcategoryId;
+    }
+
+    // Process features field if it's a string
+    if (typeof processedData.features === 'string') {
+      try {
+        processedData.features = JSON.parse(processedData.features);
+      } catch (e) {
+        // If it's comma-separated, convert to array
+        processedData.features = processedData.features.split(',').map((f: string) => f.trim()).filter(Boolean);
+      }
+    }
+
+    // Convert empty strings to undefined for optional fields
+    const optionalFields = ['authorOrCreator', 'description', 'publisherOrManufacturer', 'color', 'dimensions', 'usageType', 'powerSource', 'usage', 'warrantyPeriod'];
+    optionalFields.forEach(field => {
+      if (processedData[field] === '') {
+        processedData[field] = undefined;
+      }
+    });
+
+    // Convert string numbers to actual numbers
+    const numericFields = ['publicationYear', 'price', 'quantity', 'availableCopies', 'defaultReturnPeriod'];
+    numericFields.forEach(field => {
+      if (processedData[field] !== undefined && processedData[field] !== '') {
+        processedData[field] = Number(processedData[field]);
+      } else if (processedData[field] === '') {
+        processedData[field] = undefined;
+      }
+    });
+
+    const validatedData = InventoryItemsUpdateSchema.parse(processedData);
 
     const updatedItem = await updateItemService({ itemId, validatedData });
 
@@ -908,6 +984,8 @@ export const updateItemController = async (req: Request, res: Response) => {
       data: updatedItem,
     });
   } catch (error: any) {
+    console.error("Error in updateItemController:", error);
+    
     if (error.name === "ZodError") {
       return res.status(400).json({
         message: "Validation error",
@@ -915,9 +993,16 @@ export const updateItemController = async (req: Request, res: Response) => {
       });
     }
 
-    if (error.code === 404) {
-      return res.status(409).json({
-        message: "No such item exits",
+    if (error.name === "CastError") {
+      return res.status(400).json({
+        message: "Invalid data format",
+        error: error.message,
+      });
+    }
+
+    if (error.statusCode === 404) {
+      return res.status(404).json({
+        message: "No such item exists",
       });
     }
 
@@ -2522,7 +2607,10 @@ export const exportDefaulterReportController = async (
   }
 };
 
-export const getNotificationsController = async (req: Request, res: Response) => {
+export const getNotificationsController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const {
       startDate,
@@ -2531,7 +2619,7 @@ export const getNotificationsController = async (req: Request, res: Response) =>
       level,
       read,
       page = 1,
-      limit = 20
+      limit = 20,
     } = req.query;
 
     const filters = {
@@ -2539,9 +2627,9 @@ export const getNotificationsController = async (req: Request, res: Response) =>
       endDate: endDate ? new Date(endDate as string) : undefined,
       type: type as string,
       level: level as string,
-      read: read !== undefined ? read === 'true' : undefined,
+      read: read !== undefined ? read === "true" : undefined,
       page: parseInt(page as string),
-      limit: parseInt(limit as string)
+      limit: parseInt(limit as string),
     };
 
     const result = await NotificationService.getAdminNotifications(filters);
@@ -2549,13 +2637,13 @@ export const getNotificationsController = async (req: Request, res: Response) =>
     return res.status(200).json({
       success: true,
       data: result.notifications,
-      pagination: result.pagination
+      pagination: result.pagination,
     });
   } catch (error: any) {
     console.error("Error in getNotificationsController:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -2569,20 +2657,20 @@ export const markAsReadController = async (req: Request, res: Response) => {
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: "Notification not found"
+        message: "Notification not found",
       });
     }
 
     return res.status(200).json({
       success: true,
       message: "Notification marked as read",
-      data: notification
+      data: notification,
     });
   } catch (error: any) {
     console.error("Error in markAsReadController:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 };
@@ -2596,39 +2684,44 @@ export const markAllAsReadController = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "All notifications marked as read",
-      data: { modifiedCount: result.modifiedCount }
+      data: { modifiedCount: result.modifiedCount },
     });
   } catch (error: any) {
     console.error("Error in markAllAsReadController:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 };
 
-export const deleteNotificationController = async (req: Request, res: Response) => {
+export const deleteNotificationController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { notificationId } = req.params;
 
-    const notification = await NotificationService.deleteNotification(notificationId);
+    const notification = await NotificationService.deleteNotification(
+      notificationId
+    );
 
     if (!notification) {
       return res.status(404).json({
         success: false,
-        message: "Notification not found"
+        message: "Notification not found",
       });
     }
 
     return res.status(200).json({
       success: true,
-      message: "Notification deleted successfully"
+      message: "Notification deleted successfully",
     });
   } catch (error: any) {
     console.error("Error in deleteNotificationController:", error);
     return res.status(500).json({
       success: false,
-      message: error.message || "Internal server error"
+      message: error.message || "Internal server error",
     });
   }
 };

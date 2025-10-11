@@ -19,4 +19,16 @@ export interface IInventoryItem extends Document {
   status: "Available" | "Issued" | "Lost" | "Damaged";
   createdAt?: Date;
   updatedAt?: Date;
+
+  // Category-specific fields
+  size?: "XS" | "S" | "M" | "L" | "XL" | "XXL";
+  color?: string;
+  genderType?: "Men" | "Women" | "Unisex" | "Kids";
+  warrantyPeriod?: string;
+  features?: string[];
+  dimensions?: string;
+  usageType?: string;
+  usage?: string;
+  ageGroup?: "0-3" | "4-7" | "8-12" | "13+";
+  powerSource?: string;
 }
