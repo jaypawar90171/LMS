@@ -14,6 +14,7 @@ import {
   getNewArrivalsService,
   getProfileDetailsService,
   getQueuedItemsService,
+  getQueueItemByIdService,
   getRequestedItemsSerice,
   registerUserService,
   requestItemService,
@@ -22,6 +23,7 @@ import {
   updateNotificationPreferenceService,
   updatePasswordService,
   updateProfileService,
+  withdrawFromQueueService,
 } from "../services/user.service";
 import {
   InventoryItemsUpdateSchema,
@@ -177,7 +179,7 @@ export const dashboardSummaryController = async (
 
 export const getIssuedItemsController = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId  = req.user.id;
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
     }
@@ -309,14 +311,15 @@ export const requestItemController = async (req: Request, res: Response) => {
 
 export const getQueuedItemsController = async (req: Request, res: Response) => {
   try {
-    const { userId } = req.params;
+    const userId = req.user.id;
+
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
     }
 
     const queuedItems = await getQueuedItemsService(userId);
+
     return res.status(200).json({
-      // Changed from 201 to 200 for GET request
       success: true,
       message: "Queue items fetched successfully",
       queuedItems,
@@ -329,13 +332,79 @@ export const getQueuedItemsController = async (req: Request, res: Response) => {
   }
 };
 
+export const getQueueItemController = async (req: Request, res: Response) => {
+  try {
+    const { queueId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const queueItem = await getQueueItemByIdService(queueId);
+
+     const isUserInQueue = queueItem.queueMembers.some(
+      (member: any) => member.userId && member.userId._id.toString() === userId
+    );
+
+    if (!isUserInQueue) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to access this queue item",
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: "Queue item fetched successfully",
+      data: queueItem,
+    });
+  } catch (error: any) {
+    console.error("Get queue item error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch queue item",
+    });
+  }
+};
+
+export const withdrawFromQueueController = async(req: Request, res: Response) => {
+   try {
+    const { queueId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const result = await withdrawFromQueueService(queueId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Withdraw from queue error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to withdraw from queue",
+    });
+  }
+}
+
 export const extendIssuedItemController = async (
   req: Request,
   res: Response
 ) => {
   try {
     const { itemId } = req.params;
-    const userId = (req as any).user.id; // Fixed: use auth middleware user
+    const userId = (req as any).user.id;
 
     if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid itemId or userId" });
@@ -362,7 +431,7 @@ export const returnItemRequestController = async (
 ) => {
   try {
     const { itemId } = req.params;
-    const userId = (req as any).user?.id; 
+    const userId = (req as any).user?.id;
     const { status } = req.body;
 
     if (!Types.ObjectId.isValid(itemId) || !Types.ObjectId.isValid(userId)) {
@@ -669,11 +738,9 @@ export const expressDonationInterestController = async (
     });
   } catch (error: any) {
     console.error("Error in expressDonationInterestController:", error);
-    return res
-      .status(error.statusCode || 500)
-      .json({ 
-        success: false,
-        error: error.message || "Internal server error" 
-      });
+    return res.status(error.statusCode || 500).json({
+      success: false,
+      error: error.message || "Internal server error",
+    });
   }
 };

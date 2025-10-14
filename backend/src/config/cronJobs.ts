@@ -1,4 +1,3 @@
-// cronJobs.ts
 import cron from "node-cron";
 import { checkExpiredNotifications } from "../services/admin.service";
 

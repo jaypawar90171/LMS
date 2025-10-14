@@ -76,12 +76,14 @@ import {
   markAsReadController,
   markAllAsReadController,
   deleteNotificationController,
+  getAllUsersReportController,
+  exportAllUsersReportController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
 import { upload } from "../config/upload";
-import { fetchAllPermissionsService } from "../services/admin.service";
+import { exportAllUsersReport, fetchAllPermissionsService } from "../services/admin.service";
 
 const router = Router();
 
@@ -382,6 +384,10 @@ router.get("/reports/defaulters", authUser, getDefaulterReportController);
 router.post("/reports/defaulters/send-reminder", authUser, sendReminderController);
 
 router.get("/reports/defaulters/export", authUser, exportDefaulterReportController);
+
+router.get("/reports/all-users", authUser, getAllUsersReportController);
+
+router.get("/reports/all-users/export", authUser, exportAllUsersReportController)
 
 /* ========================= SETTINGS ========================= */
 router.get(

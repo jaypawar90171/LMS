@@ -1,15 +1,25 @@
-// import cron from "cron";
-// import https from "https";
-// import "dotenv/config";
+import cron from "node-cron";
+import http from "http";
 
-// const job = new cron.CronJob("*/14 * * * *", function () {
-//   https
-//     .get(process.env.API_URL, (res) => {
-//       if (res.statusCode === 200) console.log("GET request sent successfully");
-//       else console.log("GET request failed", res.statusCode);
-//     })
-//     .on("error", (e) => console.error("Error while sending request", e));
-// });
+cron.schedule("*/14 * * * *", () => {
+  console.log("Running a scheduled health check every 14 minutes...");
+  try {
+    const req = http.get("http://localhost:30000", (res) => {
+      if (res.statusCode === 200) {
+        console.log("Server ping successful (Status: 200)");
+      } else {
+        console.log(`Server ping failed with status code: ${res.statusCode}`);
+      }
+    });
 
-// export default job;
+    req.on("error", (e) => {
+      console.error("Error while sending ping request:", e.message);
+    });
+  } catch (error) {
+    console.error("An unexpected error occurred within the cron job:", error);
+  }
+});
 
+export const initializeCronJob = () => {
+  console.log("Cron jobs have been initialized.");
+};

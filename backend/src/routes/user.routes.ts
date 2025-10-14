@@ -14,6 +14,7 @@ import {
   getNewArrivalsController,
   getProfileDetailsController,
   getQueuedItemsController,
+  getQueueItemController,
   getRequestedItemsController,
   registerUserController,
   requestItemController,
@@ -22,6 +23,7 @@ import {
   updateNotificationPreferenceController,
   updatePasswordController,
   updateProfileController,
+  withdrawFromQueueController,
 } from "../controllers/user.controller";
 import { loginUserController } from "../controllers/user.controller";
 import { forgotPassswordController } from "../controllers/user.controller";
@@ -46,18 +48,14 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 router.get("/logout", logoutController);
 
 /* ========================= DASHBOARD ========================= */
-router.get("/dashboard/:userId", authUser, dashboardSummaryController);
+router.get("/dashboard/:userId", dashboardSummaryController);
 
 /* ========================= INVENTORY ========================= */
-router.get("/items/issued/:userId", authUser, getIssuedItemsController);
+router.get("/items/issued", authUser, getIssuedItemsController);
 
 router.get("/inventory/categories", authUser, getCategoriesController);
 
-router.get(
-  "/inventory/categories/:categoryId/items/",
-  authUser,
-  getCategoryItemsController
-);
+router.get("/inventory/categories/:categoryId/items/", authUser, getCategoryItemsController);
 
 router.get("/inventory/categories/items/:itemId", authUser, getItemController);
 
@@ -65,29 +63,27 @@ router.get("/:userId/requests", authUser, getRequestedItemsController);
 
 router.post("/issue-requests", authUser, createIssueRequestController);
 
-router.get("/issue-requests/my-requests", authUser, getMyIssueRequestsController);
+// router.get("/issue-requests/my-requests", authUser, getMyIssueRequestsController);
 
 router.post("/:userId/requests", authUser, requestItemController);
 
-router.get("/items/queued/:userId", authUser, getQueuedItemsController);
+router.get("/items/:itemId/extend-period", authUser, extendIssuedItemController);
 
-router.get(
-  "/items/:itemId/extend-period",
-  authUser,
-  extendIssuedItemController
-);
-
-router.post(
-  "/items/:itemId/return-item",
-  authUser,
-  returnItemRequestController
-);
+router.post("/items/:itemId/return-item", authUser, returnItemRequestController);
 
 router.post("/items/request-item", authUser, requestNewItemController);
 
 router.get("/items/new-arrivals", authUser, getNewArrivalsController);
 
 router.get("/history", authUser, getHistoryController);
+
+
+/* ========================= QUEUE MANAGEMENT ========================= */
+router.get("/items/queues/queued", authUser, getQueuedItemsController);
+
+router.get("/items/queues/:queueId", authUser, getQueueItemController);
+
+router.delete("/items/queues/:queueId", authUser, withdrawFromQueueController);
 
 
 /* ========================= SETTINGS ========================= */

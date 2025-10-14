@@ -40,6 +40,7 @@ import {
   DefaulterFilters,
   DefaulterItem,
 } from "../interfaces/defaulter.interface";
+import { UserReportFilters, UserReportItem } from "../interfaces/userReport.interface";
 
 interface loginDTO {
   email: string;
@@ -2620,7 +2621,7 @@ export const getDefaulterReport = async (
       query.dueDate.$lt = overdueSinceDate;
     }
 
-    console.log("Query:", query); // Debug log
+    console.log("Query:", query); 
 
     const issuedItems = await IssuedItem.find(query)
       .populate("userId", "fullName email employeeId phoneNumber roles")
@@ -2628,7 +2629,7 @@ export const getDefaulterReport = async (
       .populate("issuedBy", "fullName")
       .sort({ dueDate: 1 });
 
-    console.log("Found issued items:", issuedItems.length); // Debug log
+    console.log("Found issued items:", issuedItems.length); 
 
     // Get additional user and category data
     const defaultersPromises = issuedItems.map(async (item) => {
@@ -2826,5 +2827,191 @@ export const exportDefaulterReport = async (filters: DefaulterFilters) => {
     return csvContent;
   } catch (error: any) {
     throw new Error(`Failed to export defaulter report: ${error.message}`);
+  }
+};
+
+export const getAllUsersReport = async (
+  filters: UserReportFilters
+): Promise<UserReportItem[]> => {
+  try {
+    const today = new Date();
+
+    // Build base query for users
+    let userQuery: any = {};
+
+    // Apply status filter - convert to match User model enum values
+    if (filters.status) {
+      if (filters.status === "active") {
+        userQuery.status = "Active";
+      } else if (filters.status === "inactive") {
+        userQuery.status = "Inactive";
+      }
+      // Note: "Locked" status is also available but not included in frontend filters
+    }
+
+    // Apply role filter
+    if (filters.roleId) {
+      userQuery.roles = new Types.ObjectId(filters.roleId);
+    }
+
+    console.log("User query:", userQuery);
+
+    const users = await User.find(userQuery)
+      .populate("roles")
+      .sort({ createdAt: -1 });
+
+    console.log("Found users:", users.length);
+
+    // Get report data for each user
+    const usersReportPromises = users.map(async (user) => {
+      try {
+        // Get user's issued items
+        const issuedItems = await IssuedItem.find({
+          userId: user._id, // This should work since user._id is string in IUser interface
+          status: "Issued",
+        })
+          .populate("itemId")
+          .sort({ issuedDate: -1 });
+
+        // Calculate statistics
+        const totalItemsIssued = issuedItems.length;
+        
+        const overdueItems = issuedItems.filter(item => 
+          new Date(item.dueDate) < today
+        );
+        
+        const itemsOverdue = overdueItems.length;
+        const totalOverdueItems = overdueItems.length;
+
+        // Calculate average days overdue
+        let avgDaysOverdue = 0;
+        if (overdueItems.length > 0) {
+          const totalDaysOverdue = overdueItems.reduce((sum, item) => {
+            const dueDate = new Date(item.dueDate);
+            const daysOverdue = Math.floor(
+              (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
+            );
+            return sum + daysOverdue;
+          }, 0);
+          avgDaysOverdue = Math.round(totalDaysOverdue / overdueItems.length);
+        }
+
+        // Get last issued date
+        const lastIssuedDate = issuedItems.length > 0 
+          ? issuedItems[0].issuedDate 
+          : undefined;
+
+        // Get role names - handle populated roles
+        let roleNames = "";
+        if (user.roles && user.roles.length > 0) {
+          // Check if roles are populated (have roleName property) or just ObjectIds
+          if (typeof user.roles[0] === 'object' && 'roleName' in user.roles[0]) {
+            roleNames = (user.roles as any[]).map((role: any) => role.roleName).join(", ");
+          } else {
+            // If roles are not populated, fetch them
+            const roleDocs = await Role.find({ _id: { $in: user.roles } });
+            roleNames = roleDocs.map(role => role.roleName).join(", ");
+          }
+        }
+
+        // Convert User model status to frontend status
+        const frontendStatus = user.status === "Active" ? "active" : "inactive";
+
+        // Handle createdAt - use current date if undefined
+        const joinDate = user.createdAt ? user.createdAt.toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+
+        // Apply overdue filter
+        if (filters.hasOverdue === "true" && itemsOverdue === 0) {
+          return null;
+        }
+        if (filters.hasOverdue === "false" && itemsOverdue > 0) {
+          return null;
+        }
+
+        return {
+          userId: user._id.toString(), // _id is string in IUser interface
+          userName: user.fullName,
+          userEmail: user.email,
+          employeeId: user.employeeId,
+          phoneNumber: user.phoneNumber,
+          roleName: roleNames,
+          totalItemsIssued,
+          itemsOverdue,
+          totalOverdueItems,
+          avgDaysOverdue,
+          lastIssuedDate: lastIssuedDate?.toISOString().split("T")[0],
+          joinDate: joinDate,
+          status: frontendStatus,
+        };
+      } catch (error) {
+        console.error("Error processing user:", error);
+        return null;
+      }
+    });
+
+    const usersReport = await Promise.all(usersReportPromises);
+
+    // Filter out null values and return
+    const result = usersReport.filter(
+      (item) => item !== null
+    ) as UserReportItem[];
+    
+    console.log("Final users report count:", result.length);
+    return result;
+  } catch (error: any) {
+    console.error("Error in getAllUsersReport:", error);
+    throw new Error(`Failed to fetch users report: ${error.message}`);
+  }
+};
+
+export const exportAllUsersReport = async (filters: UserReportFilters) => {
+  try {
+    const usersReport = await getAllUsersReport(filters);
+
+    // CSV headers
+    const headers = [
+      "User Name",
+      "Employee ID",
+      "Email",
+      "Phone Number",
+      "Role",
+      "Total Items Issued",
+      "Overdue Items Count",
+      "Total Overdue Items",
+      "Average Days Overdue",
+      "Last Issued Date",
+      "Join Date",
+      "Status",
+    ];
+
+    // Convert data to CSV rows
+    const csvRows = usersReport.map((user) => [
+      `"${user.userName}"`,
+      `"${user.employeeId || "-"}"`,
+      `"${user.userEmail}"`,
+      `"${
+        user.phoneNumber
+          ? user.phoneNumber.slice(-4).padStart(10, "*")
+          : "-"
+      }"`,
+      `"${user.roleName}"`,
+      `"${user.totalItemsIssued}"`,
+      `"${user.itemsOverdue}"`,
+      `"${user.totalOverdueItems}"`,
+      `"${user.avgDaysOverdue}"`,
+      `"${user.lastIssuedDate || "-"}"`,
+      `"${user.joinDate}"`,
+      `"${user.status}"`,
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(","),
+      ...csvRows.map((row) => row.join(",")),
+    ].join("\n");
+
+    return csvContent;
+  } catch (error: any) {
+    throw new Error(`Failed to export users report: ${error.message}`);
   }
 };

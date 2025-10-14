@@ -7,6 +7,7 @@ import UserRoutes from "./routes/user.routes";
 import AdminRoutes from "./routes/admin.routes";
 import rateLimiter from "./middleware/rateLimiter";
 import { startCronJobs } from "./config/cronJobs";
+import { initializeCronJob } from "./config/cron";
 
 dotenv.config();
 connect();
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(rateLimiter);
 app.set("view engine", "ejs");
 startCronJobs();
+initializeCronJob();
 
 app.get("/", (req: Request, res: Response) => {
   res.send("hello");

@@ -304,23 +304,94 @@ export const resetPasswordService = async (data: any) => {
 };
 
 export const dashboardSummaryService = async (userId: string) => {
-  const issuedItems = await IssuedItem.find({ userId })
-    .populate({ path: "itemId", select: "name category" })
-    .populate({ path: "issuedBy", select: "fullName" });
+  // Get user info for personalization
+  const user = await User.findById(userId).select("fullName roles");
 
-  const queuedItems = await Queue.find({ userId }).populate({
-    path: "itemId",
-    select: "name category",
+  // Get issued items with full item details and calculate overdue status
+  const issuedItems = await IssuedItem.find({
+    userId,
+    status: "Issued",
+  })
+    .populate({
+      path: "itemId",
+      select: "title authorOrCreator mediaUrl categoryId",
+    })
+    .lean();
+
+  // Calculate overdue status and days remaining
+  const enhancedIssuedItems = issuedItems.map((item) => {
+    const dueDate = new Date(item.dueDate);
+    const today = new Date();
+    const isOverdue = dueDate < today;
+    const timeDiff = dueDate.getTime() - today.getTime();
+    const daysRemaining = Math.ceil(timeDiff / (1000 * 3600 * 24));
+    const daysOverdue = isOverdue ? Math.abs(daysRemaining) : 0;
+
+    return {
+      ...item,
+      isOverdue,
+      daysRemaining: isOverdue ? 0 : daysRemaining,
+      daysOverdue,
+    };
   });
 
+  // Separate overdue items
+  const overdueItems = enhancedIssuedItems.filter((item) => item.isOverdue);
+  const currentIssuedItems = enhancedIssuedItems.filter(
+    (item) => !item.isOverdue
+  );
+
+  // Get queued items with position and estimated wait
+  const userQueues = await Queue.find({
+    "queueMembers.userId": userId,
+    "queueMembers.status": "waiting",
+  })
+    .populate({
+      path: "itemId",
+      select: "title authorOrCreator mediaUrl categoryId",
+    })
+    .lean();
+
+  const enhancedQueuedItems = userQueues.map((queue) => {
+    const userMember = queue.queueMembers.find(
+      (member) => member.userId.toString() === userId
+    );
+
+    if (!userMember) {
+      console.log("no userMember found");
+      return;
+    }
+
+    // Calculate estimated wait time (simplified)
+    const estimatedWait = userMember?.position * 7;
+
+    return {
+      _id: queue._id,
+      itemId: queue.itemId,
+      position: userMember?.position,
+      dateJoined: userMember?.dateJoined,
+      estimatedWaitTime: `wait ${estimatedWait} days`,
+      totalQueueLength: queue.queueMembers.length,
+    };
+  });
+
+  // Get new arrivals (existing logic)
   const newArrivals = await InventoryItem.find()
     .sort({ createdAt: -1 })
     .limit(10)
+    .populate("categoryId", "name")
     .exec();
 
   return {
-    issuedItems: issuedItems || [],
-    queuedItems: queuedItems || [],
+    user: {
+      fullName: user?.fullName || "User",
+      roles: user?.roles || [],
+    },
+    issuedItems: {
+      current: currentIssuedItems,
+      overdue: overdueItems,
+    },
+    queuedItems: enhancedQueuedItems,
     newArrivals: newArrivals || [],
   };
 };
@@ -341,7 +412,12 @@ export const getIssueddItemsSerive = async (userId: string) => {
 };
 
 export const getCategoriesService = async () => {
-  const categories = await Category.find({}, "name description").lean();
+  const categories = await Category.find({})
+    .populate("parentCategoryId", "name")
+    .select(
+      "name description parentCategoryId defaultReturnPeriod createdAt updatedAt"
+    )
+    .lean();
 
   if (!categories || categories.length === 0) {
     const err: any = new Error("No categories found");
@@ -349,18 +425,37 @@ export const getCategoriesService = async () => {
     throw err;
   }
 
-  return categories;
+  const categoriesWithType = categories.map((category) => ({
+    ...category,
+    categoryType: category.parentCategoryId ? "subcategory" : "parent",
+    parentCategoryName: category.parentCategoryId
+      ? (category.parentCategoryId as any).name
+      : null,
+  }));
+  return categoriesWithType;
 };
 
 export const getCategoryItemsService = async (categoryId: string) => {
   const isCategoryExits = await Category.findById(categoryId);
+
   if (!isCategoryExits) {
     const err: any = new Error("No categories found");
     err.statusCode = 404;
     throw err;
   }
 
-  const items = await InventoryItem.find({ categoryId: categoryId });
+  const items = await InventoryItem.find({ categoryId: categoryId })
+    .populate({
+      path: "categoryId",
+      select: "name description parentCategoryId",
+      populate: {
+        path: "parentCategoryId",
+        select: "name description",
+      },
+    })
+    .sort({ createdAt: -1 })
+    .lean();
+
   if (!items || items.length === 0) {
     const err: any = new Error("No items found for this category");
     err.statusCode = 404;
@@ -371,10 +466,10 @@ export const getCategoryItemsService = async (categoryId: string) => {
 };
 
 export const getItemService = async (itemId: string) => {
-  const items = await InventoryItem.findById(itemId).populate({
-    path: "categoryId",
-    select: "name description",
-  });
+  const items = await InventoryItem.findById(itemId)
+    .populate("categoryId", "name description")
+    .populate("subcategoryId", "name description");
+
   if (!items) {
     const err: any = new Error("No items found for this category");
     err.statusCode = 404;
@@ -392,10 +487,11 @@ export const getRequestedItemsSerice = async (userId: string) => {
     throw err;
   }
 
-  const requestedItems = await ItemRequest.find({ userId: userId }).populate(
-    "userId",
-    "fullName email"
-  );
+  const requestedItems = await ItemRequest.find({ userId: userId })
+    .populate("userId", "fullName email")
+    .populate("categoryId", "name description")
+    .populate("subcategoryId", "name description");
+
   return requestedItems || [];
 };
 
@@ -459,10 +555,84 @@ export const getQueuedItemsService = async (userId: any) => {
   }
 
   const queueItems = await Queue.find({ "queueMembers.userId": userId })
-    .populate("itemId", "title description")
+    .populate({
+      path: "itemId",
+      select: "title description authorOrCreator mediaUrl categoryId",
+      populate: {
+        path: "categoryId",
+        select: "name description parentCategoryId",
+        populate: {
+          path: "parentCategoryId",
+          select: "name description",
+        },
+      },
+    })
     .populate("queueMembers.userId", "fullName email");
 
   return queueItems || [];
+};
+
+export const getQueueItemByIdService = async (queueId: string) => {
+  try {
+    const queueItem = await Queue.findById(queueId)
+      .populate({
+        path: "itemId",
+        select: "title description authorOrCreator mediaUrl categoryId",
+        populate: {
+          path: "categoryId",
+          select: "name description parentCategoryId",
+          populate: {
+            path: "parentCategoryId",
+            select: "name description",
+          },
+        },
+      })
+      .populate("queueMembers.userId", "fullName email")
+      .exec();
+
+    if (!queueItem) {
+      throw new Error("Queue item not found");
+    }
+
+    return queueItem;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const withdrawFromQueueService = async (
+  queueId: string,
+  userId: string
+) => {
+  try {
+    const queue = await Queue.findById(queueId);
+
+    if (!queue) {
+      throw new Error("Queue item not found");
+    }
+
+    const memberIndex = queue.queueMembers.findIndex(
+      (member) => member.userId.toString() === userId
+    );
+
+    if (memberIndex === -1) {
+      throw new Error("Not authorized or user not found in this queue");
+    }
+
+    queue.queueMembers.splice(memberIndex, 1);
+
+    queue.queueMembers.sort((a, b) => a.position - b.position);
+
+    queue.queueMembers.forEach((member, index) => {
+      member.position = index + 1;
+    });
+
+    await queue.save();
+
+    return { message: "Successfully withdrawn from queue" };
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const extendIssuedItemService = async (

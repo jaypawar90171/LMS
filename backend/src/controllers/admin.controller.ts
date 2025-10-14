@@ -18,6 +18,7 @@ import {
   checkExpiredNotifications,
   deleteFineService,
   deleteUserService,
+  exportAllUsersReport,
   exportDefaulterReport,
   exportIssuedItemsReport,
   exportQueueAnalytics,
@@ -28,6 +29,7 @@ import {
   generateIssuedItemsReportPDF,
   getAdminProfileService,
   getAllDonationService,
+  getAllUsersReport,
   getCategoryByIdService,
   getDefaulterReport,
   getFinesReportService,
@@ -93,6 +95,7 @@ import IssueRequest from "../models/itemRequest.model";
 import InventoryItem from "../models/item.model";
 import Queue from "../models/queue.model";
 import { NotificationService } from "../utility/notificationService";
+import { UserReportFilters } from "../interfaces/userReport.interface";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -2719,6 +2722,67 @@ export const deleteNotificationController = async (
     });
   } catch (error: any) {
     console.error("Error in deleteNotificationController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const getAllUsersReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { roleId, status, hasOverdue } = req.query;
+
+    const filters: UserReportFilters = {
+      roleId: roleId as string,
+      status: status as string,
+      hasOverdue: hasOverdue as string,
+    };
+
+    const usersReport = await getAllUsersReport(filters);
+
+    return res.status(200).json({
+      success: true,
+      data: usersReport,
+    });
+  } catch (error: any) {
+    console.error("Error in getAllUsersReportController:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+};
+
+export const exportAllUsersReportController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { roleId, status, hasOverdue } = req.query;
+
+    const filters: UserReportFilters = {
+      roleId: roleId as string,
+      status: status as string,
+      hasOverdue: hasOverdue as string,
+    };
+
+    const csvData = await exportAllUsersReport(filters);
+
+    res.setHeader("Content-Type", "text/csv");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=all-users-report-${
+        new Date().toISOString().split("T")[0]
+      }.csv`
+    );
+
+    return res.send(csvData);
+  } catch (error: any) {
+    console.error("Error in exportAllUsersReportController:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
