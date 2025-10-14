@@ -19,6 +19,8 @@ import { API_BASE_URL } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomToast from "@/components/CustomToast";
 import { Picker } from "@react-native-picker/picker";
+import { useSetAtom, useAtomValue } from "jotai";
+import { isLoadingAtom, registerAtom } from "@/store/authStore";
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -31,10 +33,12 @@ export default function Signup() {
     ass_emp_id: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const isLoading = useAtomValue(isLoadingAtom);
+  const register = useSetAtom(registerAtom);
 
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
@@ -54,7 +58,6 @@ export default function Signup() {
   };
 
   const handleSignup = async () => {
-    // Basic validation
     if (
       !formData.fullName ||
       !formData.userName ||
@@ -93,25 +96,9 @@ export default function Signup() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const payload = {
-        fullName: formData.fullName,
-        userName: formData.userName,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        emp_id: formData.emp_id,
-        ass_emp_id: formData.ass_emp_id,
-      };
-
-      const API_URL = `${API_BASE_URL}/auth/register`;
-
-      const result = await axios.post(API_URL, payload);
-
-      console.log("Signup successful:", result.data);
+    const result = await register(formData);
+    if (result.success) {
       showToastMessage("Registration successful! Please login.", "success");
-
       // Clear form
       setFormData({
         fullName: "",
@@ -122,25 +109,11 @@ export default function Signup() {
         emp_id: "",
         ass_emp_id: "",
       });
-
-      // Navigate to login after delay
       setTimeout(() => {
         router.replace("/(auth)");
       }, 2000);
-    } catch (error: any) {
-      console.log("Error in signup:", error);
-
-      let errorMessage = "Network error. Please check your connection.";
-
-      if (error.response) {
-        errorMessage = error.response.data.error || "Registration failed";
-      } else if (error.request) {
-        errorMessage = "Cannot connect to server. Please try again later.";
-      }
-
-      showToastMessage(errorMessage, "error");
-    } finally {
-      setIsLoading(false);
+    } else {
+      showToastMessage(result.error, "error");
     }
   };
 

@@ -18,13 +18,14 @@ import { API_BASE_URL } from "@/constants/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import CustomToast from "@/components/CustomToast";
 import { useRouter } from "expo-router";
+import { useSetAtom, useAtomValue } from "jotai";
+import { isLoadingAtom, loginAtom, userAtom } from "@/store/authStore";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<
@@ -32,6 +33,11 @@ export default function Login() {
   >("success");
 
   const router = useRouter();
+
+  const isLoading = useAtomValue(isLoadingAtom);
+  const login = useSetAtom(loginAtom);
+  const user = useAtomValue(userAtom);
+  console.log(`${user} logged in succesgully`);
 
   const showToastMessage = (
     message: string,
@@ -50,49 +56,19 @@ export default function Login() {
   };
 
   const handleLogin = async () => {
-    console.log("Login attempted");
-
     if (!email || !password) {
       showToastMessage("Please enter both email and password", "error");
       return;
     }
 
-    setIsLoading(true);
-    try {
-      const payload = {
-        email,
-        password,
-        rememberMe,
-      };
-
-      const API_URL = `${API_BASE_URL}/auth/login`;
-      console.log("API URL:", API_URL);
-
-      const result = await axios.post(API_URL, payload);
-
-      console.log("Login successful:", result.data);
+    const result = await login({ email, password, rememberMe });
+    if (result.success) {
       showToastMessage("Login successful!", "success");
-
-      await AsyncStorage.setItem("token", result.data.token);
-
       setTimeout(() => {
-        //navigation
+        router.replace("/(tabs)/index");
       }, 1000);
-    } catch (error: any) {
-      console.log("Error in login user:", error);
-
-      let errorMessage = "Network error. Please check your connection.";
-
-      if (error.response) {
-        errorMessage = error.response.data.error || "Login failed";
-      } else if (error.request) {
-        errorMessage =
-          "Cannot connect to server. Please check if the server is running.";
-      }
-
-      showToastMessage(errorMessage, "error");
-    } finally {
-      setIsLoading(false);
+    } else {
+      showToastMessage(result.error, "error");
     }
   };
 
