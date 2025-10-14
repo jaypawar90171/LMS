@@ -37,6 +37,7 @@ import { verifyResetPasswordService } from "../services/user.service";
 import { resetPasswordService } from "../services/user.service";
 import { Types } from "mongoose";
 import { success } from "zod";
+import InventoryItem from "../models/item.model";
 
 export const registerUserController = async (req: Request, res: Response) => {
   try {
@@ -397,6 +398,51 @@ export const withdrawFromQueueController = async(req: Request, res: Response) =>
     });
   }
 }
+
+export const searchItemsController = async (req: Request, res: Response) => {
+  try {
+    const { query, category, status } = req.query;
+    const userId = req.user.id;
+
+    const searchCriteria: any = {};
+    
+    if (query) {
+      searchCriteria.$or = [
+        { title: { $regex: query, $options: 'i' } },
+        { authorOrCreator: { $regex: query, $options: 'i' } },
+        { description: { $regex: query, $options: 'i' } },
+        { isbnOrIdentifier: { $regex: query, $options: 'i' } }
+      ];
+    }
+
+    if (category) {
+      searchCriteria['categoryId._id'] = category;
+    }
+
+    if (status) {
+      searchCriteria.status = status;
+    }
+
+    const items = await InventoryItem.find(searchCriteria)
+      .populate('categoryId', 'name description')
+      .sort({ title: 1 })
+      .limit(50);
+
+    res.status(200).json({
+      success: true,
+      message: "Search completed successfully",
+      data: items,
+      total: items.length
+    });
+
+  } catch (error) {
+    console.error("Search error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error during search"
+    });
+  }
+};
 
 export const extendIssuedItemController = async (
   req: Request,

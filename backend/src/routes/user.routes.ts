@@ -20,6 +20,7 @@ import {
   requestItemController,
   requestNewItemController,
   returnItemRequestController,
+  searchItemsController,
   updateNotificationPreferenceController,
   updatePasswordController,
   updateProfileController,
@@ -55,9 +56,9 @@ router.get("/items/issued", authUser, getIssuedItemsController);
 
 router.get("/inventory/categories", authUser, getCategoriesController);
 
-router.get("/inventory/categories/:categoryId/items/", authUser, getCategoryItemsController);
+router.get("/inventory/categories/items/:categoryId", authUser, getCategoryItemsController);
 
-router.get("/inventory/categories/items/:itemId", authUser, getItemController);
+router.get("/inventory/categories/:itemId", authUser, getItemController);
 
 router.get("/:userId/requests", authUser, getRequestedItemsController);
 
@@ -85,6 +86,9 @@ router.get("/items/queues/:queueId", authUser, getQueueItemController);
 
 router.delete("/items/queues/:queueId", authUser, withdrawFromQueueController);
 
+
+/* ========================= SEARCH ========================= */
+router.get("/search/items", authUser, searchItemsController);
 
 /* ========================= SETTINGS ========================= */
 router.get("/account/fines", authUser, getAllFinesController);
