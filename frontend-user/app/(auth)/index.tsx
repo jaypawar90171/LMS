@@ -65,7 +65,7 @@ export default function Login() {
     if (result.success) {
       showToastMessage("Login successful!", "success");
       setTimeout(() => {
-        router.replace("/(tabs)/index");
+        router.replace("/(tabs)/home");
       }, 1000);
     } else {
       showToastMessage(result.error, "error");

@@ -66,7 +66,7 @@ export default function ItemDetailsScreen() {
         itemType === "overdue" ||
         itemType === "new"
       ) {
-        endpoint = `${API_BASE_URL}/inventory/categories/items/${itemId}`;
+        endpoint = `${API_BASE_URL}/inventory/categories/${itemId}`;
         response = await axios.get(endpoint, {
           headers: { Authorization: `Bearer ${token}` },
         });
