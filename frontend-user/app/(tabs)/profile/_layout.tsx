@@ -1,6 +1,6 @@
 import { Stack } from "expo-router";
 
-export default function ExploreLayout() {
+export default function ProfileLayout() {
   return (
     <Stack
       screenOptions={{
@@ -8,8 +8,6 @@ export default function ExploreLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen name="category-details" />
-      <Stack.Screen name="items-list" />
     </Stack>
   );
 }

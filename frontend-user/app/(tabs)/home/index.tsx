@@ -189,17 +189,20 @@ export default function HomeScreen() {
     });
   };
 
-  // Quick Actions Handlers
   const handleScan = () => {
     Alert.alert("Scan", "Scan functionality coming soon!");
   };
 
   const handleRequestBook = () => {
-    Alert.alert("Request Book", "Book request functionality coming soon!");
+    router.push({
+      pathname: "/(tabs)/home/request-new-item",
+    });
   };
 
   const handleDonate = () => {
-    Alert.alert("Donate", "Donation functionality coming soon!");
+    router.push({
+      pathname: "/(tabs)/home/donate-item",
+    });
   };
 
   if (loading) {
@@ -468,7 +471,7 @@ export default function HomeScreen() {
         />
         <QuickActionButton
           icon="add-circle-outline"
-          title="Request a Book"
+          title="Request New Item"
           onPress={handleRequestBook}
         />
         <QuickActionButton

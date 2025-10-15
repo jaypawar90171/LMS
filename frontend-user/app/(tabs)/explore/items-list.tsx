@@ -139,8 +139,8 @@ export default function ItemsListScreen() {
   )
 }
 
-const CARD_MIN_HEIGHT = 132 // taller card
-const IMAGE_SIZE = 104 // larger image for presence
+const CARD_MIN_HEIGHT = 132
+const IMAGE_SIZE = 104 
 
 const styles = StyleSheet.create({
   container: {

@@ -28,7 +28,7 @@ export default function RootLayout() {
       if (isAuthenticated) {
         if (inAuthGroup) {
           console.log('Redirecting authenticated user to tabs');
-          router.replace("/(tabs)/home/index");
+          router.replace("/(tabs)/home");
         }
       } else {
         if (!inAuthGroup) {
