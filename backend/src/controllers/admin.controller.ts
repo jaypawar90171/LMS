@@ -824,12 +824,10 @@ export const createInventoryItemsController = async (
     console.log("Received body:", req.body);
     console.log("Received file:", req.file);
 
-    // Process features field if it's a string
     if (typeof req.body.features === "string") {
       try {
         req.body.features = JSON.parse(req.body.features);
       } catch (e) {
-        // If it's comma-separated, convert to array
         req.body.features = req.body.features
           .split(",")
           .map((f: string) => f.trim())
@@ -837,7 +835,6 @@ export const createInventoryItemsController = async (
       }
     }
 
-    // Convert string numbers to actual numbers
     const numericFields = [
       "publicationYear",
       "price",
@@ -852,7 +849,6 @@ export const createInventoryItemsController = async (
       }
     });
 
-    // Handle empty subcategoryId
     if (
       req.body.subcategoryId === "" ||
       req.body.subcategoryId === "no-subcategory"
@@ -1204,7 +1200,6 @@ export const approveIssueRequestController = async (
       return res.status(400).json({ message: "Request already processed" });
     }
 
-    // Check user eligibility
     const eligibility = await checkUserEligibility(issueRequest.userId._id);
     if (!eligibility.eligible) {
       return res.status(400).json({ message: eligibility.reason });
@@ -1215,10 +1210,8 @@ export const approveIssueRequestController = async (
       return res.status(400).json({ message: "Item no longer available" });
     }
 
-    // Calculate due date
     const dueDate = calculateDueDate(item.defaultReturnPeriod);
 
-    // Create issued item record
     const issuedItem = new IssuedItem({
       itemId: issueRequest.itemId._id,
       userId: issueRequest.userId._id,
@@ -1298,7 +1291,6 @@ export const extendPeriodController = async (req: Request, res: Response) => {
     const { issuedItemId } = req.params;
     const { extensionDays } = req.body;
 
-    // Validate input
     if (!issuedItemId) {
       return res.status(400).json({
         success: false,
@@ -1317,7 +1309,6 @@ export const extendPeriodController = async (req: Request, res: Response) => {
       });
     }
 
-    // Call service to extend period
     const result = await extendPeriodService(issuedItemId, extensionDays);
 
     if (!result.success) {

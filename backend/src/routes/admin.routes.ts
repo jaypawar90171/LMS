@@ -231,12 +231,6 @@ router.get(
 
 router.post("/issue-item", authUser, issueItemController);
 
-// router.post(
-//   "/issue-requests",
-//   authUser,
-//   createIssueRequestController
-// );
-
 router.put(
   "/issue-requests/:requestId/approve",
   authUser,

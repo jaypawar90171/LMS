@@ -21,6 +21,7 @@ import { sendEmail } from "../config/emailService";
 import { sendWhatsAppMessage } from "../config/whatsapp";
 import { NotificationService } from "../utility/notificationService";
 import { logActivity } from "./activity.service";
+import NewItemRequest from "../models/requestedItem.model";
 
 interface RegisterDTO {
   fullName: string;
@@ -813,7 +814,8 @@ export const requestNewItemService = async (
   userId: string,
   validatedData: any
 ) => {
-  const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
+  const { name, description, category, subCategory, reason, quantity } =
+    validatedData;
 
   const user = await User.findById(userId).populate("roles");
 
@@ -823,33 +825,71 @@ export const requestNewItemService = async (
     throw err;
   }
 
-  const category = await Category.findOne({ name: itemType });
-
-  if (!category) {
-    const err: any = new Error(`Category '${itemType}' not found`);
-    err.statusCode = 404;
-    throw err;
-  }
-
-  const item = new ItemRequest({
+  const newItemRequest = new NewItemRequest({
     userId: new Types.ObjectId(userId),
-    title: title,
-    authorOrCreator: authorOrCreator,
-    itemType: category._id,
-    reasonForRequest: reasonForRequest,
+    name,
+    description,
+    category,
+    subCategory,
+    reason,
+    quantity,
   });
 
-  await item.save();
+  await newItemRequest.save();
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
   await logActivity(
     { userId: user.id, name: user.fullName, role: roleNames },
     "REQUEST_NEW_ITEM",
     { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} requested for new item ${title}`
+    `${user.fullName} requested a new item: ${name} (Qty: ${quantity})`
   );
 
-  return item;
+  return newItemRequest;
+};
+
+export const getNewRequestedItemService = async (userId: string) => {
+  const items = await NewItemRequest.find({ userId: userId }).populate(
+    "userId",
+    "fullName email username"
+  );
+
+  return items || [];
+};
+
+export const getNewSpecificRequestedItemService = async (itemId: string) => {
+  const request = await NewItemRequest.findById(itemId).populate(
+    "userId",
+    "fullName email username"
+  );
+
+  return request || "";
+};
+
+export const deleteRequestedItemService = async (
+  itemId: string,
+  userId: string
+) => {
+  try {
+    const requestedItem = await NewItemRequest.findById(itemId);
+
+    if (!requestedItem) {
+      throw new Error("Requested item not found");
+    }
+
+    if (requestedItem.userId.toString() !== userId) {
+      throw new Error("Not authorized to delete this requested item");
+    }
+
+    if (requestedItem.status !== "pending") {
+      throw new Error("Only pending requests can be deleted");
+    }
+
+    await NewItemRequest.findByIdAndDelete(itemId);
+    return { message: "Requested item deleted successfully" };
+  } catch (error) {
+    throw error;
+  }
 };
 
 export const getNewArrivalsService = async () => {
@@ -1229,7 +1269,6 @@ export const createIssueRequestService = async (
   session.startTransaction();
 
   try {
-    // Check if item exists
     const item = await InventoryItem.findById(itemId).session(session);
     if (!item) {
       const err: any = new Error("Item not found");
@@ -1237,7 +1276,6 @@ export const createIssueRequestService = async (
       throw err;
     }
 
-    // Check user eligibility
     const eligibility = await checkUserEligibility(
       new mongoose.Types.ObjectId(userId)
     );
@@ -1247,12 +1285,9 @@ export const createIssueRequestService = async (
       throw err;
     }
 
-    // Check if item is available
     if (item.availableCopies > 0 && item.status === "Available") {
-      // Item is available - issue immediately
       return await issueItemImmediately(userId, itemId, session);
     } else {
-      // Item not available - add to queue
       return await addUserToQueue(userId, itemId, session);
     }
   } catch (error) {
@@ -1439,6 +1474,7 @@ export const expressDonationInterestService = async (
     preferredContactMethod = "whatsApp",
   } = data;
 
+  console.log("ItemType" + itemType);
   const user = await User.findById(userId).populate("roles");
 
   if (!user) {

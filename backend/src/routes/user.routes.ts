@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createIssueRequestController,
   dashboardSummaryController,
+  deleteRequestedItemController,
   expressDonationInterestController,
   extendIssuedItemController,
   getAllFinesController,
@@ -12,6 +13,8 @@ import {
   getItemController,
   getMyIssueRequestsController,
   getNewArrivalsController,
+  getNewRequestedItemController,
+  getNewSpecificRequestedItemController,
   getProfileDetailsController,
   getQueuedItemsController,
   getQueueItemController,
@@ -24,6 +27,7 @@ import {
   updateNotificationPreferenceController,
   updatePasswordController,
   updateProfileController,
+  uploadPhotoController,
   withdrawFromQueueController,
 } from "../controllers/user.controller";
 import { loginUserController } from "../controllers/user.controller";
@@ -32,6 +36,7 @@ import { resetPasswordController } from "../controllers/user.controller";
 import { verifyResetPasswordController } from "../controllers/user.controller";
 import { logoutController } from "../controllers/user.controller";
 import { authUser } from "../middleware/auth.middleware";
+import { upload } from "../config/upload";
 
 const router = Router();
 
@@ -64,20 +69,24 @@ router.get("/:userId/requests", authUser, getRequestedItemsController);
 
 router.post("/issue-requests", authUser, createIssueRequestController);
 
-// router.get("/issue-requests/my-requests", authUser, getMyIssueRequestsController);
-
-router.post("/:userId/requests", authUser, requestItemController);
+// router.post("/:userId/requests", authUser, requestItemController);
 
 router.get("/items/:itemId/extend-period", authUser, extendIssuedItemController);
 
 router.post("/items/:itemId/return-item", authUser, returnItemRequestController);
 
-router.post("/items/request-item", authUser, requestNewItemController);
-
 router.get("/items/new-arrivals", authUser, getNewArrivalsController);
 
 router.get("/history", authUser, getHistoryController);
 
+/* ========================= New Requested Items ========================= */
+router.post("/items/request-item", authUser, requestNewItemController);
+
+router.get("/items/requested-items", authUser, getNewRequestedItemController);
+
+router.get("/items/requested-item/:itemId", authUser, getNewSpecificRequestedItemController);
+
+router.delete("/items/requested-item/:itemId", authUser, deleteRequestedItemController);
 
 /* ========================= QUEUE MANAGEMENT ========================= */
 router.get("/items/queues/queued", authUser, getQueuedItemsController);
@@ -111,5 +120,7 @@ router.post(
   authUser,
   expressDonationInterestController
 );
+
+router.post("/upload/image", authUser, upload.single("image"), uploadPhotoController);
 
 export default router;

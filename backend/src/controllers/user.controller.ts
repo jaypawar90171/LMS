@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   createIssueRequestService,
   dashboardSummaryService,
+  deleteRequestedItemService,
   expressDonationInterestService,
   extendIssuedItemService,
   getAllFinesService,
@@ -12,6 +13,8 @@ import {
   getItemService,
   getMyIssueRequestsService,
   getNewArrivalsService,
+  getNewRequestedItemService,
+  getNewSpecificRequestedItemService,
   getProfileDetailsService,
   getQueuedItemsService,
   getQueueItemByIdService,
@@ -38,6 +41,7 @@ import { resetPasswordService } from "../services/user.service";
 import { Types } from "mongoose";
 import { success } from "zod";
 import InventoryItem from "../models/item.model";
+import { uploadFile } from "../config/upload";
 
 export const registerUserController = async (req: Request, res: Response) => {
   try {
@@ -180,7 +184,7 @@ export const dashboardSummaryController = async (
 
 export const getIssuedItemsController = async (req: Request, res: Response) => {
   try {
-    const userId  = req.user.id;
+    const userId = req.user.id;
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
     }
@@ -347,7 +351,7 @@ export const getQueueItemController = async (req: Request, res: Response) => {
 
     const queueItem = await getQueueItemByIdService(queueId);
 
-     const isUserInQueue = queueItem.queueMembers.some(
+    const isUserInQueue = queueItem.queueMembers.some(
       (member: any) => member.userId && member.userId._id.toString() === userId
     );
 
@@ -371,8 +375,11 @@ export const getQueueItemController = async (req: Request, res: Response) => {
   }
 };
 
-export const withdrawFromQueueController = async(req: Request, res: Response) => {
-   try {
+export const withdrawFromQueueController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
     const { queueId } = req.params;
     const userId = (req as any).user?.id;
 
@@ -397,7 +404,7 @@ export const withdrawFromQueueController = async(req: Request, res: Response) =>
       message: error.message || "Failed to withdraw from queue",
     });
   }
-}
+};
 
 export const searchItemsController = async (req: Request, res: Response) => {
   try {
@@ -405,18 +412,18 @@ export const searchItemsController = async (req: Request, res: Response) => {
     const userId = req.user.id;
 
     const searchCriteria: any = {};
-    
+
     if (query) {
       searchCriteria.$or = [
-        { title: { $regex: query, $options: 'i' } },
-        { authorOrCreator: { $regex: query, $options: 'i' } },
-        { description: { $regex: query, $options: 'i' } },
-        { isbnOrIdentifier: { $regex: query, $options: 'i' } }
+        { title: { $regex: query, $options: "i" } },
+        { authorOrCreator: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+        { isbnOrIdentifier: { $regex: query, $options: "i" } },
       ];
     }
 
     if (category) {
-      searchCriteria['categoryId._id'] = category;
+      searchCriteria["categoryId._id"] = category;
     }
 
     if (status) {
@@ -424,7 +431,7 @@ export const searchItemsController = async (req: Request, res: Response) => {
     }
 
     const items = await InventoryItem.find(searchCriteria)
-      .populate('categoryId', 'name description')
+      .populate("categoryId", "name description")
       .sort({ title: 1 })
       .limit(50);
 
@@ -432,14 +439,13 @@ export const searchItemsController = async (req: Request, res: Response) => {
       success: true,
       message: "Search completed successfully",
       data: items,
-      total: items.length
+      total: items.length,
     });
-
   } catch (error) {
     console.error("Search error:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error during search"
+      message: "Internal server error during search",
     });
   }
 };
@@ -506,7 +512,7 @@ export const returnItemRequestController = async (
 
 export const requestNewItemController = async (req: Request, res: Response) => {
   try {
-    const validatedData = itemRequestUpdateSchema.parse(req.body);
+    const validatedData = req.body;
     const userId = (req as any).user.id;
 
     const item = await requestNewItemService(userId, validatedData);
@@ -529,6 +535,102 @@ export const requestNewItemController = async (req: Request, res: Response) => {
   }
 };
 
+export const getNewRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User not found.",
+      });
+    }
+
+    const userRequests = await getNewRequestedItemService(userId);
+    return res.status(200).json({
+      success: true,
+      message: "Successfully retrieved your item requests",
+      count: userRequests.length,
+      data: userRequests,
+    });
+  } catch (error: any) {
+    console.error("Error fetching user item requests:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+};
+
+export const getNewSpecificRequestedItemController = async(req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    if(!itemId)
+    {
+      return res.status(401).json({
+        success: false,
+        message: "Item not found.",
+      });
+    }
+
+    const newRequest = await getNewSpecificRequestedItemService(itemId);
+     return res.status(200).json({
+      success: true,
+      message: "Successfully retrieved your item request",
+      data: newRequest,
+    });
+  } catch (error: any) {
+    console.error("Error fetching user item request:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+      error: error.message,
+    });
+  }
+}
+
+export const deleteRequestedItemController  = async(req: Request, res: Response) => {
+  try {
+    const { itemId } = req.params;
+    const userId = (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Authentication required",
+      });
+    }
+
+    const result = await deleteRequestedItemService(itemId, userId);
+
+    res.status(200).json({
+      success: true,
+      message: result.message,
+      data: result,
+    });
+
+  } catch (error: any) {
+     console.error("Delete requested item error:", error);
+    
+    if (error.message.includes('not found') || 
+        error.message.includes('Not authorized') ||
+        error.message.includes('Only pending requests')) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+      });
+    }
+    
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to delete requested item",
+    });
+  }
+}
+
 export const getNewArrivalsController = async (req: Request, res: Response) => {
   try {
     const newArrivals = await getNewArrivalsService();
@@ -547,7 +649,7 @@ export const getNewArrivalsController = async (req: Request, res: Response) => {
 
 export const getHistoryController = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id; // Fixed: use auth middleware user
+    const userId = (req as any).user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
     }
@@ -775,6 +877,9 @@ export const expressDonationInterestController = async (
       return res.status(400).json({ message: "userId not found" });
     }
 
+     console.log("Donation request body:", req.body); 
+    console.log("User ID:", userId);
+
     const donation = await expressDonationInterestService(userId, req.body);
 
     return res.status(201).json({
@@ -784,9 +889,45 @@ export const expressDonationInterestController = async (
     });
   } catch (error: any) {
     console.error("Error in expressDonationInterestController:", error);
+    console.error("Error stack:", error.stack);
     return res.status(error.statusCode || 500).json({
       success: false,
       error: error.message || "Internal server error",
     });
   }
 };
+
+export const uploadPhotoController = async(req: Request, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No image file provided",
+      });
+    }
+
+    const result = await uploadFile(req.file.path);
+
+    if (!result) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to upload image to Cloudinary",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Image uploaded successfully",
+      data: {
+        url: result.secure_url,
+        publicId: result.public_id,
+      },
+    });
+  } catch (error: any) {
+    console.error("Image upload error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error during upload",
+    });
+  }
+}
