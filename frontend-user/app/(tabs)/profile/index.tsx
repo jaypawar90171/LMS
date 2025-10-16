@@ -139,17 +139,22 @@ export default function ProfileScreen() {
       screen: "/(tabs)/profile/change-password",
     },
     {
-      id: "borrowing-history",
-      title: "Borrowing History",
+      id: "history",
+      title: "History",
       icon: "time-outline",
-      screen: "/history",
-      comingSoon: true,
+      screen: "/(tabs)/profile/history",
     },
     {
       id: "notifications",
-      title: "Notifications",
+      title: "View Notifications",
       icon: "notifications-outline",
       screen: "/(tabs)/profile/notifications",
+    },
+    {
+      id: "notifications preference",
+      title: "Notification Preference",
+      icon: "notifications-outline",
+      screen: "/(tabs)/profile/notificationPreference",
     },
     {
       id: "fines",
