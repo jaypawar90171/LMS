@@ -22,6 +22,7 @@ import { sendWhatsAppMessage } from "../config/whatsapp";
 import { NotificationService } from "../utility/notificationService";
 import { logActivity } from "./activity.service";
 import NewItemRequest from "../models/requestedItem.model";
+import Notification from "../models/notofication.modal";
 
 interface RegisterDTO {
   fullName: string;
@@ -128,6 +129,17 @@ export const loginUserService = async (data: loginDTO) => {
     throw err;
   }
 
+  // if (user.passwordResetRequired) {
+  //   const tempToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY!, {
+  //     expiresIn: "30m",
+  //   });
+  //   return {
+  //     passwordChangeRequired: true,
+  //     message: "Login successful, but you must change your password.",
+  //     token: tempToken,
+  //   };
+  // }
+
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false }); // Skip validation to avoid hashing password again
 
@@ -150,6 +162,7 @@ export const loginUserService = async (data: loginDTO) => {
   );
 
   return {
+    // passwordChangeRequired: false,
     user: {
       id: user._id,
       email: user.email,
@@ -1581,3 +1594,41 @@ export const expressDonationInterestService = async (
 
   return donation;
 };
+
+export const getUserNotificationService = async (userId: string) => {
+  const notifications = await Notification.find({ recipientId: userId }).sort({
+    createdAt: -1,
+  });
+
+  return notifications || [];
+};
+
+export const markAsReadService = async(userId: string, notificationId: string, markAll: any) => {
+
+  if (markAll) {
+      await Notification.updateMany(
+        { recipientId: userId, read: false },
+        { $set: { read: true } }
+      );
+      return "All notifications marked as read";
+    }
+
+  if (notificationId) {
+      await Notification.findByIdAndUpdate(notificationId, { read: true });
+      return "Notification marked as read";
+    }
+
+}
+
+export const deleteNotificationService = async(userId: string, notificationId: string, deleteAll: any) => {
+
+  if (deleteAll) {
+      await Notification.deleteMany({ recipientId: userId });
+      return "All notifications deleted";
+    }
+
+  if (notificationId) {
+      await Notification.findByIdAndDelete(notificationId);
+      return "Notification deleted";
+    }
+}

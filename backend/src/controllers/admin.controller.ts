@@ -280,14 +280,12 @@ export const createUserController = async (req: Request, res: Response) => {
       ...userData
     } = req.body;
 
-    // Validate required fields
     if (!userData.email || !userData.username) {
       return res.status(400).json({
         error: "Email and username are required",
       });
     }
 
-    // Check for existing user
     const existingUser = await User.findOne({
       $or: [{ email: userData.email }, { username: userData.username }],
     });
@@ -298,7 +296,6 @@ export const createUserController = async (req: Request, res: Response) => {
       });
     }
 
-    // Handle relationship type and IDs
     if (relationshipType === "Employee") {
       if (!employeeId) {
         return res.status(400).json({
@@ -307,7 +304,6 @@ export const createUserController = async (req: Request, res: Response) => {
       }
       userData.employeeId = employeeId;
 
-      // Check if employee ID already exists
       const existingEmployee = await User.findOne({ employeeId });
       if (existingEmployee) {
         return res.status(409).json({
@@ -322,7 +318,6 @@ export const createUserController = async (req: Request, res: Response) => {
       }
       userData.associatedEmployeeId = associatedEmployeeId;
 
-      // Verify associated employee exists
       const associatedEmployee = await User.findOne({
         $or: [
           { employeeId: associatedEmployeeId },
@@ -338,7 +333,6 @@ export const createUserController = async (req: Request, res: Response) => {
 
     userData.relationshipType = relationshipType;
 
-    // Handle roles
     let permissionsFromRoles: any[] = [];
     if (assignedRoles && assignedRoles.length > 0) {
       const roleDocs = await Role.find({ _id: { $in: assignedRoles } });
@@ -353,7 +347,6 @@ export const createUserController = async (req: Request, res: Response) => {
       permissionsFromRoles = roleDocs.flatMap((role) => role.permissions || []);
     }
 
-    // Handle additional permissions
     let additionalPermissionIds: any[] = [];
     if (permissions && permissions.length > 0) {
       const permissionDocs = await Permission.find({
@@ -372,24 +365,23 @@ export const createUserController = async (req: Request, res: Response) => {
       additionalPermissionIds = permissionDocs.map((p) => p._id);
     }
 
-    // Combine permissions from roles and additional permissions
     const allPermissions = [
       ...new Set([...permissionsFromRoles, ...additionalPermissionIds]),
     ];
     userData.permissions = allPermissions;
 
-    // Set default status if not provided
     if (!userData.status) {
       userData.status = "Inactive";
     }
 
-    // Create the user
+    // Set the flag to force a password change on first login
+    userData.passwordResetRequired = true;
+    
     const user = await User.create(userData);
 
-    // Populate the created user for response
     const populatedUser = await User.findById(user._id)
       .populate("roles")
-      .populate("permissions");
+      .populate("permissions"); 
 
     // Send welcome email
     try {
@@ -416,7 +408,6 @@ export const createUserController = async (req: Request, res: Response) => {
       console.log("Welcome email sent successfully to:", userData.email);
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
-      // Don't fail the request if email fails
     }
 
     res.status(201).json({
@@ -426,7 +417,6 @@ export const createUserController = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error creating user:", error);
 
-    // Handle duplicate key errors
     if (error.code === 11000) {
       const field = Object.keys(error.keyValue)[0];
       return res.status(409).json({
@@ -434,7 +424,6 @@ export const createUserController = async (req: Request, res: Response) => {
       });
     }
 
-    // Handle validation errors
     if (error.name === "ValidationError") {
       const errors = Object.values(error.errors).map((err: any) => err.message);
       return res.status(400).json({

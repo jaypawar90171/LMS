@@ -2,6 +2,7 @@ import { Router } from "express";
 import {
   createIssueRequestController,
   dashboardSummaryController,
+  deleteNotificationController,
   deleteRequestedItemController,
   expressDonationInterestController,
   extendIssuedItemController,
@@ -19,6 +20,8 @@ import {
   getQueuedItemsController,
   getQueueItemController,
   getRequestedItemsController,
+  getUserNotificationController,
+  markAsReadController,
   registerUserController,
   requestItemController,
   requestNewItemController,
@@ -37,6 +40,7 @@ import { verifyResetPasswordController } from "../controllers/user.controller";
 import { logoutController } from "../controllers/user.controller";
 import { authUser } from "../middleware/auth.middleware";
 import { upload } from "../config/upload";
+import { markAllAsReadController } from "../controllers/admin.controller";
 
 const router = Router();
 
@@ -122,5 +126,12 @@ router.post(
 );
 
 router.post("/upload/image", authUser, upload.single("image"), uploadPhotoController);
+
+/* ========================= NOTIFICATION ========================= */
+router.get("/notifications", authUser, getUserNotificationController);
+
+router.patch("/notifications/mark-as-read", authUser, markAsReadController);
+
+router.delete("/notifications", authUser, deleteNotificationController);
 
 export default router;

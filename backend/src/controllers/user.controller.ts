@@ -19,6 +19,8 @@ import {
   getQueuedItemsService,
   getQueueItemByIdService,
   getRequestedItemsSerice,
+  getUserNotificationService,
+  markAsReadService,
   registerUserService,
   requestItemService,
   requestNewItemService,
@@ -565,11 +567,13 @@ export const getNewRequestedItemController = async (
   }
 };
 
-export const getNewSpecificRequestedItemController = async(req: Request, res: Response) => {
+export const getNewSpecificRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { itemId } = req.params;
-    if(!itemId)
-    {
+    if (!itemId) {
       return res.status(401).json({
         success: false,
         message: "Item not found.",
@@ -577,7 +581,7 @@ export const getNewSpecificRequestedItemController = async(req: Request, res: Re
     }
 
     const newRequest = await getNewSpecificRequestedItemService(itemId);
-     return res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Successfully retrieved your item request",
       data: newRequest,
@@ -590,9 +594,12 @@ export const getNewSpecificRequestedItemController = async(req: Request, res: Re
       error: error.message,
     });
   }
-}
+};
 
-export const deleteRequestedItemController  = async(req: Request, res: Response) => {
+export const deleteRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { itemId } = req.params;
     const userId = (req as any).user?.id;
@@ -611,25 +618,26 @@ export const deleteRequestedItemController  = async(req: Request, res: Response)
       message: result.message,
       data: result,
     });
-
   } catch (error: any) {
-     console.error("Delete requested item error:", error);
-    
-    if (error.message.includes('not found') || 
-        error.message.includes('Not authorized') ||
-        error.message.includes('Only pending requests')) {
+    console.error("Delete requested item error:", error);
+
+    if (
+      error.message.includes("not found") ||
+      error.message.includes("Not authorized") ||
+      error.message.includes("Only pending requests")
+    ) {
       return res.status(400).json({
         success: false,
         message: error.message,
       });
     }
-    
+
     res.status(500).json({
       success: false,
       message: error.message || "Failed to delete requested item",
     });
   }
-}
+};
 
 export const getNewArrivalsController = async (req: Request, res: Response) => {
   try {
@@ -877,7 +885,7 @@ export const expressDonationInterestController = async (
       return res.status(400).json({ message: "userId not found" });
     }
 
-     console.log("Donation request body:", req.body); 
+    console.log("Donation request body:", req.body);
     console.log("User ID:", userId);
 
     const donation = await expressDonationInterestService(userId, req.body);
@@ -897,7 +905,7 @@ export const expressDonationInterestController = async (
   }
 };
 
-export const uploadPhotoController = async(req: Request, res: Response) => {
+export const uploadPhotoController = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -930,4 +938,90 @@ export const uploadPhotoController = async(req: Request, res: Response) => {
       message: error.message || "Internal server error during upload",
     });
   }
-}
+};
+
+export const getUserNotificationController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const notifications = await getUserNotificationService(userId);
+    return res.status(200).json({
+      success: true,
+      message: "notifications fetched successfully",
+      data: {
+        notifications: notifications,
+      },
+    });
+  } catch (error: any) {
+    console.error("Notification fetch error:", error);
+    res.status(500).json({
+      success: false,
+      message:
+        error.message || "Internal server error during notification fetching",
+    });
+  }
+};
+
+export const markAsReadController = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user.id;
+    const { notificationId, markAll } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const message = await markAsReadService(userId, notificationId, markAll);
+    return res.status(200).json({
+      success: true,
+      message: "mark notification as read",
+      data: {
+        message: message,
+      },
+    });
+  } catch (error: any) {
+    console.error("mark as read error:", error);
+    res.status(500).json({
+      success: false,
+      message:
+        error.message ||
+        "Internal server error during notification mark-as-read",
+    });
+  }
+};
+
+export const deleteNotificationController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const userId = req.user.id;
+    const { notificationId, deleteAll } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const message = await markAsReadService(userId, notificationId, deleteAll);
+    return res.status(200).json({
+      success: true,
+      message: "notification deleted successfully",
+      data: {
+        message: message,
+      },
+    });
+  } catch (error: any) {
+    console.error("notification delete error:", error);
+    res.status(500).json({
+      success: false,
+      message:
+        error.message || "Internal server error during notification delete",
+    });
+  }
+};
