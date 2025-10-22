@@ -376,12 +376,12 @@ export const createUserController = async (req: Request, res: Response) => {
 
     // Set the flag to force a password change on first login
     userData.passwordResetRequired = true;
-    
+
     const user = await User.create(userData);
 
     const populatedUser = await User.findById(user._id)
       .populate("roles")
-      .populate("permissions"); 
+      .populate("permissions");
 
     // Send welcome email
     try {
@@ -525,6 +525,10 @@ export const updateUserController = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
+    if (!userId) {
+      return res.status(400).json({ message: "User does not exists" });
+    }
+
     if (!Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
     }
@@ -535,37 +539,33 @@ export const updateUserController = async (req: Request, res: Response) => {
       relationshipType,
       employeeId,
       associatedEmployeeId,
-      password, // Remove password from update data
+      password,
       ...updateData
     } = req.body;
 
-    console.log("🔄 Update request received for user:", userId);
-    console.log("📦 Update data:", updateData);
-    console.log("🎯 Roles:", assignedRoles);
-    console.log("🔑 Permissions:", permissions);
+    console.log("Update request received for user:", userId);
+    console.log("Update data:", updateData);
+    console.log("Roles:", assignedRoles);
+    console.log("Permissions:", permissions);
 
-    // Check if user exists
     const existingUser = await User.findById(userId);
     if (!existingUser) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Handle relationship type and IDs
     if (relationshipType === "Employee") {
       updateData.employeeId = employeeId;
-      updateData.associatedEmployeeId = undefined; // Clear family member field
+      updateData.associatedEmployeeId = undefined;
     } else if (relationshipType === "Family Member") {
       updateData.associatedEmployeeId = associatedEmployeeId;
-      updateData.employeeId = undefined; // Clear employee field
+      updateData.employeeId = undefined;
     }
 
     if (relationshipType) {
       updateData.relationshipType = relationshipType;
     }
 
-    // Handle roles FIRST - this is likely causing the hang
     if (assignedRoles && Array.isArray(assignedRoles)) {
-      // Validate that all role IDs exist
       const validRoles = await Role.find({ _id: { $in: assignedRoles } });
       if (validRoles.length !== assignedRoles.length) {
         return res.status(400).json({
@@ -575,7 +575,6 @@ export const updateUserController = async (req: Request, res: Response) => {
       updateData.roles = assignedRoles;
     }
 
-    // Handle permissions - SIMPLIFIED to avoid circular references
     if (permissions && Array.isArray(permissions)) {
       const permissionDocs = await Permission.find({
         permissionKey: { $in: permissions },
@@ -583,7 +582,6 @@ export const updateUserController = async (req: Request, res: Response) => {
 
       const permissionIds = permissionDocs.map((p) => p._id);
 
-      // Get permissions from the assigned roles
       let permissionsFromRoles: any[] = [];
       if (updateData.roles && updateData.roles.length > 0) {
         const roleDocs = await Role.find({ _id: { $in: updateData.roles } });
@@ -592,43 +590,40 @@ export const updateUserController = async (req: Request, res: Response) => {
         );
       }
 
-      // Combine role permissions and additional permissions
       const allPermissionIds = [...permissionsFromRoles, ...permissionIds];
       updateData.permissions = [
         ...new Set(allPermissionIds.map((id) => id.toString())),
       ];
     }
 
-    console.log("✅ Final update data:", updateData);
+    console.log("Final update data:", updateData);
 
-    // Use lean() to avoid mongoose document issues and simplify the query
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
       {
         new: true,
         runValidators: true,
-        lean: true, // Add this to return plain JavaScript object
+        lean: true,
       }
     )
-      .populate("roles", "roleName description") // Only populate specific fields
-      .populate("permissions", "permissionKey description") // Only populate specific fields
-      .exec(); // Explicitly execute the query
+      .populate("roles", "roleName description")
+      .populate("permissions", "permissionKey description")
+      .exec();
 
     if (!updatedUser) {
       return res.status(404).json({ error: "User not found after update" });
     }
 
-    console.log("✅ User updated successfully:", updatedUser._id);
+    console.log("User updated successfully:", updatedUser._id);
 
     res.status(200).json({
       message: "User updated successfully",
       user: updatedUser,
     });
   } catch (error: any) {
-    console.error("❌ Error in updating user:", error);
+    console.error("Error in updating user:", error);
 
-    // More specific error handling
     if (error.name === "ValidationError") {
       return res.status(400).json({
         error: "Validation failed",
@@ -923,42 +918,62 @@ export const updateItemController = async (req: Request, res: Response) => {
   try {
     const { itemId } = req.params;
 
+    if (!itemId) {
+      return res.status(400).json({ error: "Item not found" });
+    }
+
     if (!Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ error: "Invalid itemId" });
     }
 
-    // Process the data before validation
     const processedData = { ...req.body };
 
-    // Handle empty subcategoryId
-    if (processedData.subcategoryId === "" || processedData.subcategoryId === "no-subcategory") {
+    if (
+      processedData.subcategoryId === "" ||
+      processedData.subcategoryId === "no-subcategory"
+    ) {
       delete processedData.subcategoryId;
     }
 
-    // Process features field if it's a string
-    if (typeof processedData.features === 'string') {
+    if (typeof processedData.features === "string") {
       try {
         processedData.features = JSON.parse(processedData.features);
       } catch (e) {
-        // If it's comma-separated, convert to array
-        processedData.features = processedData.features.split(',').map((f: string) => f.trim()).filter(Boolean);
+        processedData.features = processedData.features
+          .split(",")
+          .map((f: string) => f.trim())
+          .filter(Boolean);
       }
     }
 
-    // Convert empty strings to undefined for optional fields
-    const optionalFields = ['authorOrCreator', 'description', 'publisherOrManufacturer', 'color', 'dimensions', 'usageType', 'powerSource', 'usage', 'warrantyPeriod'];
-    optionalFields.forEach(field => {
-      if (processedData[field] === '') {
+    const optionalFields = [
+      "authorOrCreator",
+      "description",
+      "publisherOrManufacturer",
+      "color",
+      "dimensions",
+      "usageType",
+      "powerSource",
+      "usage",
+      "warrantyPeriod",
+    ];
+    optionalFields.forEach((field) => {
+      if (processedData[field] === "") {
         processedData[field] = undefined;
       }
     });
 
-    // Convert string numbers to actual numbers
-    const numericFields = ['publicationYear', 'price', 'quantity', 'availableCopies', 'defaultReturnPeriod'];
-    numericFields.forEach(field => {
-      if (processedData[field] !== undefined && processedData[field] !== '') {
+    const numericFields = [
+      "publicationYear",
+      "price",
+      "quantity",
+      "availableCopies",
+      "defaultReturnPeriod",
+    ];
+    numericFields.forEach((field) => {
+      if (processedData[field] !== undefined && processedData[field] !== "") {
         processedData[field] = Number(processedData[field]);
-      } else if (processedData[field] === '') {
+      } else if (processedData[field] === "") {
         processedData[field] = undefined;
       }
     });
@@ -973,7 +988,7 @@ export const updateItemController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error in updateItemController:", error);
-    
+
     if (error.name === "ZodError") {
       return res.status(400).json({
         message: "Validation error",
@@ -1012,6 +1027,10 @@ export const deleteItemController = async (req: Request, res: Response) => {
 
     if (!Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    if (!itemId) {
+      return res.status(400).json({ error: "Item not found" });
     }
 
     const deletedItem = await deleteItemService(itemId);
@@ -1076,11 +1095,6 @@ export const getPendingIssueRequestsController = async (
   res: Response
 ) => {
   try {
-    const accessToken = req.headers.authorization?.split(" ")[1];
-    if (!accessToken) {
-      return res.status(401).json({ message: "No access token provided" });
-    }
-
     const requests = await IssueRequest.find({ status: "pending" })
       .populate("userId", "fullName email employeeId")
       .populate("itemId", "title authorOrCreator availableCopies categoryId")
@@ -1537,6 +1551,10 @@ export const getAllFinesController = async (req: Request, res: Response) => {
 export const fetchUserFinesController = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
+    if (!userId) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
     if (!Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
     }
@@ -1544,14 +1562,18 @@ export const fetchUserFinesController = async (req: Request, res: Response) => {
     const fines = await fetchUserFinesService(userId);
     return res.status(200).json({ fines: fines });
   } catch (error: any) {
+    if (error.statusCode === 404) {
+      return res.status(404).json({ error: error.message });
+    }
     return res.status(500).json({
-      message: error.message || "Internal Server Error",
+      error: error.message || "Internal Server Error",
     });
   }
 };
 
 export const createFinesController = async (req: Request, res: Response) => {
   try {
+    const adminId = req.user.id;
     const validatedData = FineSchema.parse(req.body);
     const {
       userId,
@@ -1559,8 +1581,7 @@ export const createFinesController = async (req: Request, res: Response) => {
       reason,
       amountIncurred,
       amountPaid,
-      paymentDetails,
-      managedByAdminId,
+      paymentDetails = [],
     } = validatedData;
 
     if (!Types.ObjectId.isValid(userId)) {
@@ -1578,7 +1599,7 @@ export const createFinesController = async (req: Request, res: Response) => {
       amountIncurred,
       amountPaid,
       paymentDetails,
-      managedByAdminId,
+      managedByAdminId: adminId,
     });
 
     return res.status(201).json({
@@ -1588,13 +1609,13 @@ export const createFinesController = async (req: Request, res: Response) => {
   } catch (error: any) {
     if (error.name === "ZodError") {
       return res.status(400).json({
-        message: "Validation error",
+        error: "Validation error",
         errors: error.errors,
       });
     }
 
     return res.status(500).json({
-      message: error.message || "Internal Server Error",
+      error: error.message || "Internal Server Error",
     });
   }
 };
@@ -2185,10 +2206,13 @@ export const downloadBarcodeController = async (
     await generateBarcodePDF(itemId, res);
   } catch (error: any) {
     console.log("Error in barcode generation");
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      error: error.message || "Internal server error.",
-    });
+
+    if (!res.headersSent) {
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({
+        error: error.message || "Internal server error.",
+      });
+    }
   }
 };
 
@@ -2394,10 +2418,13 @@ export const fetchAllPermissionsController = async (
       message: "Permissions fetched successfully",
       data: permissions,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.log("Error in fetching permissions");
-    return res.status(500).json({
-      message: "Internal server error",
+
+    const statusCode = error.statusCode || 500;
+    const message = error.message || "Internal server error";
+    return res.status(statusCode).json({
+      error: message,
     });
   }
 };

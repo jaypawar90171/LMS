@@ -40,7 +40,10 @@ import {
   DefaulterFilters,
   DefaulterItem,
 } from "../interfaces/defaulter.interface";
-import { UserReportFilters, UserReportItem } from "../interfaces/userReport.interface";
+import {
+  UserReportFilters,
+  UserReportItem,
+} from "../interfaces/userReport.interface";
 
 interface loginDTO {
   email: string;
@@ -231,7 +234,9 @@ export const resetPasswordService = async (data: any) => {
       }
     );
     return verify;
-  } catch (error) {}
+  } catch (error) {
+    return "not verified";
+  }
 };
 
 export const updateUserStatusService = async (userId: any, status: string) => {
@@ -254,8 +259,7 @@ export const updateUserStatusService = async (userId: any, status: string) => {
   }
 
   if (status === "Inactive") {
-    // 1. Check issued inventory (Books, Courses, Toys) not returned
-    const issuedItems = await InventoryItem.findOne({
+    const issuedItems = await IssuedItem.findOne({
       userId: targetUser._id,
       status: "Issued",
     });
@@ -268,7 +272,6 @@ export const updateUserStatusService = async (userId: any, status: string) => {
       throw err;
     }
 
-    // 2. Check unpaid fines
     const unpaidFine = await Fine.findOne({
       userId: targetUser._id,
       status: "Outstanding",
@@ -580,6 +583,16 @@ export const updateRoleService = async ({
 };
 
 export const deleteRoleService = async (roleId: string) => {
+  const assignedUserCount = await User.countDocuments({ roles: roleId });
+
+  if (assignedUserCount > 0) {
+    const err: any = new Error(
+      `Cannot delete this role. It is currently assigned to ${assignedUserCount} user(s).`
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
   const deletedRole = await Role.findByIdAndDelete(roleId);
 
   if (!deletedRole) {
@@ -686,7 +699,9 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
 
   // Remove undefined values to avoid overwriting with undefined
   const cleanData = Object.fromEntries(
-    Object.entries(validatedData).filter(([_, value]) => value !== undefined && value !== null)
+    Object.entries(validatedData).filter(
+      ([_, value]) => value !== undefined && value !== null
+    )
   );
 
   // Handle Decimal128 conversion for price - with null check
@@ -702,19 +717,20 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
         new: true,
         runValidators: true,
       }
-    ).populate("categoryId", "name")
-     .populate("subcategoryId", "name");
+    )
+      .populate("categoryId", "name")
+      .populate("subcategoryId", "name");
 
     return updatedData;
   } catch (error: any) {
     console.error("Error in updateItemService:", error);
-    
+
     if (error.name === "CastError") {
       const err: any = new Error(`Invalid data format: ${error.message}`);
       err.statusCode = 400;
       throw err;
     }
-    
+
     throw error;
   }
 };
@@ -943,7 +959,7 @@ export const getAllFinesService = async () => {
 
 export const fetchUserFinesService = async (userId: any) => {
   const isUserExists = await User.findById(userId);
-  if (!userId) {
+  if (!isUserExists) {
     const err: any = new Error("No user found");
     err.statusCode = 404;
     throw err;
@@ -982,11 +998,20 @@ export const createFineService = async (data: any) => {
     managedByAdminId,
     dateSettled: outstandingAmount === 0 ? new Date() : null,
   });
-  const user = await User.findById(data.userId).lean();
-  if (user && user.phoneNumber) {
-    const message = `Hi ${user.fullName}, a new fine of $${data.amountIncurred} for "${data.reason}" has been added to your account.`;
-    sendWhatsAppMessage(user.phoneNumber, message);
+
+  try {
+    const user = await User.findById(data.userId).lean();
+    if (user && user.phoneNumber) {
+      const message = `Hi ${user.fullName}, a new fine of $${data.amountIncurred} for "${data.reason}" has been added to your account.`;
+      await sendWhatsAppMessage(user.phoneNumber, message);
+    }
+  } catch (notificationError: any) {
+    console.error(
+      "Failed to send WhatsApp notification:",
+      notificationError.message
+    );
   }
+
   return fine;
 };
 
@@ -998,9 +1023,13 @@ export const updateFineService = async ({ fineId, data }: any) => {
     throw err;
   }
 
-  if (data.amountPaid !== undefined) {
-    const newOutstanding =
-      (data.amountIncurred ?? isFineExists.amountIncurred) - data.amountPaid;
+  // Recalculate outstanding amount and status if either amountIncurred or amountPaid changes
+  if (data.amountIncurred !== undefined || data.amountPaid !== undefined) {
+    const newAmountIncurred =
+      data.amountIncurred ?? isFineExists.amountIncurred;
+    const newAmountPaid = data.amountPaid ?? isFineExists.amountPaid;
+
+    const newOutstanding = newAmountIncurred - newAmountPaid;
 
     data.outstandingAmount = newOutstanding;
     data.status = newOutstanding > 0 ? "Outstanding" : "Paid";
@@ -1039,6 +1068,7 @@ export const recordPaymentService = async (data: any) => {
     managedByAdminId,
   } = data;
 
+  console.log("amount paid", amountPaid);
   const fine = await Fine.findById(fineId);
   if (!fine) {
     const err: any = new Error("Fine not found");
@@ -1080,8 +1110,6 @@ export const recordPaymentService = async (data: any) => {
     sendWhatsAppMessage(user.phoneNumber, message);
   }
 
-  //send email
-
   return updatedFine;
 };
 
@@ -1109,18 +1137,21 @@ export const waiveFineService = async (data: any) => {
     { new: true, runValidators: true }
   );
 
-  // Send notification to user
   const user = await User.findById(fine.userId).lean();
   if (user && user.phoneNumber) {
-    const message = `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} has been waived. Reason: ${waiverReason}`;
-    sendWhatsAppMessage(user.phoneNumber, message);
+    try {
+      const message = `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} has been waived. Reason: ${waiverReason}`;
+      await sendWhatsAppMessage(user.phoneNumber, message);
+      console.log("WhatsApp notification sent successfully");
+    } catch (error) {
+      console.error("Failed to send WhatsApp notification:", error);
+    }
   }
 
   return updatedFine;
 };
 
 export const generateInventoryReportPDF = async (res: Response) => {
-  // Fetch inventory items with populated category
   const items = (await InventoryItem.find()
     .populate<{ categoryId: Icategory }>("categoryId")
     .lean()
@@ -2093,7 +2124,7 @@ export const generateBarcodePDF = async (itemId: string, res: Response) => {
   try {
     const isItemExisting = await InventoryItem.findById(itemId);
     if (!isItemExisting) {
-      const err: any = new Error("no admin found with this amdinId");
+      const err: any = new Error("Item not found");
       err.statusCode = 404;
       throw err;
     }
@@ -2595,6 +2626,7 @@ export const removeUserFromQueueService = async (
 
 export const fetchAllPermissionsService = async () => {
   const permissions = await Permission.find({}).lean();
+
   if (!permissions.length) {
     const err: any = new Error("No permissions found.");
     err.statusCode = 404;
@@ -2621,7 +2653,7 @@ export const getDefaulterReport = async (
       query.dueDate.$lt = overdueSinceDate;
     }
 
-    console.log("Query:", query); 
+    console.log("Query:", query);
 
     const issuedItems = await IssuedItem.find(query)
       .populate("userId", "fullName email employeeId phoneNumber roles")
@@ -2629,7 +2661,7 @@ export const getDefaulterReport = async (
       .populate("issuedBy", "fullName")
       .sort({ dueDate: 1 });
 
-    console.log("Found issued items:", issuedItems.length); 
+    console.log("Found issued items:", issuedItems.length);
 
     // Get additional user and category data
     const defaultersPromises = issuedItems.map(async (item) => {
@@ -2836,17 +2868,14 @@ export const getAllUsersReport = async (
   try {
     const today = new Date();
 
-    // Build base query for users
     let userQuery: any = {};
 
-    // Apply status filter - convert to match User model enum values
     if (filters.status) {
       if (filters.status === "active") {
         userQuery.status = "Active";
       } else if (filters.status === "inactive") {
         userQuery.status = "Inactive";
       }
-      // Note: "Locked" status is also available but not included in frontend filters
     }
 
     // Apply role filter
@@ -2862,12 +2891,10 @@ export const getAllUsersReport = async (
 
     console.log("Found users:", users.length);
 
-    // Get report data for each user
     const usersReportPromises = users.map(async (user) => {
       try {
-        // Get user's issued items
         const issuedItems = await IssuedItem.find({
-          userId: user._id, // This should work since user._id is string in IUser interface
+          userId: user._id,
           status: "Issued",
         })
           .populate("itemId")
@@ -2875,11 +2902,11 @@ export const getAllUsersReport = async (
 
         // Calculate statistics
         const totalItemsIssued = issuedItems.length;
-        
-        const overdueItems = issuedItems.filter(item => 
-          new Date(item.dueDate) < today
+
+        const overdueItems = issuedItems.filter(
+          (item) => new Date(item.dueDate) < today
         );
-        
+
         const itemsOverdue = overdueItems.length;
         const totalOverdueItems = overdueItems.length;
 
@@ -2896,31 +2923,30 @@ export const getAllUsersReport = async (
           avgDaysOverdue = Math.round(totalDaysOverdue / overdueItems.length);
         }
 
-        // Get last issued date
-        const lastIssuedDate = issuedItems.length > 0 
-          ? issuedItems[0].issuedDate 
-          : undefined;
+        const lastIssuedDate =
+          issuedItems.length > 0 ? issuedItems[0].issuedDate : undefined;
 
-        // Get role names - handle populated roles
         let roleNames = "";
         if (user.roles && user.roles.length > 0) {
-          // Check if roles are populated (have roleName property) or just ObjectIds
-          if (typeof user.roles[0] === 'object' && 'roleName' in user.roles[0]) {
-            roleNames = (user.roles as any[]).map((role: any) => role.roleName).join(", ");
+          if (
+            typeof user.roles[0] === "object" &&
+            "roleName" in user.roles[0]
+          ) {
+            roleNames = (user.roles as any[])
+              .map((role: any) => role.roleName)
+              .join(", ");
           } else {
-            // If roles are not populated, fetch them
             const roleDocs = await Role.find({ _id: { $in: user.roles } });
-            roleNames = roleDocs.map(role => role.roleName).join(", ");
+            roleNames = roleDocs.map((role) => role.roleName).join(", ");
           }
         }
 
-        // Convert User model status to frontend status
         const frontendStatus = user.status === "Active" ? "active" : "inactive";
 
-        // Handle createdAt - use current date if undefined
-        const joinDate = user.createdAt ? user.createdAt.toISOString().split("T")[0] : new Date().toISOString().split("T")[0];
+        const joinDate = user.createdAt
+          ? user.createdAt.toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0];
 
-        // Apply overdue filter
         if (filters.hasOverdue === "true" && itemsOverdue === 0) {
           return null;
         }
@@ -2929,7 +2955,7 @@ export const getAllUsersReport = async (
         }
 
         return {
-          userId: user._id.toString(), // _id is string in IUser interface
+          userId: user._id.toString(),
           userName: user.fullName,
           userEmail: user.email,
           employeeId: user.employeeId,
@@ -2955,7 +2981,7 @@ export const getAllUsersReport = async (
     const result = usersReport.filter(
       (item) => item !== null
     ) as UserReportItem[];
-    
+
     console.log("Final users report count:", result.length);
     return result;
   } catch (error: any) {
@@ -2968,7 +2994,6 @@ export const exportAllUsersReport = async (filters: UserReportFilters) => {
   try {
     const usersReport = await getAllUsersReport(filters);
 
-    // CSV headers
     const headers = [
       "User Name",
       "Employee ID",
@@ -2990,9 +3015,7 @@ export const exportAllUsersReport = async (filters: UserReportFilters) => {
       `"${user.employeeId || "-"}"`,
       `"${user.userEmail}"`,
       `"${
-        user.phoneNumber
-          ? user.phoneNumber.slice(-4).padStart(10, "*")
-          : "-"
+        user.phoneNumber ? user.phoneNumber.slice(-4).padStart(10, "*") : "-"
       }"`,
       `"${user.roleName}"`,
       `"${user.totalItemsIssued}"`,

@@ -12,6 +12,7 @@ import {
   getHistoryController,
   getIssuedItemsController,
   getItemController,
+  getMyDonationsController,
   getMyIssueRequestsController,
   getNewArrivalsController,
   getNewRequestedItemController,
@@ -58,7 +59,7 @@ router.post("/auth/reset-password/:id/:token", resetPasswordController);
 router.get("/logout", logoutController);
 
 /* ========================= DASHBOARD ========================= */
-router.get("/dashboard/:userId", dashboardSummaryController);
+router.get("/dashboard/:userId", authUser, dashboardSummaryController);
 
 /* ========================= INVENTORY ========================= */
 router.get("/items/issued", authUser, getIssuedItemsController);
@@ -119,11 +120,9 @@ router.put(
 );
 
 /* ========================= DONATION ========================= */
-router.post(
-  "/items/donations/express-interest",
-  authUser,
-  expressDonationInterestController
-);
+router.post("/items/donations/express-interest", authUser, expressDonationInterestController);
+
+router.get("/items/donations/my-donations", authUser, getMyDonationsController);
 
 router.post("/upload/image", authUser, upload.single("image"), uploadPhotoController);
 

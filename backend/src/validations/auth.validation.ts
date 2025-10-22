@@ -152,7 +152,7 @@ export const CategoryUpdateSchema = CategorySchema.partial();
 export const FineSchema = z.object({
   userId: z.string().min(1, "userId is required"),
   itemId: z.string().min(1, "itemId is required"),
-  reason: z.enum(["Overdue", "Damaged"], {
+  reason: z.enum(["Overdue", "Damaged", "Lost item"], {
     message: "reason must be either 'Overdue' or 'Damaged'",
   }),
   amountIncurred: z.number().positive("amountIncurred must be greater than 0"),
@@ -166,15 +166,18 @@ export const FineSchema = z.object({
     .min(0, "outstandingAmount cannot be negative")
     .optional(),
   paymentDetails: z
-    .object({
-      paymentMethod: z.enum(["Cash", "Card"]).optional(),
-      transactionId: z.string().trim().optional(),
-    })
-    .optional(),
+    .array(
+      z.object({
+        paymentMethod: z.enum(["Cash", "Card", "Online Transfer"]),
+        transactionId: z.string().trim().optional(),
+        notes: z.string().trim().optional(),
+      })
+    )
+    .optional()
+    .default([]),
   dateIncurred: z.date().optional(),
   dateSettled: z.date().nullable().optional(),
   status: z.enum(["Outstanding", "Paid"]).optional(),
-  managedByAdminId: z.string().min(1, "managedByAdminId is required"),
 });
 
 export const FineUpdateSchema = FineSchema.partial();
@@ -207,7 +210,7 @@ export const itemRequestSchema = z.object({
   userId: z.string().min(1, "User ID is required"),
   title: z.string().min(1, "Title is required").trim(),
   authorOrCreator: z.string().trim().optional(),
-  itemType: z.string().min(1, "Item type (Category ID) is required"), 
+  itemType: z.string().min(1, "Item type (Category ID) is required"),
   reasonForRequest: z.string().min(1, "Reason is required").trim(),
   status: z.enum(["Pending", "Approved", "Rejected"]).default("Pending"),
   createdAt: z.date().optional(),

@@ -1,7 +1,7 @@
 // fine.model.ts
 
 import mongoose, { Schema } from "mongoose";
-import { IFine } from "../interfaces/fine.interface"; // Make sure the path to your interface is correct
+import { IFine } from "../interfaces/fine.interface";
 
 const fineSchema = new Schema<IFine>(
   {
@@ -17,7 +17,7 @@ const fineSchema = new Schema<IFine>(
     },
     reason: {
       type: String,
-      enum: ["Overdue", "Damaged"],
+      enum: ["Overdue", "Damaged", "Lost item"],
       required: true,
     },
     amountIncurred: {
@@ -26,7 +26,7 @@ const fineSchema = new Schema<IFine>(
     },
     amountPaid: {
       type: Number,
-      default: 0, // This is the cumulative amount paid
+      default: 0,
     },
     outstandingAmount: {
       type: Number,
@@ -34,6 +34,10 @@ const fineSchema = new Schema<IFine>(
     },
     paymentDetails: [
       {
+        amountPaid: {
+          type: Number,
+          required: true,
+        },
         paymentMethod: {
           type: String,
           enum: ["Cash", "Card", "Online Transfer"],
@@ -69,6 +73,10 @@ const fineSchema = new Schema<IFine>(
       type: String,
       enum: ["Outstanding", "Paid", "Waived"],
       default: "Outstanding",
+    },
+    waiverReason: {
+      type: String,
+      required: false,
     },
   },
   { timestamps: true }

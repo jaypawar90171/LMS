@@ -12,7 +12,7 @@ export interface IPaymentDetail {
 export interface IFine extends Document {
   userId: Types.ObjectId;
   itemId: Types.ObjectId;
-  reason: "Overdue" | "Damaged" | string;
+  reason: "Overdue" | "Damaged" | string | "Lost Item";
   amountIncurred: number;
   amountPaid: number;
   outstandingAmount: number;
@@ -23,4 +23,5 @@ export interface IFine extends Document {
   dateSettled?: Date | null;
   status: "Outstanding" | "Paid" | "Waived";
   managedByAdminId?: Types.ObjectId;
+  waiverReason?: string;
 }

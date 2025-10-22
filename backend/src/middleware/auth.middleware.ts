@@ -18,7 +18,7 @@ export const authUser = (req: Request, res: Response, next: NextFunction) => {
       : authHeader;
 
   if (!token) {
-    res.status(400).send({ err: "Token in not present in the request" });
+    res.status(401).send({ err: "Token in not present in the request" });
     return;
   }
 

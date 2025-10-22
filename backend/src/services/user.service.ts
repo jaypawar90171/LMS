@@ -43,7 +43,6 @@ export const registerUserService = async (data: RegisterDTO) => {
   const { fullName, email, userName, password, role, emp_id, ass_emp_id } =
     data;
 
-  // Check if email/username already exists
   const existingUser = await User.findOne({
     $or: [{ email }, { username: userName }],
   });
@@ -129,19 +128,30 @@ export const loginUserService = async (data: loginDTO) => {
     throw err;
   }
 
-  // if (user.passwordResetRequired) {
-  //   const tempToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY!, {
-  //     expiresIn: "30m",
-  //   });
-  //   return {
-  //     passwordChangeRequired: true,
-  //     message: "Login successful, but you must change your password.",
-  //     token: tempToken,
-  //   };
-  // }
-
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false }); // Skip validation to avoid hashing password again
+
+  const userResponse = {
+    id: user._id,
+    email: user.email,
+    username: user.username,
+    roles: user.roles,
+    fullName: user.fullName,
+    status: user.status,
+    lastLogin: user.lastLogin,
+  };
+
+  if (user.passwordResetRequired) {
+    const tempToken = jwt.sign({ id: user._id }, process.env.SECRET_KEY!, {
+      expiresIn: "30m",
+    });
+    return {
+      passwordChangeRequired: true,
+      message: "Login successful, but you must change your password.",
+      token: tempToken,
+      user: userResponse,
+    };
+  }
 
   const payload = {
     id: user._id,
@@ -162,7 +172,7 @@ export const loginUserService = async (data: loginDTO) => {
   );
 
   return {
-    // passwordChangeRequired: false,
+    passwordChangeRequired: false,
     user: {
       id: user._id,
       email: user.email,
@@ -318,10 +328,8 @@ export const resetPasswordService = async (data: any) => {
 };
 
 export const dashboardSummaryService = async (userId: string) => {
-  // Get user info for personalization
   const user = await User.findById(userId).select("fullName roles");
 
-  // Get issued items with full item details and calculate overdue status
   const issuedItems = await IssuedItem.find({
     userId,
     status: "Issued",
@@ -909,6 +917,7 @@ export const getNewArrivalsService = async () => {
   const newArrivals = await InventoryItem.find({ status: "Available" })
     .sort({ createdAt: -1 })
     .limit(10)
+    .lean()
     .exec();
 
   return newArrivals || [];
@@ -1594,6 +1603,30 @@ export const expressDonationInterestService = async (
 
   return donation;
 };
+
+export const getMyDonationsService = async(userId: string) => {
+  try {
+    const donations = await Donation.find({ userId })
+    .populate("userId", "fullName email username")
+    .sort({ createdAt: -1 }) 
+    .exec();
+
+    return {
+      success: true,
+      data: donations,
+      count: donations.length,
+    };
+
+  } catch (error: any) {
+     console.error("Error in getMyDonationsService:", error);
+    throw {
+      success: false,
+      statusCode: 500,
+      message: "Failed to fetch donations",
+      error: error.message,
+    };
+  }
+}
 
 export const getUserNotificationService = async (userId: string) => {
   const notifications = await Notification.find({ recipientId: userId }).sort({

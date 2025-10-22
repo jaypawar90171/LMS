@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import {
   createIssueRequestService,
   dashboardSummaryService,
+  deleteNotificationService,
   deleteRequestedItemService,
   expressDonationInterestService,
   extendIssuedItemService,
@@ -11,6 +12,7 @@ import {
   getHistoryService,
   getIssueddItemsSerive,
   getItemService,
+  getMyDonationsService,
   getMyIssueRequestsService,
   getNewArrivalsService,
   getNewRequestedItemService,
@@ -44,6 +46,7 @@ import { Types } from "mongoose";
 import { success } from "zod";
 import InventoryItem from "../models/item.model";
 import { uploadFile } from "../config/upload";
+import fs from "fs";
 
 export const registerUserController = async (req: Request, res: Response) => {
   try {
@@ -58,6 +61,14 @@ export const registerUserController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Error during user registration:", error);
+
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.errors,
+      });
+    }
+
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error." });
@@ -68,15 +79,32 @@ export const loginUserController = async (req: Request, res: Response) => {
   try {
     const validatedData = loginSchema.parse(req.body);
 
-    const { user, token } = await loginUserService(validatedData);
+    const result = await loginUserService(validatedData);
+
+    if (result.passwordChangeRequired) {
+      return res.status(201).json({
+        message: result.message,
+        passwordChangeRequired: true,
+        user: result.user,
+        token: result.token,
+      });
+    }
 
     return res.status(201).json({
       message: "Login successful.",
-      user: user,
-      token: token,
+      user: result.user,
+      token: result.token,
+      passwordChangeRequired: false,
     });
   } catch (error: any) {
     console.error("Error during user login:", error);
+    if (error.name === "ZodError") {
+      return res.status(400).json({
+        error: "Validation failed",
+        details: error.errors,
+      });
+    }
+
     return res
       .status(error.statusCode || 500)
       .json({ error: error.message || "Internal server error." });
@@ -164,9 +192,23 @@ export const dashboardSummaryController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { userId } = req.params;
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (req.user.id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden. You can only access your own dashboard.",
+      });
     }
 
     const { issuedItems, queuedItems, newArrivals } =
@@ -186,6 +228,13 @@ export const dashboardSummaryController = async (
 
 export const getIssuedItemsController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
@@ -207,6 +256,13 @@ export const getIssuedItemsController = async (req: Request, res: Response) => {
 
 export const getCategoriesController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const categories = await getCategoriesService();
 
     return res.status(200).json({
@@ -229,6 +285,13 @@ export const getCategoryItemsController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { categoryId } = req.params;
     if (!Types.ObjectId.isValid(categoryId) || !categoryId) {
       return res.status(400).json({ error: "Invalid categoryId" });
@@ -250,6 +313,13 @@ export const getCategoryItemsController = async (
 
 export const getItemController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { itemId } = req.params;
     if (!Types.ObjectId.isValid(itemId) || !itemId) {
       return res.status(400).json({ error: "Invalid itemId" });
@@ -274,9 +344,23 @@ export const getRequestedItemsController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { userId } = req.params;
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
+    }
+
+    if (req.user.id !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Forbidden. You can only access your own requests.",
+      });
     }
 
     const requestedItems = await getRequestedItemsSerice(userId);
@@ -295,6 +379,13 @@ export const getRequestedItemsController = async (
 
 export const requestItemController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { userId } = req.params;
     const validatedData = itemRequestUpdateSchema.parse(req.body);
 
@@ -318,6 +409,13 @@ export const requestItemController = async (req: Request, res: Response) => {
 
 export const getQueuedItemsController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
 
     if (!Types.ObjectId.isValid(userId) || !userId) {
@@ -341,6 +439,13 @@ export const getQueuedItemsController = async (req: Request, res: Response) => {
 
 export const getQueueItemController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { queueId } = req.params;
     const userId = (req as any).user?.id;
 
@@ -382,6 +487,13 @@ export const withdrawFromQueueController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { queueId } = req.params;
     const userId = (req as any).user?.id;
 
@@ -410,6 +522,13 @@ export const withdrawFromQueueController = async (
 
 export const searchItemsController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { query, category, status } = req.query;
     const userId = req.user.id;
 
@@ -425,7 +544,7 @@ export const searchItemsController = async (req: Request, res: Response) => {
     }
 
     if (category) {
-      searchCriteria["categoryId._id"] = category;
+      searchCriteria.categoryId = category;
     }
 
     if (status) {
@@ -457,6 +576,13 @@ export const extendIssuedItemController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { itemId } = req.params;
     const userId = (req as any).user.id;
 
@@ -484,6 +610,13 @@ export const returnItemRequestController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { itemId } = req.params;
     const userId = (req as any).user?.id;
     const { status } = req.body;
@@ -514,6 +647,13 @@ export const returnItemRequestController = async (
 
 export const requestNewItemController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const validatedData = req.body;
     const userId = (req as any).user.id;
 
@@ -542,6 +682,12 @@ export const getNewRequestedItemController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
     const userId = req.user.id;
     if (!userId) {
       return res.status(401).json({
@@ -572,6 +718,13 @@ export const getNewSpecificRequestedItemController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { itemId } = req.params;
     if (!itemId) {
       return res.status(401).json({
@@ -601,6 +754,13 @@ export const deleteRequestedItemController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const { itemId } = req.params;
     const userId = (req as any).user?.id;
 
@@ -641,6 +801,13 @@ export const deleteRequestedItemController = async (
 
 export const getNewArrivalsController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const newArrivals = await getNewArrivalsService();
     return res.status(200).json({
       success: true,
@@ -657,6 +824,13 @@ export const getNewArrivalsController = async (req: Request, res: Response) => {
 
 export const getHistoryController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = (req as any).user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -681,6 +855,13 @@ export const createIssueRequestController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     const { itemId } = req.body;
 
@@ -693,7 +874,6 @@ export const createIssueRequestController = async (
 
     const result = await createIssueRequestService(userId.toString(), itemId);
 
-    // Proper type checking with type guards
     if (result.type === "immediate" && "issuedItem" in result) {
       return res.status(201).json({
         success: true,
@@ -713,7 +893,6 @@ export const createIssueRequestController = async (
         },
       });
     } else {
-      // Fallback for any other type
       return res.status(201).json({
         success: true,
         message: result.message,
@@ -734,6 +913,13 @@ export const getMyIssueRequestsController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = (req as any).user?.id;
 
     const requests = await getMyIssueRequestsService(userId);
@@ -753,6 +939,13 @@ export const getMyIssueRequestsController = async (
 
 export const getAllFinesController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -777,6 +970,13 @@ export const getProfileDetailsController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -799,6 +999,13 @@ export const getProfileDetailsController = async (
 
 export const updateProfileController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -824,6 +1031,13 @@ export const updateNotificationPreferenceController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -849,6 +1063,13 @@ export const updateNotificationPreferenceController = async (
 
 export const updatePasswordController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -880,6 +1101,13 @@ export const expressDonationInterestController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -905,8 +1133,46 @@ export const expressDonationInterestController = async (
   }
 };
 
+export const getMyDonationsController = async (req: Request, res: Response) => {
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
+    const userId = req.user.id;
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const response = await getMyDonationsService(userId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Donations fetched successfully",
+      data: response.data,
+      count: response.count,
+    });
+  } catch (error: any) {
+    console.error("Error in getMyDonationsController:", error);
+    return res
+      .status(error.statusCode || 500)
+      .json({ error: error.message || "Internal server error" });
+  }
+};
+
 export const uploadPhotoController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -914,13 +1180,32 @@ export const uploadPhotoController = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await uploadFile(req.file.path);
+    const filePath = req.file.path;
+    const result = await uploadFile(filePath);
 
     if (!result) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (unlinkErr) {
+        console.error(
+          "Error deleting temp file after failed upload:",
+          unlinkErr
+        );
+      }
       return res.status(500).json({
         success: false,
         message: "Failed to upload image to Cloudinary",
       });
+    }
+
+    try {
+      fs.unlinkSync(filePath);
+      console.log(`Successfully deleted temporary file: ${filePath}`);
+    } catch (unlinkErr) {
+      console.error(
+        "Error deleting temporary file after successful upload:",
+        unlinkErr
+      );
     }
 
     res.status(200).json({
@@ -933,6 +1218,17 @@ export const uploadPhotoController = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     console.error("Image upload error:", error);
+
+    if (req.file && req.file.path) {
+      try {
+        if (fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+      } catch (cleanupErr) {
+        console.error("Error during cleanup after upload error:", cleanupErr);
+      }
+    }
+
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error during upload",
@@ -945,6 +1241,13 @@ export const getUserNotificationController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     if (!userId) {
       return res.status(400).json({ message: "userId not found" });
@@ -970,6 +1273,13 @@ export const getUserNotificationController = async (
 
 export const markAsReadController = async (req: Request, res: Response) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
     const userId = req.user.id;
     const { notificationId, markAll } = req.body;
 
@@ -1001,6 +1311,12 @@ export const deleteNotificationController = async (
   res: Response
 ) => {
   try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
     const userId = req.user.id;
     const { notificationId, deleteAll } = req.body;
 
@@ -1008,7 +1324,11 @@ export const deleteNotificationController = async (
       return res.status(400).json({ message: "userId not found" });
     }
 
-    const message = await markAsReadService(userId, notificationId, deleteAll);
+    const message = await deleteNotificationService(
+      userId,
+      notificationId,
+      deleteAll
+    );
     return res.status(200).json({
       success: true,
       message: "notification deleted successfully",
