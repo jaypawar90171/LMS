@@ -44,6 +44,7 @@ import {
   UserReportFilters,
   UserReportItem,
 } from "../interfaces/userReport.interface";
+import NewItemRequest from "../models/requestedItem.model";
 
 interface loginDTO {
   email: string;
@@ -1910,14 +1911,12 @@ export const extendPeriodService = async (
   message?: string;
 }> => {
   try {
-    // Find the issued item
     const issuedItem = await IssuedItem.findById(issuedItemId);
 
     if (!issuedItem) {
       return { success: false, message: "Issued item not found" };
     }
 
-    // Check if item is already returned
     if (issuedItem.status === "Returned") {
       return {
         success: false,
@@ -1925,7 +1924,6 @@ export const extendPeriodService = async (
       };
     }
 
-    // Check if maximum extensions reached
     if (issuedItem.extensionCount >= issuedItem.maxExtensionAllowed) {
       return {
         success: false,
@@ -1933,17 +1931,14 @@ export const extendPeriodService = async (
       };
     }
 
-    // Validate extension days
     if (extensionDays <= 0) {
       return { success: false, message: "Extension days must be positive" };
     }
 
-    // Calculate new due date
     const currentDueDate = issuedItem.dueDate || new Date();
     const newDueDate = new Date(currentDueDate);
     newDueDate.setDate(newDueDate.getDate() + extensionDays);
 
-    // Update the issued item
     const updatedItem = await IssuedItem.findByIdAndUpdate(
       issuedItemId,
       {
@@ -1977,6 +1972,425 @@ export const extendPeriodService = async (
   } catch (error) {
     console.error("Error extending period:", error);
     return { success: false, message: "Internal server error" };
+  }
+};
+
+interface GetAllRequestedItemsParams {
+  page: number;
+  limit: number;
+  status?: string;
+  category?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export const getAllRequestedItemsService = async ({
+  page,
+  limit,
+  status,
+  category,
+  sortBy = 'requestedAt',
+  sortOrder = 'desc'
+}: GetAllRequestedItemsParams) => {
+  try {
+   
+    const filter: any = {};
+
+    if (status) {
+      filter.status = status;
+    }
+
+    if (category) {
+      filter.category = { $regex: category, $options: 'i' };
+    }
+
+   
+    const skip = (page - 1) * limit;
+
+   
+    const sort: any = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+   
+    const [requests, totalCount] = await Promise.all([
+      NewItemRequest.find(filter)
+        .populate("userId", "name email department")
+        .populate("processedBy", "name email")
+        .sort(sort)
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      
+      NewItemRequest.countDocuments(filter)
+    ]);
+
+    const totalPages = Math.ceil(totalCount / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    return {
+      success: true,
+      message: "Item requests fetched successfully",
+      data: {
+        requests,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalCount,
+          hasNextPage,
+          hasPrevPage,
+          limit
+        },
+        filters: {
+          status: status || 'all',
+          category: category || 'all'
+        }
+      }
+    };
+
+  } catch (error) {
+    console.error("Error in getAllRequestedItemsService:", error);
+    return {
+      success: false,
+      message: "Error fetching item requests"
+    };
+  }
+};
+
+export const approveRequestedItemService = async (
+  requestId: string,
+  adminId: string
+) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return {
+        success: false,
+        message: "Invalid request ID format",
+      };
+    }
+
+    const itemRequest = await NewItemRequest.findById(requestId);
+
+    if (!itemRequest) {
+      return {
+        success: false,
+        message: "Item request not found",
+      };
+    }
+
+    if (itemRequest.status !== "pending") {
+      return {
+        success: false,
+        message: `Item request is already ${itemRequest.status}`,
+      };
+    }
+
+    const updatedRequest = await NewItemRequest.findByIdAndUpdate(
+      requestId,
+      {
+        status: "approved",
+        processedAt: new Date(),
+        processedBy: adminId,
+      },
+      { new: true }
+    )
+      .populate("userId", "name email")
+      .populate("processedBy", "name email");
+
+    if (
+      itemRequest.userId &&
+      (itemRequest.userId as any).notificationPreference?.email
+    ) {
+      const userEmail = (itemRequest.userId as any).email;
+      const userName = (itemRequest.userId as any).name || "User";
+
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #4CAF50; color: white; padding: 20px; text-align: center; }
+                .content { background: #f9f9f9; padding: 20px; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+                .button { display: inline-block; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
+                .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🎉 Item Request Approved!</h1>
+                </div>
+                <div class="content">
+                    <p>Dear ${userName},</p>
+                    <p>Great news! Your item request has been approved by the administrator.</p>
+                    
+                    <div class="details">
+                        <h3>Request Details:</h3>
+                        <p><strong>Item Name:</strong> ${itemRequest.name}</p>
+                        <p><strong>Category:</strong> ${
+                          itemRequest.category
+                        }</p>
+                        <p><strong>Quantity:</strong> ${
+                          itemRequest.quantity
+                        }</p>
+                        <p><strong>Approved On:</strong> ${new Date().toLocaleDateString()}</p>
+                    </div>
+
+                    <p>You can now proceed to collect your item from the designated location.</p>
+                    
+                    <p>If you have any questions, please contact the administration.</p>
+                    
+                    <p>Best regards,<br>Your App Team</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail(
+        userEmail,
+        `Item Request Approved: ${itemRequest.name}`,
+        emailHtml
+      );
+    }
+
+    return {
+      success: true,
+      message: "Item request approved successfully",
+      data: updatedRequest,
+    };
+  } catch (error) {
+    console.error("Error in approveRequestedItemService:", error);
+    return {
+      success: false,
+      message: "Error approving item request",
+    };
+  }
+};
+
+export const rejectRequestedItemService = async (
+  requestId: string,
+  adminId: string
+) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return {
+        success: false,
+        message: "Invalid request ID format",
+      };
+    }
+
+    const itemRequest = await NewItemRequest.findById(requestId);
+
+    if (!itemRequest) {
+      return {
+        success: false,
+        message: "Item request not found",
+      };
+    }
+
+    if (itemRequest.status !== "pending") {
+      return {
+        success: false,
+        message: `Item request is already ${itemRequest.status}`,
+      };
+    }
+
+    const updatedRequest = await NewItemRequest.findByIdAndUpdate(
+      requestId,
+      {
+        status: "rejected",
+        processedAt: new Date(),
+        processedBy: adminId,
+      },
+      { new: true }
+    )
+      .populate("userId", "name email")
+      .populate("processedBy", "name email");
+
+    if (
+      itemRequest.userId &&
+      (itemRequest.userId as any).notificationPreference?.email
+    ) {
+      const userEmail = (itemRequest.userId as any).email;
+      const userName = (itemRequest.userId as any).name || "User";
+
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #f44336; color: white; padding: 20px; text-align: center; }
+                .content { background: #f9f9f9; padding: 20px; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+                .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                .contact-info { background: #fff3cd; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>❌ Item Request Not Approved</h1>
+                </div>
+                <div class="content">
+                    <p>Dear ${userName},</p>
+                    <p>We regret to inform you that your item request could not be approved at this time.</p>
+                    
+                    <div class="details">
+                        <h3>Request Details:</h3>
+                        <p><strong>Item Name:</strong> ${itemRequest.name}</p>
+                        <p><strong>Category:</strong> ${
+                          itemRequest.category
+                        }</p>
+                        <p><strong>Quantity:</strong> ${
+                          itemRequest.quantity
+                        }</p>
+                        <p><strong>Status Updated:</strong> ${new Date().toLocaleDateString()}</p>
+                    </div>
+
+                    <div class="contact-info">
+                        <p><strong>Need more information?</strong></p>
+                        <p>If you would like to know more about why your request was not approved or would like to discuss alternative options, please contact the administration team.</p>
+                    </div>
+
+                    <p>You can submit a new request with different specifications if needed.</p>
+                    
+                    <p>Best regards,<br>Your App Team</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail(
+        userEmail,
+        `Item Request Update: ${itemRequest.name}`,
+        emailHtml
+      );
+    }
+
+    return {
+      success: true,
+      message: "Item request rejected successfully",
+      data: updatedRequest,
+    };
+  } catch (error) {
+    console.error("Error in rejectRequestedItemService:", error);
+    return {
+      success: false,
+      message: "Error rejecting item request",
+    };
+  }
+};
+
+export const deleteRequestedItemService = async (
+  requestId: string
+) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(requestId)) {
+      return {
+        success: false,
+        message: "Invalid request ID format"
+      };
+    }
+
+    const itemRequest = await NewItemRequest.findById(requestId)
+      .populate("userId", "name email notificationPreference");
+
+    if (!itemRequest) {
+      return {
+        success: false,
+        message: "Item request not found"
+      };
+    }
+
+    if (itemRequest.status !== "pending") {
+      return {
+        success: false,
+        message: `Cannot delete ${itemRequest.status} item requests`
+      };
+    }
+
+    if (itemRequest.userId && (itemRequest.userId as any).notificationPreference?.email) {
+      const userEmail = (itemRequest.userId as any).email;
+      const userName = (itemRequest.userId as any).name || "User";
+      
+      const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <style>
+                body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                .header { background: #ff9800; color: white; padding: 20px; text-align: center; }
+                .content { background: #f9f9f9; padding: 20px; }
+                .footer { text-align: center; padding: 20px; font-size: 12px; color: #666; }
+                .details { background: white; padding: 15px; border-radius: 5px; margin: 15px 0; }
+                .action { background: #e7f3ff; padding: 15px; border-radius: 5px; margin: 15px 0; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>🗑️ Item Request Cancelled</h1>
+                </div>
+                <div class="content">
+                    <p>Dear ${userName},</p>
+                    <p>Your pending item request has been removed from the system.</p>
+                    
+                    <div class="details">
+                        <h3>Cancelled Request Details:</h3>
+                        <p><strong>Item Name:</strong> ${itemRequest.name}</p>
+                        <p><strong>Category:</strong> ${itemRequest.category}</p>
+                        <p><strong>Quantity:</strong> ${itemRequest.quantity}</p>
+                        <p><strong>Request Date:</strong> ${itemRequest.requestedAt.toLocaleDateString()}</p>
+                    </div>
+
+                    <div class="action">
+                        <p><strong>Want to submit a new request?</strong></p>
+                        <p>If you believe this was done in error or would like to submit a new request, please visit the application and create a new item request.</p>
+                    </div>
+
+                    <p>If you have any questions about this cancellation, please contact the administration team.</p>
+                    
+                    <p>Best regards,<br>Your App Team</p>
+                </div>
+                <div class="footer">
+                    <p>This is an automated message. Please do not reply to this email.</p>
+                </div>
+            </div>
+        </body>
+        </html>
+      `;
+
+      await sendEmail(userEmail, `Item Request Cancelled: ${itemRequest.name}`, emailHtml);
+    }
+
+    await NewItemRequest.findByIdAndDelete(requestId);
+
+    return {
+      success: true,
+      message: "Item request deleted successfully",
+      data: { id: requestId }
+    };
+
+  } catch (error) {
+    console.error("Error in deleteRequestedItemService:", error);
+    return {
+      success: false,
+      message: "Error deleting item request"
+    };
   }
 };
 

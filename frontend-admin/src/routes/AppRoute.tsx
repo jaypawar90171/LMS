@@ -23,6 +23,8 @@ import QueueDashboard from "@/screens/QueueDashboard";
 import AnalyticsDashboard from "@/screens/AnalyticsDashboard";
 import DefaulterReport from "@/screens/DefaulterReport";
 import Notifications from "@/screens/Notifications";
+import AllUsersReport from "@/screens/AllUsersReport";
+import RequestedItems from "@/screens/RequestedItems";
 
 const AppRoute = () => {
   return (
@@ -96,6 +98,14 @@ const AppRoute = () => {
             element={
               <Layout>
                 <IssuedItemsReportPage />
+              </Layout>
+            }
+          />
+          <Route
+            path="/reports/all-users"
+            element={
+              <Layout>
+                <AllUsersReport />
               </Layout>
             }
           />
@@ -192,6 +202,14 @@ const AppRoute = () => {
             element={
               <Layout>
                 <Notifications />
+              </Layout>
+            }
+          />
+          <Route
+            path="/requested-items"
+            element={
+              <Layout>
+                <RequestedItems />
               </Layout>
             }
           />

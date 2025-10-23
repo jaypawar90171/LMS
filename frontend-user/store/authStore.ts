@@ -22,6 +22,18 @@ export const loginAtom = atom(
         rememberMe,
       });
 
+      if (result.data.passwordChangeRequired) {
+        const { token, message } = result.data;
+        await AsyncStorage.setItem("temp_auth_token", token);
+        await AsyncStorage.setItem("accessToken", token);
+        set(tokenAtom, token);
+        return {
+          success: true,
+          passwordChangeRequired: true,
+          message: message || "Password change required.",
+        };
+      }
+
       const { token, user } = result.data;
       await AsyncStorage.setItem("accessToken", token);
       if (user) {

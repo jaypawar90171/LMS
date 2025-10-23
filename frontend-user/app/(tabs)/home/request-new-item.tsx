@@ -188,9 +188,9 @@ export default function RequestNewItemScreen() {
             )}
           </View>
 
-          {/* Description (Optional) */}
+          {/* Description  */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (Optional)</Text>
+            <Text style={styles.label}>Description <Text style={styles.required}>*</Text></Text>
             <TextInput
               style={styles.textInput}
               placeholder="Provide additional details about the item (features, specifications, edition, etc.)"

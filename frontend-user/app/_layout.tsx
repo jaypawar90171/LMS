@@ -2,7 +2,11 @@ import SafeScreen from "@/components/SafeScreen";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { checkAuthAtom, isCheckingAuthAtom, isAuthenticatedAtom } from "@/store/authStore";
+import {
+  checkAuthAtom,
+  isCheckingAuthAtom,
+  isAuthenticatedAtom,
+} from "@/store/authStore";
 import { ActivityIndicator, View } from "react-native";
 import { useSetAtom, useAtomValue } from "jotai";
 import { useEffect } from "react";
@@ -16,24 +20,24 @@ export default function RootLayout() {
   const router = useRouter();
 
   useEffect(() => {
-    checkAuth(); 
+    checkAuth();
   }, []);
 
   useEffect(() => {
     if (!isChecking) {
-      const inAuthGroup = segments[0] === '(auth)';
-      
-      console.log('Auth State:', { isAuthenticated, segments, inAuthGroup });
-      
+      const inAuthGroup = segments[0] === "(auth)";
+
+      console.log("Auth State:", { isAuthenticated, segments, inAuthGroup });
+
       if (isAuthenticated) {
         if (inAuthGroup) {
-          console.log('Redirecting authenticated user to tabs');
+          console.log("Redirecting authenticated user to tabs");
           router.replace("/(tabs)/home");
         }
       } else {
         if (!inAuthGroup) {
-          console.log('Redirecting unauthenticated user to login');
-          router.replace('/');
+          console.log("Redirecting unauthenticated user to login");
+          router.replace("/");
         }
       }
     }
@@ -44,12 +48,14 @@ export default function RootLayout() {
     return (
       <SafeAreaProvider>
         <SafeScreen>
-          <View style={{ 
-            flex: 1, 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            backgroundColor: COLORS.background 
-          }}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: "center",
+              alignItems: "center",
+              backgroundColor: COLORS.background,
+            }}
+          >
             <ActivityIndicator size="large" color={COLORS.primary} />
           </View>
         </SafeScreen>

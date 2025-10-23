@@ -94,16 +94,117 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     className?: string;
   }) => (
     <div className={`flex flex-col ${className}`}>
-      <span className="text-gray-500 text-sm">{label}</span>
-      <span className="text-gray-800 text-base">{value || "N/A"}</span>
+      <span className="text-gray-500 text-sm font-medium">{label}</span>{" "}
+      {/* Added font-medium */}
+      <span className="text-gray-800 text-base mt-1">
+        {value || "N/A"}
+      </span>{" "}
+      {/* Added mt-1 */}
     </div>
   );
+
+  // Helper function to get category-specific fields
+  const getCategorySpecificFields = () => {
+    if (!itemData?.categoryId?.name) return null;
+
+    const categoryName = itemData.categoryId.name;
+    const fields = [];
+
+    // Common fields for all categories
+    if (itemData.size) {
+      fields.push(<Field key="size" label="Size" value={itemData.size} />);
+    }
+    if (itemData.color) {
+      fields.push(<Field key="color" label="Color" value={itemData.color} />);
+    }
+    if (itemData.genderType) {
+      fields.push(
+        <Field
+          key="genderType"
+          label="Gender Type"
+          value={itemData.genderType}
+        />
+      );
+    }
+    if (itemData.ageGroup) {
+      fields.push(
+        <Field key="ageGroup" label="Age Group" value={itemData.ageGroup} />
+      );
+    }
+    if (itemData.dimensions) {
+      fields.push(
+        <Field
+          key="dimensions"
+          label="Dimensions"
+          value={itemData.dimensions}
+        />
+      );
+    }
+    if (itemData.warrantyPeriod) {
+      fields.push(
+        <Field
+          key="warrantyPeriod"
+          label="Warranty Period"
+          value={itemData.warrantyPeriod}
+        />
+      );
+    }
+    if (itemData.powerSource) {
+      fields.push(
+        <Field
+          key="powerSource"
+          label="Power Source"
+          value={itemData.powerSource}
+        />
+      );
+    }
+    if (itemData.usageType) {
+      fields.push(
+        <Field key="usageType" label="Usage Type" value={itemData.usageType} />
+      );
+    }
+    if (itemData.usage) {
+      fields.push(<Field key="usage" label="Usage" value={itemData.usage} />);
+    }
+    if (
+      itemData.features &&
+      Array.isArray(itemData.features) &&
+      itemData.features.length > 0
+    ) {
+      fields.push(
+        <div key="features" className="flex flex-col">
+          <span className="text-gray-500 text-sm">Features</span>
+          <div className="flex flex-wrap gap-1 mt-1">
+            {itemData.features.map((feature: string, index: number) => (
+              <span
+                key={index}
+                className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded"
+              >
+                {feature}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    return fields;
+  };
+
+  // Helper to format price from Decimal128
+  const formatPrice = (price: any) => {
+    if (!price) return "N/A";
+    if (typeof price === "number") return `$${price.toFixed(2)}`;
+    if (price.$numberDecimal)
+      return `$${parseFloat(price.$numberDecimal).toFixed(2)}`;
+    return "N/A";
+  };
 
   console.log(itemData);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl my-8 p-6 space-y-8">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-40 backdrop-blur-sm overflow-y-auto scrollbar-hide">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] my-8 p-6 space-y-6 overflow-y-auto scrollbar-hide">
         <div className="flex justify-between items-center pb-4 border-b border-gray-200">
           <h1 className="text-2xl font-semibold text-gray-900">Item Details</h1>
           <Button onClick={onClose} variant="ghost" className="p-2">
@@ -123,11 +224,14 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         ) : (
           itemData && (
             <>
+              {/* Basic Information Section */}
               <section>
                 <h2 className="text-lg font-bold text-gray-700 mb-4">
-                  Item Information
+                  Basic Information
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {" "}
+                  {/* Changed gap from gap-y-6 to gap-4 */}
                   <Field label="Title" value={itemData.title} />
                   <Field
                     label="Category"
@@ -137,9 +241,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     label="Subcategory"
                     value={itemData.subcategoryId?.name || "N/A"}
                   />
-                  <Field label="ISBN" value={itemData.isbnOrIdentifier} />
                   <Field
-                    label="Publisher"
+                    label="ISBN/Identifier"
+                    value={itemData.isbnOrIdentifier}
+                  />
+                  <Field
+                    label="Publisher/Manufacturer"
                     value={itemData.publisherOrManufacturer}
                   />
                   <Field
@@ -148,7 +255,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   />
                   <Field label="Description" value={itemData.description} />
                   <Field
-                    label="Duration"
+                    label="Default Return Period"
                     value={
                       itemData.defaultReturnPeriod
                         ? `${itemData.defaultReturnPeriod} Days`
@@ -156,6 +263,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     }
                   />
                   <Field label="Status" value={itemData.status} />
+                  <Field label="Price" value={formatPrice(itemData.price)} />
                   <div className="flex flex-col">
                     <span className="text-gray-500 text-sm">Barcode</span>
                     <a
@@ -168,13 +276,34 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                   </div>
                 </div>
               </section>
+
+              {/* Category Specific Fields Section */}
+              {getCategorySpecificFields() &&
+                getCategorySpecificFields()!.length > 0 && (
+                  <section>
+                    <h2 className="text-lg font-bold text-gray-700 mb-4">
+                      Category Specific Details
+                    </h2>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      {" "}
+                      {/* Changed to 3 columns and smaller gap */}
+                      {getCategorySpecificFields()}
+                    </div>
+                  </section>
+                )}
+
+              {/* Availability Section */}
               <section>
                 <h2 className="text-lg font-bold text-gray-700 mb-4">
                   Availability
                 </h2>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-3 gap-4">
+                  {" "}
+                  {/* Simplified to 3 columns with consistent gap */}
                   <div className="flex flex-col">
-                    <span className="text-gray-500 text-sm">Total Copies</span>
+                    <span className="text-gray-500 text-sm">
+                      Total Quantity
+                    </span>
                     <span className="text-gray-800 text-lg font-semibold">
                       {itemData.quantity}
                     </span>
@@ -187,6 +316,54 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                       {itemData.availableCopies}
                     </span>
                   </div>
+                  <div className="flex flex-col">
+                    <span className="text-gray-500 text-sm">
+                      Currently Issued
+                    </span>
+                    <span className="text-gray-800 text-lg font-semibold">
+                      {itemData.quantity - itemData.availableCopies}
+                    </span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Additional Information Section */}
+              <section>
+                <h2 className="text-lg font-bold text-gray-700 mb-4">
+                  Additional Information
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
+                  {itemData.authorOrCreator && (
+                    <Field
+                      label="Author/Creator"
+                      value={itemData.authorOrCreator}
+                    />
+                  )}
+                  {itemData.mediaUrl && (
+                    <div className="flex flex-col">
+                      <span className="text-gray-500 text-sm">Media</span>
+                      <a
+                        href={itemData.mediaUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-base"
+                      >
+                        View Image
+                      </a>
+                    </div>
+                  )}
+                  {itemData.createdAt && (
+                    <Field
+                      label="Created At"
+                      value={new Date(itemData.createdAt).toLocaleDateString()}
+                    />
+                  )}
+                  {itemData.updatedAt && (
+                    <Field
+                      label="Last Updated"
+                      value={new Date(itemData.updatedAt).toLocaleDateString()}
+                    />
+                  )}
                 </div>
               </section>
             </>

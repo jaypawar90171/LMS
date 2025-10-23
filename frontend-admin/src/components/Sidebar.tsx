@@ -111,7 +111,7 @@ const navItems = [
     ),
   },
   {
-    name: "Fines & Payments",
+    name: "Fines",
     path: "/fines",
     icon: (
       <svg
@@ -149,6 +149,7 @@ const navItems = [
     subItems: [
       { name: "Inventory Report", path: "/reports/inventory" },
       { name: "Fine Report", path: "/reports/fines" },
+      { name: "All Users Report", path: "/reports/all-users" },
       { name: "Defaulter User Report", path: "/reports/defaulter" },
       { name: "Issued Items Report", path: "/reports/issued-items" },
       { name: "Queue Report", path: "/reports/queue" },
@@ -169,6 +170,25 @@ const navItems = [
           strokeLinejoin="round"
           strokeWidth={2}
           d="M8 4H4a2 2 0 00-2 2v14a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2h-4m-6 2l-3 3m0 0l3 3m-3-3h12"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: "Requtested Items",
+    path: "/requested-items",
+    icon: (
+      <svg
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
         />
       </svg>
     ),

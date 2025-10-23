@@ -1463,6 +1463,8 @@ export const updatePasswordService = async (
   }
 
   user.password = newPassword;
+  user.passwordResetRequired = false;
+
   await user.save();
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
@@ -1604,21 +1606,20 @@ export const expressDonationInterestService = async (
   return donation;
 };
 
-export const getMyDonationsService = async(userId: string) => {
+export const getMyDonationsService = async (userId: string) => {
   try {
     const donations = await Donation.find({ userId })
-    .populate("userId", "fullName email username")
-    .sort({ createdAt: -1 }) 
-    .exec();
+      .populate("userId", "fullName email username")
+      .sort({ createdAt: -1 })
+      .exec();
 
     return {
       success: true,
       data: donations,
       count: donations.length,
     };
-
   } catch (error: any) {
-     console.error("Error in getMyDonationsService:", error);
+    console.error("Error in getMyDonationsService:", error);
     throw {
       success: false,
       statusCode: 500,
@@ -1626,7 +1627,7 @@ export const getMyDonationsService = async(userId: string) => {
       error: error.message,
     };
   }
-}
+};
 
 export const getUserNotificationService = async (userId: string) => {
   const notifications = await Notification.find({ recipientId: userId }).sort({
@@ -1636,32 +1637,37 @@ export const getUserNotificationService = async (userId: string) => {
   return notifications || [];
 };
 
-export const markAsReadService = async(userId: string, notificationId: string, markAll: any) => {
-
+export const markAsReadService = async (
+  userId: string,
+  notificationId: string,
+  markAll: any
+) => {
   if (markAll) {
-      await Notification.updateMany(
-        { recipientId: userId, read: false },
-        { $set: { read: true } }
-      );
-      return "All notifications marked as read";
-    }
+    await Notification.updateMany(
+      { recipientId: userId, read: false },
+      { $set: { read: true } }
+    );
+    return "All notifications marked as read";
+  }
 
   if (notificationId) {
-      await Notification.findByIdAndUpdate(notificationId, { read: true });
-      return "Notification marked as read";
-    }
+    await Notification.findByIdAndUpdate(notificationId, { read: true });
+    return "Notification marked as read";
+  }
+};
 
-}
-
-export const deleteNotificationService = async(userId: string, notificationId: string, deleteAll: any) => {
-
+export const deleteNotificationService = async (
+  userId: string,
+  notificationId: string,
+  deleteAll: any
+) => {
   if (deleteAll) {
-      await Notification.deleteMany({ recipientId: userId });
-      return "All notifications deleted";
-    }
+    await Notification.deleteMany({ recipientId: userId });
+    return "All notifications deleted";
+  }
 
   if (notificationId) {
-      await Notification.findByIdAndDelete(notificationId);
-      return "Notification deleted";
-    }
-}
+    await Notification.findByIdAndDelete(notificationId);
+    return "Notification deleted";
+  }
+};

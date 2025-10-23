@@ -5,7 +5,7 @@ import { Toaster } from "./components/ui/sonner";
 import App from "./App";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+  <StrictMode >
     <App />
     <Toaster />
   </StrictMode>

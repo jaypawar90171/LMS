@@ -81,6 +81,17 @@ type ItemFormData = {
   availableCopies: number;
   defaultReturnPeriod?: number;
   status: "Available" | "Issued" | "Lost" | "Damaged";
+  color?: string;
+  size?: "XS" | "S" | "M" | "L" | "XL" | "XXL"; // enum for clothes
+  genderType?: "Male" | "Female" | "Unisex"; // enum for clothes
+  ageGroup?: "0-3" | "4-7" | "8-12" | "13+";
+
+  dimensions?: string; // e.g., "10x5x2 cm"
+  warrantyPeriod?: number; // months or years
+  features?: string[]; // for electronics
+  usageType?: string; // e.g., "Cooking", "Storage" (for kitchen)
+  powerSource?: string; // for tools
+  usage?: string; // for sports
 };
 
 const safeParsePrice = (price: unknown): number => {
@@ -101,7 +112,7 @@ const safeParsePrice = (price: unknown): number => {
   return 0;
 };
 
-const categoryFieldConfig: Record<string, string[]> = {
+export const categoryFieldConfig: Record<string, string[]> = {
   Books: [
     "title",
     "authorOrCreator",
@@ -116,93 +127,103 @@ const categoryFieldConfig: Record<string, string[]> = {
     "status",
     "defaultReturnPeriod",
   ],
+  Clothes: [
+    "title",
+    "description",
+    "price",
+    "quantity",
+    "availableCopies",
+    "size",
+    "color",
+    "genderType",
+    "publisherOrManufacturer",
+    "status",
+    "defaultReturnPeriod",
+    "mediaUrl"
+  ],
   Electronics: [
     "title",
     "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
     "price",
     "quantity",
     "availableCopies",
-    "status",
-    "defaultReturnPeriod",
-  ],
-  Toys: [
-    "title",
-    "description",
+    "warrantyPeriod",
+    "features",
+    "dimensions",
     "publisherOrManufacturer",
-    "mediaUrl",
-    "price",
-    "quantity",
-    "availableCopies",
     "status",
     "defaultReturnPeriod",
-  ],
-  Tools: [
-    "title",
-    "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
-    "price",
-    "quantity",
-    "availableCopies",
-    "status",
-    "defaultReturnPeriod",
+    "mediaUrl"
   ],
   Furniture: [
     "title",
     "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
     "price",
     "quantity",
     "availableCopies",
-    "status",
-    "defaultReturnPeriod",
-  ],
-  Clothes: [
-    "title",
-    "description",
+    "color",
+    "warrantyPeriod",
+    "dimensions",
     "publisherOrManufacturer",
-    "mediaUrl",
-    "price",
-    "quantity",
-    "availableCopies",
     "status",
     "defaultReturnPeriod",
-  ],
-  "Sports Equipment": [
-    "title",
-    "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
-    "price",
-    "quantity",
-    "availableCopies",
-    "status",
-    "defaultReturnPeriod",
+    "mediaUrl"
   ],
   "Kitchen Accessories": [
     "title",
     "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
     "price",
     "quantity",
     "availableCopies",
+    "usageType",
+    "dimensions",
+    "color",
+    "publisherOrManufacturer",
     "status",
     "defaultReturnPeriod",
+    "mediaUrl"
   ],
-  Default: [
+  "Sports Equipment": [
     "title",
     "description",
-    "publisherOrManufacturer",
-    "mediaUrl",
     "price",
     "quantity",
     "availableCopies",
+    "usage",
+    "ageGroup",
+    "color",
+    "publisherOrManufacturer",
     "status",
     "defaultReturnPeriod",
+    "mediaUrl"
+  ],
+  Tools: [
+    "title",
+    "description",
+    "price",
+    "quantity",
+    "availableCopies",
+    "powerSource",
+    "dimensions",
+    "warrantyPeriod",
+    "publisherOrManufacturer",
+    "status",
+    "defaultReturnPeriod",
+    "mediaUrl"
+  ],
+  Toys: [
+    "title",
+    "description",
+    "price",
+    "quantity",
+    "availableCopies",
+    "color",
+    "ageGroup",
+    "dimensions",
+    "publisherOrManufacturer",
+    "status",
+    "defaultReturnPeriod",
+    "mediaUrl"
   ],
 };
 
@@ -400,15 +421,30 @@ export const ItemFormModal = ({
   const onSubmit = async (data: ItemFormData) => {
     if (!validateForm(data)) return;
 
-    const payload: Partial<ItemFormData> = {
-      categoryId: data.categoryId,
+    const processedData = {
+      ...data,
+      features: data.features
+        ? typeof data.features === "string"
+          ? (data.features as string)
+              .split(",")
+              .map((f: string) => f.trim())
+              .filter(Boolean)
+          : data.features
+        : undefined,
       subcategoryId:
         data.subcategoryId === "no-subcategory"
           ? undefined
           : data.subcategoryId,
     };
+
+    const payload: any = {
+      categoryId: processedData.categoryId,
+      subcategoryId: processedData.subcategoryId,
+    };
+
     fieldsToShow.forEach((field) => {
-      (payload as any)[field] = (data as any)[field];
+      if (field === "mediaUrl") return; // Handle file separately
+      payload[field] = (processedData as any)[field];
     });
 
     const apiEndpoint =
@@ -419,20 +455,22 @@ export const ItemFormModal = ({
     try {
       if (mode === "add") {
         const formData = new FormData();
-        Object.entries(data).forEach(([key, value]) => {
-          if (
-            key === "mediaUrl" &&
-            value instanceof FileList &&
-            value.length > 0
-          ) {
-            formData.append(key, value[0]);
-          } else if (value !== undefined && value !== null) {
-            formData.append(
-              key,
-              typeof value === "object" ? JSON.stringify(value) : String(value)
-            );
+
+        // Append all fields to FormData
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value !== undefined && value !== null) {
+            if (Array.isArray(value)) {
+              formData.append(key, JSON.stringify(value));
+            } else {
+              formData.append(key, String(value));
+            }
           }
         });
+
+        // Handle file upload
+        if (data.mediaUrl && data.mediaUrl.length > 0) {
+          formData.append("mediaUrl", data.mediaUrl[0]);
+        }
 
         await axios.post(apiEndpoint, formData, {
           headers: {
@@ -441,7 +479,7 @@ export const ItemFormModal = ({
           },
         });
       } else {
-        await axios.put(apiEndpoint, data, {
+        await axios.put(apiEndpoint, payload, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -455,6 +493,7 @@ export const ItemFormModal = ({
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {
+      console.error("API Error:", error.response?.data);
       toast.error(
         error.response?.data?.message ||
           `Failed to ${mode === "add" ? "create" : "update"} item.`
@@ -464,7 +503,7 @@ export const ItemFormModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto scrollbar-hide">
         <DialogHeader>
           <DialogTitle>
             {mode === "add" ? "Add New Item" : "Edit Item"}
@@ -600,6 +639,154 @@ export const ItemFormModal = ({
                       id="mediaUrl"
                       type="file"
                       {...register("mediaUrl")}
+                    />
+                  </div>
+                )}
+                {fieldsToShow.includes("size") && (
+                  <div>
+                    <Label htmlFor="size">Size</Label>
+                    <Controller
+                      control={control}
+                      name="size"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="XS">XS</SelectItem>
+                            <SelectItem value="S">S</SelectItem>
+                            <SelectItem value="M">M</SelectItem>
+                            <SelectItem value="L">L</SelectItem>
+                            <SelectItem value="XL">XL</SelectItem>
+                            <SelectItem value="XXL">XXL</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("genderType") && (
+                  <div>
+                    <Label htmlFor="genderType">Gender Type</Label>
+                    <Controller
+                      control={control}
+                      name="genderType"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select gender type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Men">Male</SelectItem>
+                            <SelectItem value="Women">Female</SelectItem>
+                            <SelectItem value="Unisex">Unisex</SelectItem>
+                            <SelectItem value="Kids">Kids</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("ageGroup") && (
+                  <div>
+                    <Label htmlFor="ageGroup">Age Group</Label>
+                    <Controller
+                      control={control}
+                      name="ageGroup"
+                      render={({ field }) => (
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select age group" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectContent>
+                              <SelectItem value="0-3">0-3</SelectItem>
+                              <SelectItem value="4-7">4-7</SelectItem>
+                              <SelectItem value="8-12">8-12</SelectItem>
+                              <SelectItem value="13+">13+</SelectItem>
+                            </SelectContent>
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("color") && (
+                  <div>
+                    <Label htmlFor="color">Color</Label>
+                    <Input id="color" {...register("color")} />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("warrantyPeriod") && (
+                  <div>
+                    <Label htmlFor="warrantyPeriod">
+                      Warranty Period (months)
+                    </Label>
+                    <Input
+                      id="warrantyPeriod"
+                      type="number"
+                      {...register("warrantyPeriod")}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("features") && (
+                  <div>
+                    <Label htmlFor="features">Features (comma separated)</Label>
+                    <Input
+                      id="features"
+                      placeholder="e.g., Waterproof, Bluetooth"
+                      {...register("features")}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("dimensions") && (
+                  <div>
+                    <Label htmlFor="dimensions">Dimensions</Label>
+                    <Input
+                      id="dimensions"
+                      placeholder="e.g., 10x15x5 cm"
+                      {...register("dimensions")}
+                    />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("usageType") && (
+                  <div>
+                    <Label htmlFor="usageType">Usage Type</Label>
+                    <Input id="usageType" {...register("usageType")} />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("usage") && (
+                  <div>
+                    <Label htmlFor="usage">Usage</Label>
+                    <Input id="usage" {...register("usage")} />
+                  </div>
+                )}
+
+                {fieldsToShow.includes("powerSource") && (
+                  <div>
+                    <Label htmlFor="powerSource">Power Source</Label>
+                    <Input
+                      id="powerSource"
+                      placeholder="e.g., Battery, Electric"
+                      {...register("powerSource")}
                     />
                   </div>
                 )}

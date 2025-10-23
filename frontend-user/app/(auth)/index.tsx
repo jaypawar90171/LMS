@@ -63,10 +63,17 @@ export default function Login() {
 
     const result = await login({ email, password, rememberMe });
     if (result.success) {
-      showToastMessage("Login successful!", "success");
-      setTimeout(() => {
-        router.replace("/(tabs)/home");
-      }, 1000);
+      if (result.passwordChangeRequired) {
+        showToastMessage("Please update your password to continue", "info");
+        setTimeout(() => {
+          router.replace("/(tabs)/profile/change-password");
+        }, 1000);
+      } else {
+        showToastMessage("Login successful!", "success");
+        setTimeout(() => {
+          router.replace("/(tabs)/home");
+        }, 1500);
+      }
     } else {
       showToastMessage(result.error, "error");
     }
@@ -78,7 +85,6 @@ export default function Login() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <View style={styles.container}>
-        {/* ILLUSTRATION */}
         <View style={styles.topIllustration}>
           <Image
             source={require("../../assets/images/loginIcon.png")}

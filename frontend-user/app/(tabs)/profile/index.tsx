@@ -162,6 +162,12 @@ export default function ProfileScreen() {
       icon: "card-outline",
       screen: "/(tabs)/profile/fines",
     },
+    {
+      id: "donations",
+      title: "Donations",
+      icon: "card-outline",
+      screen: "/(tabs)/profile/donationList",
+    },
   ];
 
   const handleOptionPress = (option: ProfileOption) => {

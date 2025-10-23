@@ -43,6 +43,7 @@ import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useAtom } from "jotai";
 import { userAtom } from "@/state/userAtom";
+import { unreadNotificationsCountAtom } from "@/state/notificationAtom";
 
 interface Notification {
   _id: string;
@@ -72,6 +73,7 @@ interface PaginationInfo {
 
 const Notifications = () => {
   const [user] = useAtom(userAtom);
+  const [_, setUnreadCount] = useAtom(unreadNotificationsCountAtom);
   const [allNotifications, setAllNotifications] = useState<Notification[]>([]);
   const [filteredNotifications, setFilteredNotifications] = useState<
     Notification[]
@@ -230,6 +232,8 @@ const Notifications = () => {
         )
       );
 
+      setUnreadCount((prev) => prev - 1);
+
       toast.success("Notification marked as read");
     } catch (error: any) {
       console.error("Error marking as read:", error);
@@ -249,6 +253,8 @@ const Notifications = () => {
       setAllNotifications((prev) =>
         prev.map((notif) => ({ ...notif, read: true }))
       );
+
+      setUnreadCount(0);
 
       toast.success("All notifications marked as read");
     } catch (error: any) {

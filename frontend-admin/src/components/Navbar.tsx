@@ -2,7 +2,7 @@
 
 import { userAtom } from "@/state/userAtom";
 import { useAtom } from "jotai";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,8 +11,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, BellRing } from "lucide-react";
+import { User, Settings, LogOut, Bell } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { Badge } from "@/components/ui/badge";
+import axios from "axios";
+import { unreadNotificationsCountAtom } from "@/state/notificationAtom";
 
 interface NavbarProps {
   isSidebarOpen: boolean;
@@ -21,10 +24,49 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
   const [user] = useAtom(userAtom);
-  console.log("email: " + user?.email);
-  console.log("fullname: " + user?.fullName);
-
+  const [unreadCount, setUnreadCount] = useAtom(unreadNotificationsCountAtom);
   const navigate = useNavigate();
+
+  // Fetch unread notifications count
+  const fetchUnreadCount = async () => {
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+      if (!accessToken || !user) return;
+
+      const response = await axios.get(
+        "http://localhost:3000/api/admin/notifications",
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+          params: {
+            read: false,
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const allNotifications = response.data.data;
+        // Filter notifications for current user and unread status
+        const userUnreadNotifications = allNotifications.filter(
+          (notification: any) =>
+            !notification.read && notification.recipientId?._id === user._id
+        );
+
+        setUnreadCount(userUnreadNotifications.length);
+      }
+    } catch (error: any) {
+      console.error("Error fetching notifications count:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchUnreadCount();
+
+      // Optional: Refresh count every 30 seconds
+      const interval = setInterval(fetchUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to log out?")) {
@@ -79,8 +121,26 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
             </h1>
           </div>
 
-          {/* Right side: User profile with Dropdown */}
+          {/* Right side: Notifications and User profile */}
           <div className="flex items-center space-x-4">
+            {/* Notifications Icon */}
+            <button
+              className="relative p-2 text-gray-500 hover:text-gray-900 focus:outline-none transition-colors duration-200 rounded-full hover:bg-gray-100"
+              onClick={() => navigate("/notifications")}
+              title="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge
+                  className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs bg-red-500 text-white border-2 border-white rounded-full"
+                  variant="destructive"
+                >
+                  {unreadCount > 9 ? "9+" : unreadCount}
+                </Badge>
+              )}
+            </button>
+
+            {/* User Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center space-x-3 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 rounded-full p-1">
@@ -107,14 +167,7 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Profile Settings</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => {
-                    navigate("/notifications");
-                  }}
-                >
-                  <BellRing className="mr-2 h-4 w-4" />
-                  <span>View Notifications</span>
-                </DropdownMenuItem>
+                {/* Removed "View Notifications" from here since it's now in navbar */}
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Logout</span>

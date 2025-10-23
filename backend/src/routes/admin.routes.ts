@@ -78,6 +78,10 @@ import {
   deleteNotificationController,
   getAllUsersReportController,
   exportAllUsersReportController,
+  approveRequestedItemController,
+  rejectRequestedItemController,
+  deleteRequestedItemController,
+  getAllRequestedItemsController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
@@ -248,6 +252,16 @@ router.post(
   authUser,
   extendPeriodController
 );
+
+/* ========================= NEW ITEM REQUEST ========================= */
+
+router.get("/requested-items", authUser, getAllRequestedItemsController);
+
+router.put("/requested-items/:requestId/approve", authUser, approveRequestedItemController);
+
+router.put("/requested-items/:requestId/reject", authUser, rejectRequestedItemController);
+
+router.delete("/requested-items/:requestId", authUser, deleteRequestedItemController)
 
 /* ========================= CATEGORIES ========================= */
 router.get(

@@ -15,8 +15,10 @@ import {
 } from "../validations/auth.validation";
 import {
   addTemplateService,
+  approveRequestedItemService,
   checkExpiredNotifications,
   deleteFineService,
+  deleteRequestedItemService,
   deleteUserService,
   exportAllUsersReport,
   exportDefaulterReport,
@@ -29,6 +31,7 @@ import {
   generateIssuedItemsReportPDF,
   getAdminProfileService,
   getAllDonationService,
+  getAllRequestedItemsService,
   getAllUsersReport,
   getCategoryByIdService,
   getDefaulterReport,
@@ -43,6 +46,7 @@ import {
   loginService,
   processItemReturn,
   recordPaymentService,
+  rejectRequestedItemService,
   removeUserFromQueueService,
   resetPasswordAdminService,
   sendReminderService,
@@ -1334,65 +1338,219 @@ export const extendPeriodController = async (req: Request, res: Response) => {
   }
 };
 
-// export const createIssueRequestController = async (req: Request, res: Response) => {
-//   try {
-//     const { itemId } = req.body;
-//     const userId = (req as any).user?.userId;
-//     console.log(userId);
-//     console.log(req.user.id);
+export const getAllRequestedItemsController = async (req: Request, res: Response) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      status, 
+      category, 
+      sortBy = 'requestedAt', 
+      sortOrder = 'desc' 
+    } = req.query;
 
-//     if (!Types.ObjectId.isValid(itemId)) {
-//       return res.status(400).json({ message: "Invalid item ID" });
-//     }
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
 
-//     // Check if item exists and is available
-//     const item = await InventoryItem.findById(itemId);
-//     if (!item) {
-//       return res.status(404).json({ message: "Item not found" });
-//     }
+    if (isNaN(pageNum) || pageNum < 1) {
+      return res.status(400).json({
+        success: false,
+        message: "Page must be a positive number"
+      });
+    }
 
-//     if (item.availableCopies <= 0) {
-//       return res.status(400).json({ message: "Item not available" });
-//     }
+    if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
+      return res.status(400).json({
+        success: false,
+        message: "Limit must be between 1 and 100"
+      });
+    }
 
-//     // Check if user already has a pending request for this item
-//     const existingRequest = await IssueRequest.findOne({
-//       userId,
-//       itemId,
-//       status: "pending"
-//     });
+    if (status && !['pending', 'approved', 'rejected'].includes(status as string)) {
+      return res.status(400).json({
+        success: false,
+        message: "Status must be one of: pending, approved, rejected"
+      });
+    }
 
-//     if (existingRequest) {
-//       return res.status(400).json({ message: "You already have a pending request for this item" });
-//     }
+    if (sortOrder && !['asc', 'desc'].includes(sortOrder as string)) {
+      return res.status(400).json({
+        success: false,
+        message: "Sort order must be 'asc' or 'desc'"
+      });
+    }
 
-//     // Check user eligibility
-//     const eligibility = await checkUserEligibility(new Types.ObjectId(userId));
-//     if (!eligibility.eligible) {
-//       return res.status(400).json({ message: eligibility.reason });
-//     }
+    const result = await getAllRequestedItemsService({
+      page: pageNum,
+      limit: limitNum,
+      status: status as string,
+      category: category as string,
+      sortBy: sortBy as string,
+      sortOrder: sortOrder as 'asc' | 'desc'
+    });
 
-//     // Create issue request
-//     const issueRequest = new IssueRequest({
-//       userId,
-//       itemId,
-//       status: "pending"
-//     });
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message
+      });
+    }
 
-//     await issueRequest.save();
+    res.status(200).json({
+      success: true,
+      message: "Item requests fetched successfully",
+      data: result.data
+    });
 
-//     // Populate the response
-//     await issueRequest.populate("itemId", "title authorOrCreator");
+  } catch (error) {
+    console.error("Error fetching item requests:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
 
-//     res.status(201).json({
-//       message: "Issue request submitted successfully",
-//       request: issueRequest
-//     });
-//   } catch (error: any) {
-//     console.error("Error creating issue request:", error);
-//     res.status(500).json({ message: "Error creating issue request" });
-//   }
-// };
+export const approveRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { requestId } = req.params;
+    const adminId = req.user?.id;
+
+    if (!requestId) {
+      return res.status(400).json({
+        success: false,
+        message: "Request ID is required",
+      });
+    }
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: Admin ID not found",
+      });
+    }
+
+    const result = await approveRequestedItemService(
+      requestId,
+      adminId.toString()
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Item request approved successfully",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Error approving item request:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const rejectRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { requestId } = req.params;
+    const adminId = req.user?.id;
+
+    if (!requestId) {
+      return res.status(400).json({
+        success: false,
+        message: "Request ID is required",
+      });
+    }
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: Admin ID not found",
+      });
+    }
+
+    const result = await rejectRequestedItemService(
+      requestId,
+      adminId.toString()
+    );
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Item request rejected successfully",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Error rejecting item request:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
+
+export const deleteRequestedItemController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { requestId } = req.params;
+    const adminId = req.user?.id;
+
+    if (!requestId) {
+      return res.status(400).json({
+        success: false,
+        message: "Request ID is required",
+      });
+    }
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: Admin ID not found",
+      });
+    }
+
+    const result = await deleteRequestedItemService(requestId);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Item request deleted successfully",
+      data: result.data,
+    });
+  } catch (error) {
+    console.error("Error deleting item request:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 export const getCategoriesController = async (req: Request, res: Response) => {
   try {

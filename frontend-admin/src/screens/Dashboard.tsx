@@ -14,7 +14,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -212,6 +218,7 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       <div className="max-w-7xl mx-auto">
+        {/* header` */}
         <div className="mb-8">
           <h2 className="text-4xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent mb-3">
             Welcome back!
@@ -273,6 +280,7 @@ const DashboardPage: React.FC = () => {
             </div>
           ))}
         </div>
+
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
@@ -292,112 +300,75 @@ const DashboardPage: React.FC = () => {
             />
           </div>
 
-          <div className="space-y-8">
-            {/* Recent Activities */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-center mb-6">
-                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-                  <svg
-                    className="h-5 w-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-slate-800">
-                  Recent Activity
-                </h3>
+          {/* Recent Activities */}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
+            <div className="flex items-center mb-6">
+              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                <svg
+                  className="h-5 w-5 text-white"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 10V3L4 14h7v7l9-11h-7z"
+                  />
+                </svg>
               </div>
-              <div className="space-y-4">
-                {dashboardData.recentActivity.length > 0 ? (
-                  dashboardData.recentActivity.map(
-                    (activity: any, index: number) => (
-                      <div
-                        key={index}
-                        className="flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors duration-200"
-                      >
-                        <div className="h-10 w-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
-                          <div className="h-3 w-3 bg-blue-600 rounded-full"></div>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm text-slate-800 font-medium">
-                            <span className="font-bold text-blue-600">
-                              {activity.user}
-                            </span>{" "}
-                            {activity.action}
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            {activity.date}
-                          </p>
-                        </div>
-                      </div>
-                    )
-                  )
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                      <svg
-                        className="h-6 w-6 text-gray-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
-                        />
-                      </svg>
-                    </div>
-                    <p className="text-gray-500 text-sm">
-                      No recent activity found.
-                    </p>
-                  </div>
-                )}
-              </div>
+              <h3 className="text-lg font-bold text-slate-800">
+                Recent Activity
+              </h3>
             </div>
-
-            {/* Quick Actions */}
-            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-              <div className="flex items-center mb-6">
-                <div className="h-10 w-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center mr-3">
-                  <svg
-                    className="h-5 w-5 text-white"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 10V3L4 14h7v7l9-11h-7z"
-                    />
-                  </svg>
+            <div className="space-y-4">
+              {dashboardData.recentActivity.length > 0 ? (
+                dashboardData.recentActivity.map(
+                  (activity: any, index: number) => (
+                    <div
+                      key={index}
+                      className="flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors duration-200"
+                    >
+                      <div className="h-10 w-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="h-3 w-3 bg-blue-600 rounded-full"></div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm text-slate-800 font-medium">
+                          <span className="font-bold text-blue-600">
+                            {activity.user}
+                          </span>{" "}
+                          {activity.action}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {activity.date}
+                        </p>
+                      </div>
+                    </div>
+                  )
+                )
+              ) : (
+                <div className="text-center py-8">
+                  <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg
+                      className="h-6 w-6 text-gray-400"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"
+                      />
+                    </svg>
+                  </div>
+                  <p className="text-gray-500 text-sm">
+                    No recent activity found.
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-slate-800">
-                  Quick Actions
-                </h3>
-              </div>
-              <div className="space-y-4">
-                <button className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                  Add New User
-                </button>
-                <button className="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                  Generate Report
-                </button>
-                <button className="w-full bg-gradient-to-r from-gray-500 to-gray-600 hover:from-gray-600 hover:to-gray-700 text-white font-semibold py-4 px-6 rounded-2xl transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 shadow-lg hover:shadow-xl">
-                  View Settings
-                </button>
-              </div>
+              )}
             </div>
           </div>
         </div>

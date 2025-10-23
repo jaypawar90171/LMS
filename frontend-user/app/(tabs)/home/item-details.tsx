@@ -44,6 +44,7 @@ export default function ItemDetailsScreen() {
   const [token] = useAtom(tokenAtom);
   const [itemDetails, setItemDetails] = useState<ItemDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [extending, setExtending] = useState(false);
   const router = useRouter();
 
   console.log("itemdetails" + itemDetails?.status);
@@ -113,6 +114,69 @@ export default function ItemDetailsScreen() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExtendPeriod = async () => {
+    if (!token || !itemId) return;
+
+    try {
+      Alert.alert(
+        "Extend Period",
+        `Would you like to request an extension for "${itemDetails?.title}"? The admin will review your request.`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Request Extension",
+            style: "default",
+            onPress: async () => {
+              try {
+                setExtending(true);
+                const response = await axios.get(
+                  `${API_BASE_URL}/items/${itemId}/extend-period`,
+                  {
+                    headers: { Authorization: `Bearer ${token}` },
+                  }
+                );
+
+                Alert.alert(
+                  "Extension Request Sent",
+                  "Your request to extend the period has been submitted successfully. The admin will review it shortly.",
+                  [
+                    {
+                      text: "OK",
+                      onPress: () => {
+                        // Optionally refresh the item details to show updated status
+                        fetchItemDetails();
+                      },
+                    },
+                  ]
+                );
+              } catch (error: any) {
+                console.error("Failed to extend period:", error);
+
+                if (error.response) {
+                  const errorMessage =
+                    error.response.data.message ||
+                    "Failed to request extension";
+                  Alert.alert("Error", errorMessage);
+                } else if (error.request) {
+                  Alert.alert(
+                    "Network Error",
+                    "Could not connect to the server. Please check your internet connection."
+                  );
+                } else {
+                  Alert.alert("Error", "An unexpected error occurred.");
+                }
+              } finally {
+                setExtending(false);
+              }
+            },
+          },
+        ]
+      );
+    } catch (error) {
+      console.error("Error showing confirmation:", error);
     }
   };
 
@@ -432,13 +496,26 @@ export default function ItemDetailsScreen() {
         )}
 
         {(itemType === "issued" || itemType === "overdue") && (
-          <TouchableOpacity
-            style={[styles.actionButton, styles.primaryButton]}
-            onPress={handleReturnItem}
-          >
-            <Ionicons name="return-up-back-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Return Item</Text>
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={[styles.actionButton, styles.secondaryButton]}
+              onPress={handleExtendPeriod}
+              disabled={extending}
+            >
+              <Ionicons name="calendar-outline" size={20} color="#FFF" />
+              <Text style={styles.actionButtonText}>
+                {extending ? "Requesting..." : "Extend Period"}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.actionButton, styles.primaryButton]}
+              onPress={handleReturnItem}
+            >
+              <Ionicons name="return-up-back-outline" size={20} color="#FFF" />
+              <Text style={styles.actionButtonText}>Return Item</Text>
+            </TouchableOpacity>
+          </>
         )}
 
         {itemType === "new" && (
@@ -526,6 +603,7 @@ const styles = StyleSheet.create({
   },
   actionsContainer: {
     padding: 16,
+    gap: 12,
   },
   actionButton: {
     flexDirection: "row",
@@ -537,6 +615,9 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     backgroundColor: COLORS.primary,
+  },
+  secondaryButton: {
+    backgroundColor: "#FF9500", 
   },
   dangerButton: {
     backgroundColor: "#FF3B30",
