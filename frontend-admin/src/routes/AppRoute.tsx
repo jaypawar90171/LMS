@@ -25,6 +25,7 @@ import DefaulterReport from "@/screens/DefaulterReport";
 import Notifications from "@/screens/Notifications";
 import AllUsersReport from "@/screens/AllUsersReport";
 import RequestedItems from "@/screens/RequestedItems";
+import BarcodeScannerPage from "@/screens/BarcodeScannerPage";
 
 const AppRoute = () => {
   return (
@@ -210,6 +211,14 @@ const AppRoute = () => {
             element={
               <Layout>
                 <RequestedItems />
+              </Layout>
+            }
+          />
+          <Route
+            path="/barcode-scan"
+            element={
+              <Layout>
+                <BarcodeScannerPage />
               </Layout>
             }
           />

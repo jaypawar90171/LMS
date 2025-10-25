@@ -34,12 +34,12 @@ const ItemCard: React.FC<ItemCardProps> = ({
     <TouchableOpacity
       style={styles.container}
       onPress={onPress}
-      activeOpacity={0.7}
+      activeOpacity={0.85}
       accessibilityRole="button"
       accessibilityLabel={`Open details for ${title}`}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
-      {/* Item Image */}
+      {/* Image Container */}
       <View style={styles.imageContainer}>
         {imageUrl ? (
           <Image
@@ -51,56 +51,65 @@ const ItemCard: React.FC<ItemCardProps> = ({
           <View style={styles.placeholderImage}>
             <Ionicons
               name="book-outline"
-              size={32}
+              size={48}
               color={COLORS.textSecondary}
             />
           </View>
         )}
-      </View>
 
-      {/* Item Details */}
-      <View style={styles.detailsContainer}>
-        <Text style={styles.title} numberOfLines={2}>
-          {title}
-        </Text>
-
-        {/* Status badge just below title when available */}
-        {!!status && (
+        {/* Status Badge - Positioned on image */}
+        {status && (
           <View
             style={[
-              styles.statusChip,
-              !!statusColor && {
-                backgroundColor: `${statusColor}22`,
-                borderColor: statusColor,
-              },
+              styles.statusBadgeOverlay,
+              statusColor && { backgroundColor: statusColor },
             ]}
           >
-            <Text
-              style={[
-                styles.statusChipText,
-                !!statusColor && { color: statusColor },
-              ]}
-              numberOfLines={1}
-            >
+            <Text style={styles.statusBadgeText} numberOfLines={1}>
               {status}
             </Text>
           </View>
         )}
 
+        {/* Overdue Indicator */}
+        {showOverdue && (
+          <View style={styles.overdueIndicator}>
+            <Ionicons name="alert-circle" size={16} color="#FFFFFF" />
+          </View>
+        )}
+      </View>
+
+      {/* Content Container */}
+      <View style={styles.contentContainer}>
+        {/* Title */}
+        <Text style={styles.title} numberOfLines={2}>
+          {title}
+        </Text>
+
+        {/* Subtitle/Author */}
         {subtitle && (
           <Text style={styles.subtitle} numberOfLines={1}>
             {subtitle}
           </Text>
         )}
 
-        {/* Status/Due Info */}
-        <View style={styles.infoContainer}>
+        {/* Info Row */}
+        <View style={styles.infoRow}>
           {dueInfo && (
             <View
-              style={[styles.statusBadge, showOverdue && styles.overdueBadge]}
+              style={[styles.infoBadge, showOverdue && styles.infoBadgeOverdue]}
             >
+              <Ionicons
+                name={showOverdue ? "alert-circle" : "calendar"}
+                size={14}
+                color={showOverdue ? "#FF3B30" : COLORS.primary}
+              />
               <Text
-                style={[styles.statusText, showOverdue && styles.overdueText]}
+                style={[
+                  styles.infoBadgeText,
+                  showOverdue && styles.infoBadgeTextOverdue,
+                ]}
+                numberOfLines={1}
               >
                 {dueInfo}
               </Text>
@@ -108,10 +117,23 @@ const ItemCard: React.FC<ItemCardProps> = ({
           )}
 
           {positionInfo && (
-            <View style={styles.positionBadge}>
-              <Text style={styles.positionText}>{positionInfo}</Text>
+            <View style={styles.infoBadge}>
+              <Ionicons name="time" size={14} color={COLORS.primary} />
+              <Text style={styles.infoBadgeText} numberOfLines={1}>
+                {positionInfo}
+              </Text>
             </View>
           )}
+        </View>
+
+        {/* Action Indicator */}
+        <View style={styles.actionIndicator}>
+          <Text style={styles.actionText}>Tap to view details</Text>
+          <Ionicons
+            name="chevron-forward"
+            size={16}
+            color={COLORS.textSecondary}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -120,97 +142,126 @@ const ItemCard: React.FC<ItemCardProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: "row",
     backgroundColor: COLORS.cardBackground,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
+    borderRadius: 16,
+    marginBottom: 16,
+    overflow: "hidden",
     shadowColor: COLORS.black,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 4,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   imageContainer: {
-    marginRight: 12,
+    position: "relative",
+    width: "100%",
+    height: 200,
+    backgroundColor: COLORS.inputBackground,
   },
   image: {
-    width: 60,
-    height: 80,
-    borderRadius: 8,
+    width: "100%",
+    height: "100%",
   },
   placeholderImage: {
-    width: 60,
-    height: 80,
-    borderRadius: 8,
+    width: "100%",
+    height: "100%",
     backgroundColor: COLORS.inputBackground,
     justifyContent: "center",
     alignItems: "center",
   },
-  detailsContainer: {
-    flex: 1,
-    justifyContent: "space-between",
+  statusBadgeOverlay: {
+    position: "absolute",
+    top: 12,
+    right: 12,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#FFFFFF",
+  },
+  overdueIndicator: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    backgroundColor: "#FF3B30",
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: COLORS.black,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  contentContainer: {
+    padding: 16,
+    gap: 10,
   },
   title: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 18,
+    fontWeight: "700",
     color: COLORS.textPrimary,
-    marginBottom: 4,
+    lineHeight: 24,
   },
   subtitle: {
     fontSize: 14,
     color: COLORS.textSecondary,
-    marginBottom: 8,
+    fontWeight: "500",
   },
-  infoContainer: {
+  infoRow: {
+    flexDirection: "row",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  infoBadge: {
     flexDirection: "row",
     alignItems: "center",
-  },
-  statusBadge: {
-    backgroundColor: `${COLORS.primary}15`,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    marginRight: 8,
-  },
-  overdueBadge: {
-    backgroundColor: "#FFE6E6",
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: COLORS.primary,
-  },
-  overdueText: {
-    color: "#FF3B30",
-  },
-  positionBadge: {
-    backgroundColor: `${COLORS.textSecondary}15`,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  positionText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
-  statusChip: {
-    alignSelf: "flex-start",
+    gap: 6,
+    backgroundColor: `${COLORS.primary}12`,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-    marginBottom: 6,
-    backgroundColor: `${COLORS.primary}15`,
-    borderColor: COLORS.primary,
+    borderColor: `${COLORS.primary}30`,
   },
-  statusChipText: {
-    fontSize: 12,
+  infoBadgeOverdue: {
+    backgroundColor: "#FFE6E6",
+    borderColor: "#FF3B30",
+  },
+  infoBadgeText: {
+    fontSize: 13,
     fontWeight: "600",
     color: COLORS.primary,
+  },
+  infoBadgeTextOverdue: {
+    color: "#FF3B30",
+  },
+  actionIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  actionText: {
+    fontSize: 12,
+    color: COLORS.textSecondary,
+    fontWeight: "500",
   },
 });
 

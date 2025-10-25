@@ -82,12 +82,17 @@ import {
   rejectRequestedItemController,
   deleteRequestedItemController,
   getAllRequestedItemsController,
+  downloadBatchBarcodeController,
+  getItemByScannedBarcodeController,
 } from "../controllers/admin.controller";
 import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
 import { upload } from "../config/upload";
-import { exportAllUsersReport, fetchAllPermissionsService } from "../services/admin.service";
+import {
+  exportAllUsersReport,
+  fetchAllPermissionsService,
+} from "../services/admin.service";
 
 const router = Router();
 
@@ -254,14 +259,25 @@ router.post(
 );
 
 /* ========================= NEW ITEM REQUEST ========================= */
-
 router.get("/requested-items", authUser, getAllRequestedItemsController);
 
-router.put("/requested-items/:requestId/approve", authUser, approveRequestedItemController);
+router.put(
+  "/requested-items/:requestId/approve",
+  authUser,
+  approveRequestedItemController
+);
 
-router.put("/requested-items/:requestId/reject", authUser, rejectRequestedItemController);
+router.put(
+  "/requested-items/:requestId/reject",
+  authUser,
+  rejectRequestedItemController
+);
 
-router.delete("/requested-items/:requestId", authUser, deleteRequestedItemController)
+router.delete(
+  "/requested-items/:requestId",
+  authUser,
+  deleteRequestedItemController
+);
 
 /* ========================= CATEGORIES ========================= */
 router.get(
@@ -389,13 +405,25 @@ router.get("/reports/issued/export", authUser, exportIssuedItemsController);
 
 router.get("/reports/defaulters", authUser, getDefaulterReportController);
 
-router.post("/reports/defaulters/send-reminder", authUser, sendReminderController);
+router.post(
+  "/reports/defaulters/send-reminder",
+  authUser,
+  sendReminderController
+);
 
-router.get("/reports/defaulters/export", authUser, exportDefaulterReportController);
+router.get(
+  "/reports/defaulters/export",
+  authUser,
+  exportDefaulterReportController
+);
 
 router.get("/reports/all-users", authUser, getAllUsersReportController);
 
-router.get("/reports/all-users/export", authUser, exportAllUsersReportController)
+router.get(
+  "/reports/all-users/export",
+  authUser,
+  exportAllUsersReportController
+);
 
 /* ========================= SETTINGS ========================= */
 router.get(
@@ -475,6 +503,18 @@ router.get(
   downloadBarcodeController
 );
 
+router.get(
+  "/barcode/download-batch/:itemId",
+  authUser,
+  downloadBatchBarcodeController
+);
+
+router.get(
+  "/barcode/lookup/:scannedCode",
+  authUser,
+  getItemByScannedBarcodeController
+);
+
 /* ========================= DONATIONS ========================= */
 router.get(
   "/donations",
@@ -527,14 +567,21 @@ router.post(
 
 router.get("/inventory/queues", authUser, getAllQueuesController);
 
-
 /* ========================= Notifications ========================= */
 router.get("/notifications", authUser, getNotificationsController);
 
-router.patch("/notifications/:notificationId/read", authUser, markAsReadController);
+router.patch(
+  "/notifications/:notificationId/read",
+  authUser,
+  markAsReadController
+);
 
 router.patch("/notifications/mark-all-read", authUser, markAllAsReadController);
 
-router.delete("/notifications/:notificationId", authUser, deleteNotificationController);
+router.delete(
+  "/notifications/:notificationId",
+  authUser,
+  deleteNotificationController
+);
 
 export default router;

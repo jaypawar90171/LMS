@@ -43,51 +43,7 @@ import axios from "axios";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
 import { IssuedItemDetailsModal } from "@/components/IssuedItemDetailsModal";
 import { ExtendPeriodModal } from "@/components/ExtendPeriodModal";
-
-// Define types based on your API response
-interface UserType {
-  id: string;
-  fullName: string;
-  email: string;
-  roles: string[];
-}
-
-interface ItemType {
-  id: string;
-  title: string;
-  authorOrCreator: string;
-  description: string;
-  categoryId: string;
-  subcategoryId: string;
-  price: { $numberDecimal: string } | string;
-  quantity: number;
-  availableCopies: number;
-}
-
-interface FineType {
-  id: string;
-  reason: string;
-  amountIncurred: number;
-  amountPaid: number;
-  outstandingAmount: number;
-}
-
-interface IssuedItem {
-  id: string;
-  status: "Issued" | "Returned" | "Overdue";
-  user: UserType;
-  item: ItemType;
-  issuedBy: UserType;
-  returnedTo: UserType | null;
-  issuedDate: string;
-  dueDate: string;
-  returnDate: string;
-  extensionCount: number;
-  maxExtensionAllowed: number;
-  fine: FineType | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { IssuedItem } from "@/interfaces/issuedItem";
 
 interface FilterState {
   status: string;
@@ -107,7 +63,6 @@ export default function IssuedItemsManagement() {
     sortOrder: "asc",
   });
 
-  // Modal states
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -625,9 +580,7 @@ export default function IssuedItemsManagement() {
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Record
                               </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {}}
-                              >
+                              <DropdownMenuItem onClick={() => {}}>
                                 <Eye className="h-4 w-4 mr-2" />
                                 Mark as return
                               </DropdownMenuItem>
@@ -668,7 +621,7 @@ export default function IssuedItemsManagement() {
         <>
           <IssuedItemDetailsModal
             isOpen={isDetailsModalOpen}
-            onOpenChange={setIsDetailsModalOpen}
+            onClose={() => setIsDetailsModalOpen(false)}
             item={selectedItem}
           />
 

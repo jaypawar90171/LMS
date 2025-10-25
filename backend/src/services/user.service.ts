@@ -1519,7 +1519,6 @@ export const expressDonationInterestService = async (
     throw err;
   }
 
-  // Validate duration
   if (duration < 0) {
     const err: any = new Error("Duration cannot be negative");
     err.statusCode = 400;

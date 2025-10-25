@@ -210,8 +210,8 @@ export default function HomeScreen() {
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={[styles.card, { height: 90 }]} />
         <View style={[styles.card, { height: 40 }]} />
-        <View style={[styles.card, { height: 140 }]} />
-        <View style={[styles.card, { height: 140 }]} />
+        <View style={[styles.card, { height: 280 }]} />
+        <View style={[styles.card, { height: 280 }]} />
       </ScrollView>
     );
   }
@@ -230,15 +230,13 @@ export default function HomeScreen() {
     <View
       style={[
         styles.overviewCard,
-        { borderColor: color, backgroundColor: `${color}15` },
+        { borderColor: color, backgroundColor: `${color}10` },
       ]}
     >
-      <View style={styles.overviewTop}>
-        <View style={[styles.iconBadge, { backgroundColor: `${color}22` }]}>
-          <Ionicons name={icon} size={18} color={color} />
-        </View>
-        <Text style={[styles.overviewValue, { color }]}>{value}</Text>
+      <View style={[styles.iconBadge, { backgroundColor: `${color}25` }]}>
+        <Ionicons name={icon} size={24} color={color} />
       </View>
+      <Text style={[styles.overviewValue, { color }]}>{value}</Text>
       <Text style={styles.overviewLabel}>{label}</Text>
     </View>
   );
@@ -270,7 +268,6 @@ export default function HomeScreen() {
       }
       showsVerticalScrollIndicator={false}
     >
-      {/* Welcome Header */}
       <View style={styles.welcomeCard}>
         <View style={{ flex: 1 }}>
           <Text style={styles.welcomeText}>Welcome, {displayName} 👋</Text>
@@ -285,10 +282,11 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-        <Ionicons name="library-outline" size={28} color={COLORS.primary} />
+        <View style={styles.welcomeIcon}>
+          <Ionicons name="library-outline" size={32} color={COLORS.primary} />
+        </View>
       </View>
 
-      {/* Overview */}
       <View style={styles.overviewGrid}>
         <OverviewCard
           icon="document-text-outline"
@@ -329,7 +327,7 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Ionicons
             name="document-text-outline"
-            size={24}
+            size={32}
             color={COLORS.textSecondary}
           />
           <Text style={styles.emptyStateText}>No currently issued items</Text>
@@ -393,7 +391,7 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Ionicons
             name="time-outline"
-            size={24}
+            size={32}
             color={COLORS.textSecondary}
           />
           <Text style={styles.emptyStateText}>No items in queue</Text>
@@ -435,7 +433,7 @@ export default function HomeScreen() {
         <View style={styles.emptyState}>
           <Ionicons
             name="sparkles-outline"
-            size={24}
+            size={32}
             color={COLORS.textSecondary}
           />
           <Text style={styles.emptyStateText}>No new arrivals</Text>
@@ -464,11 +462,11 @@ export default function HomeScreen() {
       {/* Quick Actions */}
       <SectionHeader title="Quick Actions" showAction={false} />
       <View style={styles.quickActionsContainer}>
-        <QuickActionButton
+        {/* <QuickActionButton
           icon="scan-outline"
           title="Scan to Issue/Return"
           onPress={handleScan}
-        />
+        /> */}
         <QuickActionButton
           icon="add-circle-outline"
           title="Request New Item"
@@ -508,10 +506,19 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderWidth: 1,
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 20,
+    gap: 16,
+  },
+  welcomeIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
   },
   welcomeText: {
     fontSize: 28,
@@ -522,6 +529,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     color: COLORS.textSecondary,
+    marginBottom: 8,
   },
   rolesRow: {
     flexDirection: "row",
@@ -548,56 +556,49 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
-    marginTop: 12,
-    marginBottom: 8,
+    marginBottom: 24,
+    gap: 12,
   },
   overviewCard: {
     width: "48%",
-    borderRadius: 12,
-    padding: 12,
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
-    marginBottom: 10,
-  },
-  overviewTop: {
-    flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 6,
+    gap: 8,
   },
   iconBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     alignItems: "center",
     justifyContent: "center",
   },
   overviewValue: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: "800",
   },
   overviewLabel: {
-    fontSize: 12,
+    fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: "600",
   },
   emptyState: {
     backgroundColor: COLORS.cardBackground,
-    padding: 20,
-    borderRadius: 12,
+    padding: 32,
+    borderRadius: 14,
     alignItems: "center",
     borderWidth: 1,
     borderColor: COLORS.border,
     borderStyle: "dashed",
-    marginBottom: 8,
-    gap: 8,
+    marginBottom: 20,
+    gap: 12,
   },
   emptyStateText: {
     color: COLORS.textSecondary,
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
-    marginTop: 12,
-    lineHeight: 22,
   },
   card: {
     backgroundColor: COLORS.cardBackground,
@@ -608,17 +609,17 @@ const styles = StyleSheet.create({
   },
   horizontalScroll: {
     flexDirection: "row",
-    paddingVertical: 16,
-    marginHorizontal: -4,
+    paddingVertical: 8,
+    gap: 12,
   },
   newArrivalCard: {
-    width: 280,
-    marginRight: 12,
+    width: 300,
   },
   quickActionsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-evenly",
     flexWrap: "wrap",
     marginBottom: 32,
+    gap: 12,
   },
 });

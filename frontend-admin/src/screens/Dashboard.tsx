@@ -21,6 +21,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Eye, Search } from "lucide-react";
 
 const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -33,6 +34,19 @@ const DashboardPage: React.FC = () => {
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activityFilter, setActivityFilter] = useState("all");
+
+  const filteredActivities = dashboardData.recentActivity.filter(
+    (activity: any) => {
+      const matchesSearch =
+        activity.user?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        activity.action?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter =
+        activityFilter === "all" || activity.type === activityFilter;
+      return matchesSearch && matchesFilter;
+    }
+  );
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -283,13 +297,6 @@ const DashboardPage: React.FC = () => {
 
         {/* Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-            <AnalyticsOverview
-              recentOrders={dashboardData.recentOrders}
-              days={30}
-            />
-          </div> */}
-
           <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
             <TopBorrowedItems recentOrders={dashboardData.recentOrders} />
           </div>
@@ -302,51 +309,131 @@ const DashboardPage: React.FC = () => {
 
           {/* Recent Activities */}
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow duration-300">
-            <div className="flex items-center mb-6">
-              <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
-                <svg
-                  className="h-5 w-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 10V3L4 14h7v7l9-11h-7z"
-                  />
-                </svg>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <div className="h-10 w-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center mr-3">
+                  <svg
+                    className="h-5 w-5 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M13 10V3L4 14h7v7l9-11h-7z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    Recent Activity
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {filteredActivities.length} activities found
+                  </p>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-slate-800">
-                Recent Activity
-              </h3>
+              <div className="flex items-center gap-2">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search activities..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent w-48"
+                  />
+                </div>
+              </div>
             </div>
-            <div className="space-y-4">
-              {dashboardData.recentActivity.length > 0 ? (
-                dashboardData.recentActivity.map(
-                  (activity: any, index: number) => (
+
+            {/* Activity List with Scrollbar */}
+            <div className="space-y-3 max-h-96 overflow-y-auto pr-2 scrollbar-hide">
+              {filteredActivities.length > 0 ? (
+                filteredActivities.map((activity: any, index: number) => (
+                  <div
+                    key={index}
+                    className="flex items-start gap-3 p-3 rounded-xl border border-gray-100 hover:bg-gray-50 transition-colors duration-200 group"
+                  >
                     <div
-                      key={index}
-                      className="flex items-start space-x-3 p-3 rounded-xl hover:bg-gray-50 transition-colors duration-200"
+                      className={`p-2 rounded-full flex-shrink-0 ${
+                        activity.type === "user"
+                          ? "bg-blue-100"
+                          : activity.type === "item"
+                          ? "bg-emerald-100"
+                          : activity.type === "system"
+                          ? "bg-purple-100"
+                          : activity.type === "borrow"
+                          ? "bg-amber-100"
+                          : activity.type === "return"
+                          ? "bg-green-100"
+                          : "bg-gray-100"
+                      }`}
                     >
-                      <div className="h-10 w-10 bg-gradient-to-br from-blue-100 to-blue-200 rounded-full flex items-center justify-center flex-shrink-0">
-                        <div className="h-3 w-3 bg-blue-600 rounded-full"></div>
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm text-slate-800 font-medium">
-                          <span className="font-bold text-blue-600">
-                            {activity.user}
-                          </span>{" "}
-                          {activity.action}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
+                      <div
+                        className={`h-2 w-2 rounded-full ${
+                          activity.type === "user"
+                            ? "bg-blue-600"
+                            : activity.type === "item"
+                            ? "bg-emerald-600"
+                            : activity.type === "system"
+                            ? "bg-purple-600"
+                            : activity.type === "borrow"
+                            ? "bg-amber-600"
+                            : activity.type === "return"
+                            ? "bg-green-600"
+                            : "bg-gray-600"
+                        }`}
+                      />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-slate-800 font-medium">
+                        <span className="font-bold text-blue-600">
+                          {activity.user}
+                        </span>{" "}
+                        {activity.action}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-xs text-gray-500">
                           {activity.date}
-                        </p>
+                        </span>
+                        {activity.type && (
+                          <span
+                            className={`text-xs px-2 py-1 rounded-full ${
+                              activity.type === "user"
+                                ? "bg-blue-50 text-blue-700"
+                                : activity.type === "item"
+                                ? "bg-emerald-50 text-emerald-700"
+                                : activity.type === "system"
+                                ? "bg-purple-50 text-purple-700"
+                                : activity.type === "borrow"
+                                ? "bg-amber-50 text-amber-700"
+                                : activity.type === "return"
+                                ? "bg-green-50 text-green-700"
+                                : "bg-gray-50 text-gray-700"
+                            }`}
+                          >
+                            {activity.type}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  )
-                )
+
+                    {/* Quick Actions */}
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1">
+                      <button
+                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4 text-gray-600" />
+                      </button>
+                    </div>
+                  </div>
+                ))
               ) : (
                 <div className="text-center py-8">
                   <div className="h-12 w-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -364,8 +451,13 @@ const DashboardPage: React.FC = () => {
                       />
                     </svg>
                   </div>
-                  <p className="text-gray-500 text-sm">
-                    No recent activity found.
+                  <p className="text-gray-500 text-sm mb-2">
+                    No activities found
+                  </p>
+                  <p className="text-gray-400 text-xs">
+                    {searchTerm || activityFilter !== "all"
+                      ? "Try adjusting your search or filters"
+                      : "Activities will appear here as they happen"}
                   </p>
                 </div>
               )}

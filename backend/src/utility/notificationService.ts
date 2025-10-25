@@ -1,4 +1,3 @@
-// notification.service.ts
 import Notification from "../models/notofication.modal";
 import { Types } from "mongoose";
 
@@ -7,7 +6,7 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   level: "Info" | "Success" | "Warning" | "Danger";
-  type: "user_registered" | "item_requested" | "donation_submitted" | "item_overdue" | "system_alert";
+  type: "user_registered" | "item_requested" | "donation_submitted" | "item_overdue" | "system_alert" | "force_password_reset" | "fine_created" | "fine_updated" | "fine_deleted" | "fine_payment_recorded" | "fine_waived";
   metadata?: any;
   expiresInDays?: number;
 }
@@ -34,8 +33,8 @@ export class NotificationService {
       read: false,
     };
 
-    // Set expiration if provided
-    if (expiresInDays) {
+    
+  if (expiresInDays) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
       notificationData.expiresAt = expiresAt;
@@ -68,15 +67,15 @@ export class NotificationService {
 
     const query: any = {};
 
-    // Date range filter
-    if (startDate || endDate) {
+    
+  if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = startDate;
       if (endDate) query.createdAt.$lte = endDate;
     }
 
-    // Other filters
-    if (type) query.type = type;
+    
+  if (type) query.type = type;
     if (level) query.level = level;
     if (read !== undefined) query.read = read;
 

@@ -9,15 +9,14 @@ export async function getNotificationTemplate(
   const settings = await Setting.findOne();
 
   if (!settings || !settings.notificationTemplates) {
-    console.error("🔴 ERROR: Settings or notificationTemplates not found.");
+    console.error("ERROR: Settings or notificationTemplates not found.");
     return fallback;
   }
   
-  // Use .get() to retrieve the value from the Map
   const template = settings.notificationTemplates.get(key);
 
   if (template) {
-    console.log(`👍 Template for key "${key}" found! Rendering...`);
+    console.log(`Template for key "${key}" found! Rendering...`);
     return {
       subject: renderTemplate(template.emailSubject || fallback.subject, placeholders),
       body: renderTemplate(template.emailBody || fallback.body, placeholders),
@@ -27,6 +26,6 @@ export async function getNotificationTemplate(
     };
   }
   
-  console.warn(`🟡 WARNING: Template for key "${key}" not found. Using fallback.`);
+  console.warn(`WARNING: Template for key "${key}" not found. Using fallback.`);
   return fallback;
 }

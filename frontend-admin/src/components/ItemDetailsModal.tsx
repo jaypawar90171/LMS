@@ -61,7 +61,7 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         return;
       }
       const response = await axios.get(
-        `http://localhost:3000/api/admin/barcode/download/${itemData._id}`,
+        `http://localhost:3000/api/admin/barcode/download-batch/${itemData._id}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -95,22 +95,16 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
   }) => (
     <div className={`flex flex-col ${className}`}>
       <span className="text-gray-500 text-sm font-medium">{label}</span>{" "}
-      {/* Added font-medium */}
-      <span className="text-gray-800 text-base mt-1">
-        {value || "N/A"}
-      </span>{" "}
-      {/* Added mt-1 */}
+      <span className="text-gray-800 text-base mt-1">{value || "N/A"}</span>{" "}
     </div>
   );
 
-  // Helper function to get category-specific fields
   const getCategorySpecificFields = () => {
     if (!itemData?.categoryId?.name) return null;
 
     const categoryName = itemData.categoryId.name;
     const fields = [];
 
-    // Common fields for all categories
     if (itemData.size) {
       fields.push(<Field key="size" label="Size" value={itemData.size} />);
     }
@@ -191,7 +185,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
     return fields;
   };
 
-  // Helper to format price from Decimal128
   const formatPrice = (price: any) => {
     if (!price) return "N/A";
     if (typeof price === "number") return `$${price.toFixed(2)}`;
@@ -224,14 +217,12 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
         ) : (
           itemData && (
             <>
-              {/* Basic Information Section */}
               <section>
                 <h2 className="text-lg font-bold text-gray-700 mb-4">
                   Basic Information
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {" "}
-                  {/* Changed gap from gap-y-6 to gap-4 */}
                   <Field label="Title" value={itemData.title} />
                   <Field
                     label="Category"
@@ -286,7 +277,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {" "}
-                      {/* Changed to 3 columns and smaller gap */}
                       {getCategorySpecificFields()}
                     </div>
                   </section>
@@ -299,7 +289,6 @@ const ItemDetailsModal: React.FC<ItemDetailsModalProps> = ({
                 </h2>
                 <div className="grid grid-cols-3 gap-4">
                   {" "}
-                  {/* Simplified to 3 columns with consistent gap */}
                   <div className="flex flex-col">
                     <span className="text-gray-500 text-sm">
                       Total Quantity

@@ -100,6 +100,8 @@ import InventoryItem from "../models/item.model";
 import Queue from "../models/queue.model";
 import { NotificationService } from "../utility/notificationService";
 import { UserReportFilters } from "../interfaces/userReport.interface";
+import PDFDocument from "pdfkit";
+import bwipjs from "bwip-js";
 
 export const loginController = async (req: Request, res: Response) => {
   try {
@@ -1338,15 +1340,18 @@ export const extendPeriodController = async (req: Request, res: Response) => {
   }
 };
 
-export const getAllRequestedItemsController = async (req: Request, res: Response) => {
+export const getAllRequestedItemsController = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { 
-      page = 1, 
-      limit = 10, 
-      status, 
-      category, 
-      sortBy = 'requestedAt', 
-      sortOrder = 'desc' 
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      category,
+      sortBy = "requestedAt",
+      sortOrder = "desc",
     } = req.query;
 
     const pageNum = parseInt(page as string);
@@ -1355,28 +1360,31 @@ export const getAllRequestedItemsController = async (req: Request, res: Response
     if (isNaN(pageNum) || pageNum < 1) {
       return res.status(400).json({
         success: false,
-        message: "Page must be a positive number"
+        message: "Page must be a positive number",
       });
     }
 
     if (isNaN(limitNum) || limitNum < 1 || limitNum > 100) {
       return res.status(400).json({
         success: false,
-        message: "Limit must be between 1 and 100"
+        message: "Limit must be between 1 and 100",
       });
     }
 
-    if (status && !['pending', 'approved', 'rejected'].includes(status as string)) {
+    if (
+      status &&
+      !["pending", "approved", "rejected"].includes(status as string)
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Status must be one of: pending, approved, rejected"
+        message: "Status must be one of: pending, approved, rejected",
       });
     }
 
-    if (sortOrder && !['asc', 'desc'].includes(sortOrder as string)) {
+    if (sortOrder && !["asc", "desc"].includes(sortOrder as string)) {
       return res.status(400).json({
         success: false,
-        message: "Sort order must be 'asc' or 'desc'"
+        message: "Sort order must be 'asc' or 'desc'",
       });
     }
 
@@ -1386,27 +1394,26 @@ export const getAllRequestedItemsController = async (req: Request, res: Response
       status: status as string,
       category: category as string,
       sortBy: sortBy as string,
-      sortOrder: sortOrder as 'asc' | 'desc'
+      sortOrder: sortOrder as "asc" | "desc",
     });
 
     if (!result.success) {
       return res.status(400).json({
         success: false,
-        message: result.message
+        message: result.message,
       });
     }
 
     res.status(200).json({
       success: true,
       message: "Item requests fetched successfully",
-      data: result.data
+      data: result.data,
     });
-
   } catch (error) {
     console.error("Error fetching item requests:", error);
     res.status(500).json({
       success: false,
-      message: "Internal server error"
+      message: "Internal server error",
     });
   }
 };
@@ -2371,6 +2378,103 @@ export const downloadBarcodeController = async (
         error: error.message || "Internal server error.",
       });
     }
+  }
+};
+
+export const downloadBatchBarcodeController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { itemId } = req.params;
+    if (!Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
+
+    const item = await InventoryItem.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ error: "Item not found" });
+    }
+
+    const baseBarcode = item.barcode;
+    const quantity = item.quantity;
+
+    const doc = new PDFDocument();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=barcodes-${baseBarcode}.pdf`
+    );
+    doc.pipe(res);
+
+    doc.fontSize(20).text(`Barcodes for: ${item.title}`, { align: "center" });
+    doc.fontSize(14).text(`(Base Code: ${baseBarcode})`, { align: "center" });
+    doc.moveDown(2);
+
+    for (let i = 1; i <= quantity; i++) {
+      const copyBarcodeValue = `${baseBarcode}-${i}`;
+
+      const pngBuffer = await bwipjs.toBuffer({
+        bcid: "code128",
+        text: copyBarcodeValue,
+        scale: 3,
+        height: 10,
+        includetext: true,
+        textxalign: "center",
+      });
+
+      doc.image(pngBuffer, {
+        fit: [250, 100],
+        align: "center",
+      });
+
+      doc.moveDown(1);
+
+      if (i < quantity) {
+        doc.addPage();
+      }
+    }
+    doc.end();
+  } catch (error: any) {
+    console.log("Error in batch barcode generation", error);
+    if (!res.headersSent) {
+      const statusCode = error.statusCode || 500;
+      return res.status(statusCode).json({
+        error: error.message || "Internal server error.",
+      });
+    }
+  }
+};
+
+export const getItemByScannedBarcodeController = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { scannedCode } = req.params;
+
+    const baseCode = scannedCode.replace(/-\d+$/, "");
+
+    if (!baseCode) {
+      return res.status(400).json({ error: "Invalid barcode format" });
+    }
+
+    const item = await InventoryItem.findOne({ barcode: baseCode }).populate(
+      "categoryId",
+      "name description parentCategoryId"
+    );
+
+    if (!item) {
+      return res.status(404).json({ error: "No item found with this barcode" });
+    }
+
+    return res.status(200).json(item);
+  } catch (error: any) {
+    console.log("Error in barcode lookup", error);
+    const statusCode = error.statusCode || 500;
+    return res.status(statusCode).json({
+      error: error.message || "Internal server error.",
+    });
   }
 };
 

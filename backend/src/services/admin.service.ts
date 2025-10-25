@@ -45,6 +45,7 @@ import {
   UserReportItem,
 } from "../interfaces/userReport.interface";
 import NewItemRequest from "../models/requestedItem.model";
+import { NotificationService } from "../utility/notificationService";
 
 interface loginDTO {
   email: string;
@@ -303,6 +304,31 @@ export const updateUserStatusService = async (userId: any, status: string) => {
     throw err;
   }
 
+  let notificationData: any;
+  if (status === "Active") {
+    notificationData = {
+      recipientId: userId,
+      title: "Account Activated",
+      message: `Hi ${updatedUser.fullName}, your account has been activated successfully!`,
+      level: "Success",
+      type: "user_activated",
+      metadata: { userId: userId.toString() },
+    };
+  } else if (status === "Inactive") {
+    notificationData = {
+      recipientId: userId,
+      title: "Account Deactivated",
+      message: `Hi ${updatedUser.fullName}, your account has been deactivated. Please contact support for more details.`,
+      level: "Warning",
+      type: "user_deactivated",
+      metadata: { userId: userId.toString() },
+    };
+  }
+
+  const userNotificationPromise =
+    NotificationService.createNotification(notificationData);
+  await userNotificationPromise;
+
   // notifications
   if (status === "Active") {
     const { subject, body, whatsapp } = await getNotificationTemplate(
@@ -311,7 +337,7 @@ export const updateUserStatusService = async (userId: any, status: string) => {
       {
         subject: "Account Activated",
         body: `Hi ${updatedUser.fullName}, your account has been activated! You can now log in.`,
-        whatsapp: `Hi ${updatedUser.fullName}, your account has been activated! 🎉`,
+        whatsapp: `Hi ${updatedUser.fullName}, your account has been activated!`,
       }
     );
 
@@ -420,6 +446,31 @@ export const forcePasswordResetService = async (userId: any) => {
     throw err;
   }
 
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: userId,
+    title: "Password Reset Required",
+    message: `Hi ${user.fullName}, an administrator has requested that you reset your password before your next login.`,
+    level: "Info",
+    type: "force_password_reset",
+    metadata: { userId: userId.toString() },
+  });
+
+  const { subject, body } = await getNotificationTemplate(
+    "forcePasswordReset",
+    { user: user.fullName },
+    {
+      subject: "Password Reset Required",
+      body: `Hi ${user.fullName},\n\nYour account requires a password reset before your next login. Please visit the login page and use the 'Forgot Password' option to set a new password.\n\nIf you didn’t request this, please contact support immediately.`,
+    }
+  );
+
+  const emailPromise =
+    user.email && user.notificationPreference?.email
+      ? sendEmail(user.email, subject, body)
+      : Promise.resolve();
+
+  await Promise.all([userNotificationPromise, emailPromise]);
+
   return user;
 };
 
@@ -463,6 +514,23 @@ export const deleteUserService = async (userId: string) => {
     throw err;
   }
   await User.findByIdAndDelete(userId);
+
+  const { subject, body } = await getNotificationTemplate(
+    "userDeleted",
+    { user: user.fullName },
+    {
+      subject: "Account Deletion Notice",
+      body: `Hi ${user.fullName},\n\nYour account has been deleted from our system. If you believe this was a mistake, please contact support immediately.\n\nThank you.`,
+    }
+  );
+
+  const emailPromise =
+    user.email && user.notificationPreference?.email
+      ? sendEmail(user.email, subject, body)
+      : Promise.resolve();
+
+  await emailPromise;
+
   return { message: "User deleted successfully." };
 };
 
@@ -502,11 +570,10 @@ export const createRoleService = async ({
   description?: string;
   permissions: string[];
 }) => {
-  // 1. Check if role already exists
   const existingRole = await Role.findOne({ roleName });
   if (existingRole) {
     const err: any = new Error(`Role with name '${roleName}' already exists.`);
-    err.statusCode = 409; // 409 Conflict
+    err.statusCode = 409;
     throw err;
   }
 
@@ -514,7 +581,6 @@ export const createRoleService = async ({
     permissionKey: { $in: permissions },
   }).select("_id");
 
-  // 2. Improved check: Ensure ALL requested permissions were found
   if (foundPermissions.length !== permissions.length) {
     const err: any = new Error("One or more permissions not found.");
     err.statusCode = 400;
@@ -529,7 +595,6 @@ export const createRoleService = async ({
     permissions: permissionIds,
   });
 
-  // 3. Correctly await the save operation
   await newRole.save();
   return newRole;
 };
@@ -690,7 +755,6 @@ export const fetchSpecificItemServive = async (itemId: any) => {
 };
 
 export const updateItemService = async ({ itemId, validatedData }: any) => {
-  // Check if item exists first
   const existingItem = await InventoryItem.findById(itemId);
   if (!existingItem) {
     const err: any = new Error("No such item exists");
@@ -698,14 +762,12 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
     throw err;
   }
 
-  // Remove undefined values to avoid overwriting with undefined
   const cleanData = Object.fromEntries(
     Object.entries(validatedData).filter(
       ([_, value]) => value !== undefined && value !== null
     )
   );
 
-  // Handle Decimal128 conversion for price - with null check
   if (cleanData.price !== undefined && cleanData.price !== null) {
     cleanData.price = new mongoose.Types.Decimal128(cleanData.price.toString());
   }
@@ -737,11 +799,38 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
 };
 
 export const deleteItemService = async (itemId: any) => {
+  const existingItem = await InventoryItem.findById(itemId);
+
+  if (!existingItem) {
+    const err = new Error("No such item exists");
+    throw err;
+  }
+
+  if (existingItem.status === "Issued") {
+    const err = new Error(
+      "Cannot delete item that is currently borrowed/checked out"
+    );
+    throw err;
+  }
+
+  const hasUnpaidFines = await Fine.findOne({
+    itemId: itemId,
+    status: "Outstanding",
+  });
+
+  if (hasUnpaidFines) {
+    const err: any = new Error(
+      "This item cannot be deleted because there are unpaid fines associated with it."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
   const deletedItem = await InventoryItem.findByIdAndDelete(itemId);
 
   if (!deletedItem) {
-    const err: any = new Error("No such item exists");
-    err.statusCode = 404;
+    const err: any = new Error("Failed to delete item. Please try again.");
+    err.statusCode = 500;
     throw err;
   }
 
@@ -783,11 +872,9 @@ export const getCategoriesService = async (includeTree = false) => {
     .sort({ name: 1 });
 
   if (includeTree) {
-    // Return categories in tree structure with children array
     return buildCategoryTree(allCategories);
   }
 
-  // Return flat array but with additional field to identify parent/child relationships
   const categoriesWithType = allCategories.map((category) => ({
     ...category.toObject(),
     isParent: !category.parentCategoryId,
@@ -1002,15 +1089,55 @@ export const createFineService = async (data: any) => {
 
   try {
     const user = await User.findById(data.userId).lean();
-    if (user && user.phoneNumber) {
-      const message = `Hi ${user.fullName}, a new fine of $${data.amountIncurred} for "${data.reason}" has been added to your account.`;
-      await sendWhatsAppMessage(user.phoneNumber, message);
+
+    if (!user) {
+      const err: any = new Error("User not found for fine creation.");
+      err.statusCode = 404;
+      throw err;
     }
+
+    const fineStatusMsg =
+      outstandingAmount > 0
+        ? `A fine of ₹${amountIncurred} for "${reason}" has been issued. Outstanding amount: ₹${outstandingAmount}.`
+        : `A fine of ₹${amountIncurred} for "${reason}" has been fully paid.`;
+
+    const emailSubject = "New Fine Added to Your Account";
+    const emailBody = `
+        Hi ${user.fullName},
+        
+        ${fineStatusMsg}
+        
+        Please log in to your account for more details.
+        
+        Regards,
+        Library Management Team
+      `;
+
+    const userNotificationPromise = NotificationService.createNotification({
+      recipientId: userId,
+      title: "New Fine Issued",
+      message: fineStatusMsg,
+      level: outstandingAmount > 0 ? "Warning" : "Info",
+      type: "fine_created",
+      metadata: { fineId: fine.id.toString(), itemId },
+    });
+
+    const emailPromise =
+      user.email && user.notificationPreference?.email
+        ? sendEmail(user.email, emailSubject, emailBody)
+        : Promise.resolve();
+
+    const whatsappPromise =
+      user.phoneNumber && user.notificationPreference?.whatsApp
+        ? sendWhatsAppMessage(
+            user.phoneNumber,
+            `Hi ${user.fullName}, a new fine of ₹${amountIncurred} for "${reason}" has been added to your account.`
+          )
+        : Promise.resolve();
+
+    await Promise.all([userNotificationPromise, emailPromise, whatsappPromise]);
   } catch (notificationError: any) {
-    console.error(
-      "Failed to send WhatsApp notification:",
-      notificationError.message
-    );
+    console.error("Failed to send notification:", notificationError.message);
   }
 
   return fine;
@@ -1018,13 +1145,13 @@ export const createFineService = async (data: any) => {
 
 export const updateFineService = async ({ fineId, data }: any) => {
   const isFineExists = await Fine.findById(fineId);
+
   if (!isFineExists) {
     const err: any = new Error("No such fine exists");
     err.statusCode = 404;
     throw err;
   }
 
-  // Recalculate outstanding amount and status if either amountIncurred or amountPaid changes
   if (data.amountIncurred !== undefined || data.amountPaid !== undefined) {
     const newAmountIncurred =
       data.amountIncurred ?? isFineExists.amountIncurred;
@@ -1043,19 +1170,110 @@ export const updateFineService = async ({ fineId, data }: any) => {
     { new: true, runValidators: true }
   );
 
+  const user = await User.findById(updatedFine?.userId).lean();
+  if (!user) {
+    const err: any = new Error("User not found for this fine.");
+    err.statusCode = 404;
+    throw err;
+  }
+
+  let messageBody = "";
+  if (data.amountPaid !== undefined) {
+    if (updatedFine?.status === "Paid") {
+      messageBody = `Hi ${user.fullName}, your fine of ₹${updatedFine.amountIncurred} for "${updatedFine.reason}" has been fully paid. Thank you!`;
+    } else {
+      messageBody = `Hi ${user.fullName}, your payment of ₹${data.amountPaid} has been received for fine "${updatedFine?.reason}". Outstanding balance: ₹${updatedFine?.outstandingAmount}.`;
+    }
+  } else if (data.amountIncurred !== undefined) {
+    messageBody = `Hi ${user.fullName}, your fine amount for "${updatedFine?.reason}" has been updated to ₹${updatedFine?.amountIncurred}.`;
+  } else {
+    messageBody = `Hi ${user.fullName}, your fine record for "${updatedFine?.reason}" has been updated.`;
+  }
+
+  const notificationPromise = NotificationService.createNotification({
+    recipientId: user._id,
+    title: "Fine Updated",
+    message: messageBody,
+    level: updatedFine?.status === "Paid" ? "Success" : "Info",
+    type: "fine_updated",
+    metadata: { fineId: updatedFine?.id.toString() },
+  });
+
+  const { subject, body } = await getNotificationTemplate(
+    "fineUpdated",
+    { user: user.fullName },
+    {
+      subject: "Fine Update Notification",
+      body: `${messageBody}\n\nPlease log in to your account for more details.\n\nRegards,\nLibrary Management Team`,
+    }
+  );
+
+  const emailPromise =
+    user.email && user.notificationPreference?.email
+      ? sendEmail(user.email, subject, body)
+      : Promise.resolve();
+
+  await Promise.all([notificationPromise, emailPromise]);
   return updatedFine;
 };
 
 export const deleteFineService = async (fineId: string) => {
-  const isExists = await Fine.findById(fineId);
+  const fine = await Fine.findById(fineId);
 
-  if (!isExists) {
+  if (!fine) {
     const err: any = new Error("No such Fine Exits");
     err.statusCode = 404;
     throw err;
   }
 
-  await Fine.findByIdAndDelete(fineId);
+  if (fine.status === "Outstanding" || fine.outstandingAmount > 0) {
+    const err: any = new Error(
+      "This fine cannot be deleted as it still has outstanding dues."
+    );
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const deletedFine = await Fine.findByIdAndDelete(fineId);
+  if (!deletedFine) {
+    const err: any = new Error("Failed to delete fine. Please try again.");
+    err.statusCode = 500;
+    throw err;
+  }
+  const user = await User.findById(fine.userId).lean();
+  if (user) {
+    const message = `Hi ${user.fullName}, your fine for "${fine.reason}" (₹${fine.amountIncurred}) has been removed from your account.`;
+
+    const notificationPromise = NotificationService.createNotification({
+      recipientId: user._id,
+      title: "Fine Removed",
+      message,
+      level: "Info",
+      type: "fine_deleted",
+      metadata: { fineId: fine.id.toString() },
+    });
+
+    const { subject, body } = await getNotificationTemplate(
+      "fineDeleted",
+      { user: user.fullName },
+      {
+        subject: "Fine Removed Successfully",
+        body: `${message}\n\nYou can log in to your account for updated records.\n\nRegards,\nLibrary Management Team`,
+      }
+    );
+
+    const emailPromise =
+      user.email && user.notificationPreference?.email
+        ? sendEmail(user.email, subject, body)
+        : Promise.resolve();
+
+    const whatsappPromise =
+      user.phoneNumber && user.notificationPreference?.whatsApp
+        ? sendWhatsAppMessage(user.phoneNumber, message)
+        : Promise.resolve();
+
+    await Promise.all([notificationPromise, emailPromise, whatsappPromise]);
+  }
   return { message: "Fine deleted successfully" };
 };
 
@@ -1070,7 +1288,9 @@ export const recordPaymentService = async (data: any) => {
   } = data;
 
   console.log("amount paid", amountPaid);
+
   const fine = await Fine.findById(fineId);
+
   if (!fine) {
     const err: any = new Error("Fine not found");
     err.statusCode = 404;
@@ -1102,14 +1322,55 @@ export const recordPaymentService = async (data: any) => {
   const updatedFine = await fine.save();
 
   const user = await User.findById(fine.userId).lean();
-  if (user && user.phoneNumber) {
-    const message = `Hi ${
-      user.fullName
-    }, a payment of ₹${amountPaid} has been recorded for your fine. The new outstanding amount is ₹${fine.outstandingAmount.toFixed(
-      2
-    )}.`;
-    sendWhatsAppMessage(user.phoneNumber, message);
+  if (!user) {
+    const err: any = new Error("User not found for this fine.");
+    err.statusCode = 404;
+    throw err;
   }
+
+  const paymentMsg =
+    fine.status === "Paid"
+      ? `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} for "${fine.reason}" has been fully paid. Thank you!`
+      : `Hi ${
+          user.fullName
+        }, a payment of ₹${amountPaid} has been recorded for your fine "${
+          fine.reason
+        }". Your remaining balance is ₹${fine.outstandingAmount.toFixed(2)}.`;
+
+  const notificationPromise = NotificationService.createNotification({
+    recipientId: user._id,
+    title: "Fine Payment Recorded",
+    message: paymentMsg,
+    level: fine.status === "Paid" ? "Success" : "Info",
+    type: "fine_payment_recorded",
+    metadata: {
+      fineId: fine.id.toString(),
+      amountPaid,
+      paymentMethod,
+      transactionId: referenceId,
+    },
+  });
+
+  const { subject, body } = await getNotificationTemplate(
+    "finePayment",
+    { user: user.fullName },
+    {
+      subject: "Fine Payment Recorded",
+      body: `${paymentMsg}\n\nYou can view the payment details in your account.\n\nRegards,\nLibrary Management Team`,
+    }
+  );
+
+  const emailPromise =
+    user.email && user.notificationPreference?.email
+      ? sendEmail(user.email, subject, body)
+      : Promise.resolve();
+
+  const whatsappPromise =
+    user.phoneNumber && user.notificationPreference?.whatsApp
+      ? sendWhatsAppMessage(user.phoneNumber, paymentMsg)
+      : Promise.resolve();
+
+  await Promise.all([notificationPromise, emailPromise, whatsappPromise]);
 
   return updatedFine;
 };
@@ -1118,6 +1379,7 @@ export const waiveFineService = async (data: any) => {
   const { fineId, waiverReason, managedByAdminId } = data;
 
   const fine = await Fine.findById(fineId);
+
   if (!fine) {
     const err: any = new Error("Fine not found");
     err.statusCode = 404;
@@ -1139,15 +1401,62 @@ export const waiveFineService = async (data: any) => {
   );
 
   const user = await User.findById(fine.userId).lean();
-  if (user && user.phoneNumber) {
-    try {
-      const message = `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} has been waived. Reason: ${waiverReason}`;
-      await sendWhatsAppMessage(user.phoneNumber, message);
-      console.log("WhatsApp notification sent successfully");
-    } catch (error) {
-      console.error("Failed to send WhatsApp notification:", error);
-    }
+  if (!user) {
+    const err: any = new Error("User not found for this fine.");
+    err.statusCode = 404;
+    throw err;
   }
+
+  const messageText = `Hi ${user.fullName}, your fine of ₹${fine.amountIncurred} for "${fine.reason}" has been waived. Reason: ${waiverReason}`;
+
+  const notificationPromise = NotificationService.createNotification({
+    recipientId: user._id,
+    title: "Fine Waived",
+    message: messageText,
+    level: "Success",
+    type: "fine_waived",
+    metadata: {
+      fineId: fine.id.toString(),
+      waiverReason,
+      managedByAdminId,
+    },
+  });
+
+  let subject = "Fine Waived Successfully";
+  let body = `${messageText}\n\nYou can log in to your account to view the updated fine status.\n\nRegards,\nLibrary Management Team`;
+
+  try {
+    const template = await getNotificationTemplate(
+      "fineWaived",
+      { user: user.fullName },
+      {
+        subject: `${subject}`,
+        body: `${body}`,
+        whatsapp: `${subject}`,
+      }
+    );
+
+    if (template?.subject && template?.body) {
+      subject = template.subject;
+      body = template.body;
+    }
+  } catch (templateError) {
+    console.warn(
+      "No fineWaived email template found — using default fallback."
+    );
+  }
+
+  const emailPromise =
+    user.email && user.notificationPreference?.email
+      ? sendEmail(user.email, subject, body)
+      : Promise.resolve();
+
+  const whatsappPromise =
+    user.phoneNumber && user.notificationPreference?.whatsApp
+      ? sendWhatsAppMessage(user.phoneNumber, messageText)
+      : Promise.resolve();
+
+  await Promise.all([notificationPromise, emailPromise, whatsappPromise]);
 
   return updatedFine;
 };
@@ -1359,28 +1668,6 @@ export const getFinesReportService = async () => {
   };
 };
 
-// export const getIssuedReportService = async () => {
-//   const records = await IssuedIetm.find()
-//     .populate("userId", "fullName email roles")
-//     .populate("itemId", "title authorOrCreator description price quantity availableCopies categoryId subcategoryId")
-//     .populate("issuedBy", "fullName email roles")
-//     .populate("returnedTo", "fullName email role")
-//     .populate("fineId", "userId itemId reason amountIncurred amountPaid outstandingAmount")
-//     .lean();
-
-//   return records.map((record: any) => ({
-//     user: record.userId?.fullName || "Unknown",
-//     item: record.itemId?.title || "-",
-//     issueDate: record.issueDate
-//       ? new Date(record.issueDate).toISOString().split("T")[0]
-//       : "-",
-//     returnDate: record.returnDate
-//       ? new Date(record.returnDate).toISOString().split("T")[0]
-//       : "-",
-//     status: record.status || "Issued",
-//   }));
-// };
-
 export const getIssuedReportService = async () => {
   const records = await IssuedItem.find()
     .populate("userId", "fullName email roles")
@@ -1397,11 +1684,9 @@ export const getIssuedReportService = async () => {
     .lean();
 
   return records.map((record: any) => ({
-    // 🔹 Core Details
     id: record._id,
     status: record.status || "Issued",
 
-    // 🔹 User (Borrower)
     user: {
       id: record.userId?._id || null,
       fullName: record.userId?.fullName || "Unknown",
@@ -1409,7 +1694,6 @@ export const getIssuedReportService = async () => {
       roles: record.userId?.roles || [],
     },
 
-    // 🔹 Item Details
     item: {
       id: record.itemId?._id || null,
       title: record.itemId?.title || "-",
@@ -1422,7 +1706,6 @@ export const getIssuedReportService = async () => {
       availableCopies: record.itemId?.availableCopies ?? "-",
     },
 
-    // 🔹 Issued & Returned Staff
     issuedBy: {
       id: record.issuedBy?._id || null,
       fullName: record.issuedBy?.fullName || "-",
@@ -1438,7 +1721,6 @@ export const getIssuedReportService = async () => {
         }
       : null,
 
-    // 🔹 Dates
     issuedDate: record.issuedDate
       ? new Date(record.issuedDate).toISOString().split("T")[0]
       : "-",
@@ -1449,11 +1731,9 @@ export const getIssuedReportService = async () => {
       ? new Date(record.returnDate).toISOString().split("T")[0]
       : "-",
 
-    // 🔹 Extensions
     extensionCount: record.extensionCount ?? 0,
     maxExtensionAllowed: record.maxExtensionAllowed ?? 2,
 
-    // 🔹 Fine Details (if any)
     fine: record.fineId
       ? {
           id: record.fineId._id,
@@ -1464,7 +1744,6 @@ export const getIssuedReportService = async () => {
         }
       : null,
 
-    // 🔹 Metadata
     createdAt: record.createdAt
       ? new Date(record.createdAt).toISOString().split("T")[0]
       : "-",
@@ -1474,102 +1753,6 @@ export const getIssuedReportService = async () => {
   }));
 };
 
-// export const getDefaulterListService = async (
-//   filters: IDefaulterListQuery
-// ): Promise<IDefaulterReportItem[]> => {
-//   const queryConditions: any = {
-//     status: "Issued",
-//     dueDate: { $lt: new Date() },
-//   };
-
-//   if (filters.overdueSince) {
-//     queryConditions.dueDate = { $lte: new Date(filters.overdueSince) };
-//   }
-
-//   let overdueItems = await IssuedItem.find(queryConditions)
-//     .populate<{ userId: IUser }>({
-//       path: "userId",
-//       select: "fullName email employeeId phoneNumber roles",
-//     })
-//     .populate<{ itemId: IInventoryItem }>({
-//       path: "itemId",
-//       select: "title barcode categoryId",
-//     })
-//     .lean();
-
-//   if (filters.itemCategory) {
-//     overdueItems = overdueItems.filter((item) => {
-//       const inventoryItem = item.itemId as IInventoryItem;
-//       return inventoryItem.categoryId?.toString() === filters.itemCategory;
-//     });
-//   }
-
-//   if (filters.userRole) {
-//     overdueItems = overdueItems.filter((item) => {
-//       const user = item.userId as IUser;
-//       return user.roles?.some((roleId) => roleId.toString() === filters.userRole);
-//     });
-//   }
-
-//   const formattedReport = overdueItems.map((item): IDefaulterReportItem => {
-//     const user = item.userId as IUser;
-//     const inventoryItem = item.itemId as IInventoryItem;
-
-//     const today = new Date();
-//     const dueDate = new Date(item.dueDate);
-//     const timeDiff = today.getTime() - dueDate.getTime();
-//     const daysOverdue = Math.max(0, Math.floor(timeDiff / (1000 * 3600 * 24)));
-
-//     return {
-//       userName: user.fullName,
-//       identifier: user.employeeId || user.email,
-//       itemTitle: inventoryItem.title,
-//       barcode: inventoryItem.barcode,
-//       issuedDate: new Date(item.issuedDate).toISOString().split("T")[0],
-//       dueDate: new Date(item.dueDate).toISOString().split("T")[0],
-//       daysOverdue: daysOverdue,
-//       contact: {
-//         email: user.email,
-//         phone: user.phoneNumber || "N/A",
-//       },
-//       userId: user._id.toString(),
-//       issuedItemId: item._id.toString(),
-//     };
-//   });
-
-//   return formattedReport;
-// };
-
-// export const getDefaulterReportPDF = async (req: ExpressRequest, res: Response) => {
-//   try {
-//     const filters: IDefaulterListQuery = {
-//       overdueSince: req.query.overdueSince as string | undefined,
-//       itemCategory: req.query.itemCategory as string | undefined,
-//       userRole: req.query.userRole as string | undefined,
-//     };
-
-//     const reportData = await getDefaulterListService(filters);
-
-//     res.setHeader("Content-Type", "application/pdf");
-//     res.setHeader(
-//       "Content-Disposition",
-//       'attachment; filename="defaulter-list-report.pdf"'
-//     );
-
-//     // **TODO**: Call your PDF generation logic here, passing it the `reportData` and `res` stream
-//     // For example:
-//     // await generateDefaulterReportPDF(reportData, res);
-
-//     // For now, let's just send the data as JSON to confirm it works
-//     res.status(200).json(reportData);
-
-//   } catch (error: any) {
-//     console.error("Error generating defaulter report:", error.message);
-//     res
-//       .status(500)
-//       .json({ message: "Failed to generate report", error: error.message });
-//   }
-// };
 export const getQueueAnalytics = async (startDate?: Date, endDate?: Date) => {
   const dateFilter: any = {};
   if (startDate && endDate) {
@@ -1579,13 +1762,11 @@ export const getQueueAnalytics = async (startDate?: Date, endDate?: Date) => {
     };
   }
 
-  // Get all queues with populated data
   const queues = await Queue.find(dateFilter)
     .populate("itemId", "title categoryId")
     .populate("queueMembers.userId")
     .lean();
 
-  // Calculate summary statistics
   const totalQueues = queues.length;
   const activeQueues = queues.filter((q) => q.queueMembers.length > 0).length;
   const totalUsersWaiting = queues.reduce(
@@ -1694,7 +1875,6 @@ const getPopularItems = async (queues: any[]) => {
 };
 
 const calculateAverageWaitTime = async (): Promise<number> => {
-  // Simplified calculation - in real scenario, calculate based on actual wait times
   const result = await Queue.aggregate([
     { $unwind: "$queueMembers" },
     {
@@ -1716,13 +1896,10 @@ const calculateAverageWaitTime = async (): Promise<number> => {
 };
 
 const calculateNotificationResponseRate = async (): Promise<number> => {
-  // This would require tracking notification responses
-  // For now, return a simulated value
   return 75; // 75% response rate
 };
 
 const getWaitTimeAnalysis = async () => {
-  // Return wait time trends for the last 7 days
   return [
     { period: "Mon", avgWaitTime: 5.2 },
     { period: "Tue", avgWaitTime: 4.8 },
@@ -1785,7 +1962,6 @@ const getCategoryAnalysis = async (queues: any[]) => {
 export const exportQueueAnalytics = async () => {
   const analytics = await getQueueAnalytics();
 
-  // Convert to CSV format
   const csvHeaders = [
     "Metric,Value",
     `Total Queues,${analytics.summary.totalQueues}`,
@@ -1804,7 +1980,6 @@ export const exportIssuedItemsReport = async (
   endDate?: string
 ) => {
   try {
-    // Build query with date filters
     const query: any = {};
 
     if (startDate || endDate) {
@@ -1820,7 +1995,6 @@ export const exportIssuedItemsReport = async (
       .populate("returnedTo", "fullName email")
       .sort({ issuedDate: -1 });
 
-    // CSV headers
     const headers = [
       "User Name",
       "User Email",
@@ -1981,7 +2155,7 @@ interface GetAllRequestedItemsParams {
   status?: string;
   category?: string;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export const getAllRequestedItemsService = async ({
@@ -1989,11 +2163,10 @@ export const getAllRequestedItemsService = async ({
   limit,
   status,
   category,
-  sortBy = 'requestedAt',
-  sortOrder = 'desc'
+  sortBy = "requestedAt",
+  sortOrder = "desc",
 }: GetAllRequestedItemsParams) => {
   try {
-   
     const filter: any = {};
 
     if (status) {
@@ -2001,17 +2174,14 @@ export const getAllRequestedItemsService = async ({
     }
 
     if (category) {
-      filter.category = { $regex: category, $options: 'i' };
+      filter.category = { $regex: category, $options: "i" };
     }
 
-   
     const skip = (page - 1) * limit;
 
-   
     const sort: any = {};
-    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+    sort[sortBy] = sortOrder === "asc" ? 1 : -1;
 
-   
     const [requests, totalCount] = await Promise.all([
       NewItemRequest.find(filter)
         .populate("userId", "name email department")
@@ -2020,8 +2190,8 @@ export const getAllRequestedItemsService = async ({
         .skip(skip)
         .limit(limit)
         .lean(),
-      
-      NewItemRequest.countDocuments(filter)
+
+      NewItemRequest.countDocuments(filter),
     ]);
 
     const totalPages = Math.ceil(totalCount / limit);
@@ -2039,20 +2209,19 @@ export const getAllRequestedItemsService = async ({
           totalCount,
           hasNextPage,
           hasPrevPage,
-          limit
+          limit,
         },
         filters: {
-          status: status || 'all',
-          category: category || 'all'
-        }
-      }
+          status: status || "all",
+          category: category || "all",
+        },
+      },
     };
-
   } catch (error) {
     console.error("Error in getAllRequestedItemsService:", error);
     return {
       success: false,
-      message: "Error fetching item requests"
+      message: "Error fetching item requests",
     };
   }
 };
@@ -2294,38 +2463,41 @@ export const rejectRequestedItemService = async (
   }
 };
 
-export const deleteRequestedItemService = async (
-  requestId: string
-) => {
+export const deleteRequestedItemService = async (requestId: string) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(requestId)) {
       return {
         success: false,
-        message: "Invalid request ID format"
+        message: "Invalid request ID format",
       };
     }
 
-    const itemRequest = await NewItemRequest.findById(requestId)
-      .populate("userId", "name email notificationPreference");
+    const itemRequest = await NewItemRequest.findById(requestId).populate(
+      "userId",
+      "name email notificationPreference"
+    );
 
     if (!itemRequest) {
       return {
         success: false,
-        message: "Item request not found"
+        message: "Item request not found",
       };
     }
 
     if (itemRequest.status !== "pending") {
       return {
         success: false,
-        message: `Cannot delete ${itemRequest.status} item requests`
+        message: `Cannot delete ${itemRequest.status} item requests`,
       };
     }
 
-    if (itemRequest.userId && (itemRequest.userId as any).notificationPreference?.email) {
+    if (
+      itemRequest.userId &&
+      (itemRequest.userId as any).notificationPreference?.email
+    ) {
       const userEmail = (itemRequest.userId as any).email;
       const userName = (itemRequest.userId as any).name || "User";
-      
+
       const emailHtml = `
         <!DOCTYPE html>
         <html>
@@ -2352,8 +2524,12 @@ export const deleteRequestedItemService = async (
                     <div class="details">
                         <h3>Cancelled Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
-                        <p><strong>Category:</strong> ${itemRequest.category}</p>
-                        <p><strong>Quantity:</strong> ${itemRequest.quantity}</p>
+                        <p><strong>Category:</strong> ${
+                          itemRequest.category
+                        }</p>
+                        <p><strong>Quantity:</strong> ${
+                          itemRequest.quantity
+                        }</p>
                         <p><strong>Request Date:</strong> ${itemRequest.requestedAt.toLocaleDateString()}</p>
                     </div>
 
@@ -2374,7 +2550,11 @@ export const deleteRequestedItemService = async (
         </html>
       `;
 
-      await sendEmail(userEmail, `Item Request Cancelled: ${itemRequest.name}`, emailHtml);
+      await sendEmail(
+        userEmail,
+        `Item Request Cancelled: ${itemRequest.name}`,
+        emailHtml
+      );
     }
 
     await NewItemRequest.findByIdAndDelete(requestId);
@@ -2382,14 +2562,13 @@ export const deleteRequestedItemService = async (
     return {
       success: true,
       message: "Item request deleted successfully",
-      data: { id: requestId }
+      data: { id: requestId },
     };
-
   } catch (error) {
     console.error("Error in deleteRequestedItemService:", error);
     return {
       success: false,
-      message: "Error deleting item request"
+      message: "Error deleting item request",
     };
   }
 };
@@ -2473,24 +2652,6 @@ export const getAdminProfileService = async (userId: any) => {
 
   return admin;
 };
-
-// export const updateAdminAvatarService = async ({ adminId, avatarUrl }: any) => {
-//   const isExistingAdmin = await User.findById(adminId);
-
-//   if (!isExistingAdmin) {
-//     const err: any = new Error("no admin found with this amdinId");
-//     err.statusCode = 404;
-//     throw err;
-//   }
-
-//   const res = await User.findByIdAndUpdate(
-//     adminId,
-//     { $set: avatarUrl },
-//     { new: true, runValidators: false }
-//   );
-
-//   return res;
-// };
 
 export const resetPasswordAdminService = async (userId: string) => {
   const isExistingAdmin = await User.findById(userId);
@@ -2801,10 +2962,8 @@ export const checkExpiredNotifications = async () => {
         `Notification expired for user ${member.userId._id} in queue ${queue._id}`
       );
 
-      // Mark as skipped
       member.status = "skipped";
 
-      // Send skipped notification
       await sendSkippedNotification(member.userId, queue.itemId.toString());
     }
 
@@ -2956,7 +3115,6 @@ export const issueItemFromQueueService = async (
     });
     await issuedItem.save({ session });
 
-    // Remove user from queue and update positions
     const remainingMembers = queue.queueMembers.filter(
       (member) => member.userId.toString() !== userId
     );
@@ -3055,13 +3213,11 @@ export const getDefaulterReport = async (
   try {
     const today = new Date();
 
-    // Build base query for overdue items
     let query: any = {
       status: "Issued",
       dueDate: { $lt: today },
     };
 
-    // Apply overdue since filter
     if (filters.overdueSince) {
       const overdueSinceDate = new Date(filters.overdueSince);
       query.dueDate.$lt = overdueSinceDate;
@@ -3077,7 +3233,6 @@ export const getDefaulterReport = async (
 
     console.log("Found issued items:", issuedItems.length);
 
-    // Get additional user and category data
     const defaultersPromises = issuedItems.map(async (item) => {
       try {
         const user = item.userId as any;
@@ -3088,14 +3243,11 @@ export const getDefaulterReport = async (
           return null;
         }
 
-        // Get user roles
         const userRoles = await Role.find({ _id: { $in: user.roles } });
         const roleNames = userRoles.map((role) => role.roleName).join(", ");
 
-        // Get category - fix field name from 'name' to 'categoryName'
         const category = await Category.findById(inventoryItem.categoryId);
 
-        // Apply category filter
         if (
           filters.categoryId &&
           category?._id.toString() !== filters.categoryId
@@ -3103,7 +3255,6 @@ export const getDefaulterReport = async (
           return null;
         }
 
-        // Apply role filter
         if (filters.roleId) {
           const hasRole = user.roles.some(
             (roleId: any) => roleId.toString() === filters.roleId
@@ -3113,7 +3264,6 @@ export const getDefaulterReport = async (
           }
         }
 
-        // Calculate days overdue
         const dueDate = new Date(item.dueDate);
         const daysOverdue = Math.floor(
           (today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24)
@@ -3131,9 +3281,9 @@ export const getDefaulterReport = async (
           issuedDate: item.issuedDate.toISOString().split("T")[0],
           dueDate: item.dueDate.toISOString().split("T")[0],
           daysOverdue,
-          categoryName: category?.name || "Unknown", // Using 'name' from your interface
-          userId: user._id.toString(), // Add this for reminders
-          itemId: inventoryItem._id.toString(), // Add this for reminders
+          categoryName: category?.name || "Unknown",
+          userId: user._id.toString(),
+          itemId: inventoryItem._id.toString(),
         };
       } catch (error) {
         console.error("Error processing issued item:", error);
@@ -3143,11 +3293,10 @@ export const getDefaulterReport = async (
 
     const defaulters = await Promise.all(defaultersPromises);
 
-    // Filter out null values and return
     const result = defaulters.filter(
       (item) => item !== null
     ) as DefaulterItem[];
-    console.log("Final defaulters count:", result.length); // Debug log
+    console.log("Final defaulters count:", result.length);
     return result;
   } catch (error: any) {
     console.error("Error in getDefaulterReport:", error);
@@ -3203,10 +3352,10 @@ export const sendReminderService = async (
           Dear ${user.fullName},
 
           This item is overdue:
-          📚 ${item.title}
-          📅 Due: ${dueDate.toDateString()} 
-          ⏰ Overdue: ${daysOverdue} days
-          📋 Barcode: ${item.barcode}
+          ${item.title}
+          Due: ${dueDate.toDateString()} 
+          Overdue: ${daysOverdue} days
+          Barcode: ${item.barcode}
 
           Please return it ASAP to avoid penalties.
 
@@ -3230,7 +3379,6 @@ export const exportDefaulterReport = async (filters: DefaulterFilters) => {
   try {
     const defaulters = await getDefaulterReport(filters);
 
-    // CSV headers
     const headers = [
       "User Name",
       "Employee ID",
@@ -3245,7 +3393,6 @@ export const exportDefaulterReport = async (filters: DefaulterFilters) => {
       "Category",
     ];
 
-    // Convert data to CSV rows
     const csvRows = defaulters.map((defaulter) => [
       `"${defaulter.userName}"`,
       `"${defaulter.employeeId || "-"}"`,
@@ -3264,7 +3411,6 @@ export const exportDefaulterReport = async (filters: DefaulterFilters) => {
       `"${defaulter.categoryName}"`,
     ]);
 
-    // Combine headers and rows
     const csvContent = [
       headers.join(","),
       ...csvRows.map((row) => row.join(",")),
@@ -3292,7 +3438,6 @@ export const getAllUsersReport = async (
       }
     }
 
-    // Apply role filter
     if (filters.roleId) {
       userQuery.roles = new Types.ObjectId(filters.roleId);
     }
@@ -3314,7 +3459,6 @@ export const getAllUsersReport = async (
           .populate("itemId")
           .sort({ issuedDate: -1 });
 
-        // Calculate statistics
         const totalItemsIssued = issuedItems.length;
 
         const overdueItems = issuedItems.filter(
@@ -3324,7 +3468,6 @@ export const getAllUsersReport = async (
         const itemsOverdue = overdueItems.length;
         const totalOverdueItems = overdueItems.length;
 
-        // Calculate average days overdue
         let avgDaysOverdue = 0;
         if (overdueItems.length > 0) {
           const totalDaysOverdue = overdueItems.reduce((sum, item) => {
@@ -3391,7 +3534,6 @@ export const getAllUsersReport = async (
 
     const usersReport = await Promise.all(usersReportPromises);
 
-    // Filter out null values and return
     const result = usersReport.filter(
       (item) => item !== null
     ) as UserReportItem[];
@@ -3441,7 +3583,6 @@ export const exportAllUsersReport = async (filters: UserReportFilters) => {
       `"${user.status}"`,
     ]);
 
-    // Combine headers and rows
     const csvContent = [
       headers.join(","),
       ...csvRows.map((row) => row.join(",")),

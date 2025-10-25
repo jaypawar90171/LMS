@@ -1113,8 +1113,8 @@ export const expressDonationInterestController = async (
       return res.status(400).json({ message: "userId not found" });
     }
 
-    console.log("Donation request body:", req.body);
-    console.log("User ID:", userId);
+    // console.log("Donation request body:", req.body);
+    // console.log("User ID:", userId);
 
     const donation = await expressDonationInterestService(userId, req.body);
 
