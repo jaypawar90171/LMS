@@ -59,7 +59,7 @@ const QueueDashboard = () => {
   const [queues, setQueues] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all"); // all, active, processing
+  const [filter, setFilter] = useState("all"); 
 
   const fetchAllQueues = async () => {
     setIsLoading(true);
@@ -70,7 +70,7 @@ const QueueDashboard = () => {
         return;
       }
 
-      // This endpoint should return all queues with populated item data
+      
       const response = await axios.get(
         "http://localhost:3000/api/admin/inventory/queues",
         {
@@ -145,8 +145,8 @@ const QueueDashboard = () => {
   const getUrgentQueues = () => {
     return queues.filter(
       (queue) =>
-        queue.queueMembers.length >= 5 || // Long queues
-        queue.isProcessing // Currently processing
+        queue.queueMembers.length >= 5 || 
+        queue.isProcessing 
     );
   };
 

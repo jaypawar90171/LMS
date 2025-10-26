@@ -67,8 +67,11 @@ export default function IssuedItemsManagement() {
   const [isExtendModalOpen, setIsExtendModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<IssuedItem | null>(null);
+  const [isReturnModalOpen, setIsReturnModalOpen] = useState(false);
+  const [returnCondition, setReturnCondition] = useState<
+    "Good" | "Lost" | "Damaged" | ""
+  >("");
 
-  // Fetch issued items data
   useEffect(() => {
     const fetchIssuedItems = async () => {
       try {
@@ -100,7 +103,6 @@ export default function IssuedItemsManagement() {
     fetchIssuedItems();
   }, []);
 
-  // Filter and search functionality
   useEffect(() => {
     let filtered = [...issuedItems];
 
@@ -152,7 +154,6 @@ export default function IssuedItemsManagement() {
     setFilteredItems(filtered);
   }, [issuedItems, search, filters]);
 
-  // Statistics calculations
   const totalIssued = issuedItems.length;
   const currentlyIssued = issuedItems.filter(
     (item) => item.status === "Issued"
@@ -169,7 +170,6 @@ export default function IssuedItemsManagement() {
     return false;
   }).length;
 
-  // Action handlers
   const handleViewDetails = (item: IssuedItem) => {
     setSelectedItem(item);
     setIsDetailsModalOpen(true);
@@ -214,6 +214,49 @@ export default function IssuedItemsManagement() {
     }
   };
 
+  const handleMarkAsReturn = (item: IssuedItem) => {
+    setSelectedItem(item);
+    setIsReturnModalOpen(true);
+  };
+
+  const confirmMarkAsReturn = async () => {
+    if (!selectedItem || !returnCondition) return;
+
+    try {
+      const token = localStorage.getItem("accessToken");
+      const response = await axios.post(
+        `http://localhost:3000/api/admin/issued-items/mark-as-return/${selectedItem.item.id}`,
+        {
+          condition: returnCondition,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+
+      toast.success(response.data.data.message);
+      setIssuedItems((prev) =>
+        prev.map((item) =>
+          item.id === selectedItem.id
+            ? {
+                ...item,
+                status: "Returned",
+                returnDate: new Date().toISOString(),
+              }
+            : item
+        )
+      );
+
+      setIsReturnModalOpen(false);
+      setSelectedItem(null);
+      setReturnCondition("");
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.message || "Failed to mark item as returned."
+      );
+    }
+  };
+
   const handleExtendSuccess = (updatedItem: IssuedItem) => {
     setIssuedItems((prev) =>
       prev.map((item) => (item.id === updatedItem.id ? updatedItem : item))
@@ -241,13 +284,11 @@ export default function IssuedItemsManagement() {
     });
   };
 
-  // Format date for display
   const formatDate = (dateString: string) => {
     if (dateString === "-") return "-";
     return new Date(dateString).toLocaleDateString();
   };
 
-  // Get status badge style
   const getStatusBadge = (item: IssuedItem) => {
     const isOverdue =
       item.status === "Issued" && new Date(item.dueDate) < new Date();
@@ -580,7 +621,9 @@ export default function IssuedItemsManagement() {
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Delete Record
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => {}}>
+                              <DropdownMenuItem
+                                onClick={() => handleMarkAsReturn(item)}
+                              >
                                 <Eye className="h-4 w-4 mr-2" />
                                 Mark as return
                               </DropdownMenuItem>
@@ -639,6 +682,47 @@ export default function IssuedItemsManagement() {
             itemName={`issued record for "${selectedItem.item.title}" to ${selectedItem.user.fullName}`}
           />
         </>
+      )}
+
+      {isReturnModalOpen && selectedItem && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg space-y-4 w-[90%] max-w-sm">
+            <h2 className="text-lg font-semibold text-gray-800">
+              Mark Item as Returned
+            </h2>
+            <p className="text-sm text-gray-600">
+              Please select the condition of <b>{selectedItem.item.title}</b>:
+            </p>
+
+            <Select
+              value={returnCondition}
+              onValueChange={(value: "Good" | "Lost" | "Damaged") =>
+                setReturnCondition(value)
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select condition" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Good">Good</SelectItem>
+                <SelectItem value="Damaged">Damaged</SelectItem>
+                <SelectItem value="Lost">Lost</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsReturnModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button onClick={confirmMarkAsReturn} disabled={!returnCondition}>
+                Confirm
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

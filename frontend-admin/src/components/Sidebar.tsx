@@ -20,17 +20,21 @@ const navItems = [
     path: "/",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-layout-dashboard-icon lucide-layout-dashboard"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-10l2 2m0 0l-7 7-7-7M19 10v10a1 1 0 01-1 1h-3"
-        />
+        <rect width="7" height="9" x="3" y="3" rx="1" />
+        <rect width="7" height="5" x="14" y="3" rx="1" />
+        <rect width="7" height="9" x="14" y="12" rx="1" />
+        <rect width="7" height="5" x="3" y="16" rx="1" />
       </svg>
     ),
   },
@@ -58,17 +62,29 @@ const navItems = [
     path: "/inventory",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-boxes-icon lucide-boxes"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 7h12m0 0l-3-3m3 3l-3 3m-3 1v5a2 2 0 002 2h4a2 2 0 002-2v-5m-9 0a2 2 0 00-2 2v5a2 2 0 002 2h4a2 2 0 002-2v-5M8 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2h-4"
-        />
+        <path d="M2.97 12.92A2 2 0 0 0 2 14.63v3.24a2 2 0 0 0 .97 1.71l3 1.8a2 2 0 0 0 2.06 0L12 19v-5.5l-5-3-4.03 2.42Z" />
+        <path d="m7 16.5-4.74-2.85" />
+        <path d="m7 16.5 5-3" />
+        <path d="M7 16.5v5.17" />
+        <path d="M12 13.5V19l3.97 2.38a2 2 0 0 0 2.06 0l3-1.8a2 2 0 0 0 .97-1.71v-3.24a2 2 0 0 0-.97-1.71L17 10.5l-5 3Z" />
+        <path d="m17 16.5-5-3" />
+        <path d="m17 16.5 4.74-2.85" />
+        <path d="M17 16.5v5.17" />
+        <path d="M7.97 4.42A2 2 0 0 0 7 6.13v4.37l5 3 5-3V6.13a2 2 0 0 0-.97-1.71l-3-1.8a2 2 0 0 0-2.06 0l-3 1.8Z" />
+        <path d="M12 8 7.26 5.15" />
+        <path d="m12 8 4.74-2.85" />
+        <path d="M12 13.5V8" />
       </svg>
     ),
   },
@@ -77,17 +93,23 @@ const navItems = [
     path: "/queue-dashboard",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-list-ordered-icon lucide-list-ordered"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M8 7h12m0 0l-3-3m3 3l-3 3m-3 1v5a2 2 0 002 2h4a2 2 0 002-2v-5m-9 0a2 2 0 00-2 2v5a2 2 0 002 2h4a2 2 0 002-2v-5M8 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2h-4"
-        />
+        <path d="M11 5h10" />
+        <path d="M11 12h10" />
+        <path d="M11 19h10" />
+        <path d="M4 4h1v5" />
+        <path d="M4 9h2" />
+        <path d="M6.5 20H3.4c0-1 2.6-1.925 2.6-3.5a1.5 1.5 0 0 0-2.6-1.02" />
       </svg>
     ),
   },
@@ -96,17 +118,19 @@ const navItems = [
     path: "/roles",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-shield-check-icon lucide-shield-check"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 11c0-1.104-.896-2-2-2s-2 .896-2 2m0 0c0 1.104.896 2 2 2s2-.896 2-2zM12 11V3m0 0l2 2m-2-2l-2 2m-6 6h12a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v5a2 2 0 002 2h6"
-        />
+        <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z" />
+        <path d="m9 12 2 2 4-4" />
       </svg>
     ),
   },
@@ -115,17 +139,22 @@ const navItems = [
     path: "/fines",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-hand-coins-icon lucide-hand-coins"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"
-        />
+        <path d="M11 15h2a2 2 0 1 0 0-4h-3c-.6 0-1.1.2-1.4.6L3 17" />
+        <path d="m7 21 1.6-1.4c.3-.4.8-.6 1.4-.6h4c1.1 0 2.1-.4 2.8-1.2l4.6-4.4a2 2 0 0 0-2.75-2.91l-4.2 3.9" />
+        <path d="m2 16 6 6" />
+        <circle cx="16" cy="9" r="2.9" />
+        <circle cx="6" cy="5" r="3" />
       </svg>
     ),
   },
@@ -133,17 +162,22 @@ const navItems = [
     name: "Reports & Analytics",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-file-text-icon lucide-file-text"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-        />
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+        <path d="M10 9H8" />
+        <path d="M16 13H8" />
+        <path d="M16 17H8" />
       </svg>
     ),
     subItems: [
@@ -198,17 +232,24 @@ const navItems = [
     path: "/barcode-scan",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-scan-barcode-icon lucide-scan-barcode"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"
-        />
+        <path d="M3 7V5a2 2 0 0 1 2-2h2" />
+        <path d="M17 3h2a2 2 0 0 1 2 2v2" />
+        <path d="M21 17v2a2 2 0 0 1-2 2h-2" />
+        <path d="M7 21H5a2 2 0 0 1-2-2v-2" />
+        <path d="M8 7v10" />
+        <path d="M12 7v10" />
+        <path d="M17 7v10" />
       </svg>
     ),
   },
@@ -217,17 +258,19 @@ const navItems = [
     path: "/settings",
     icon: (
       <svg
-        className="h-6 w-6"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"
-        viewBox="0 0 24 24"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        className="lucide lucide-settings-icon lucide-settings"
       >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M10.325 4.317c.426-.175.895-.251 1.4-.251h.147c.505 0 .973.076 1.4.251m-2.8 0a2 2 0 112.8 0M7 8h10a2 2 0 012 2v10a2 2 0 01-2 2H7a2 2 0 01-2-2v-10a2 2 0 012-2zm2 4a2 2 0 100 4 2 2 0 000-4z"
-        />
+        <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+        <circle cx="12" cy="12" r="3" />
       </svg>
     ),
     subItems: [
@@ -258,9 +301,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     >
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-6 border-b border-gray-200">
-        <h2 className="text-xl font-bold text-gray-800">
-          Library Management System
-        </h2>
+        <h2 className="text-xl font-bold text-gray-800">LMS</h2>
       </div>
 
       {/* Scrollable Navigation */}

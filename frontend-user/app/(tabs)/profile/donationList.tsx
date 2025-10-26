@@ -36,14 +36,14 @@ interface Donation {
   duration: number;
   donationType: "giveaway" | "duration";
   preferredContactMethod: string;
-  status: "Pending" | "Approved" | "Rejected" | "Completed";
+  status: "Pending" | "Accepted" | "Rejected" | "Completed";
   inventoryItemId: string | null;
   createdAt: string;
   updatedAt: string;
   __v: number;
 }
 
-type FilterStatus = "all" | "pending" | "approved" | "rejected" | "completed";
+type FilterStatus = "all" | "pending" | "Accepted" | "rejected" | "completed";
 type FilterType = "all" | "giveaway" | "duration";
 
 export default function MyDonationsScreen() {
@@ -71,9 +71,12 @@ export default function MyDonationsScreen() {
   const fetchDonations = async () => {
     try {
       setError(null);
-      const response = await axios.get(`${API_BASE_URL}/items/donations/my-donations`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${API_BASE_URL}/items/donations/my-donations`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
 
       if (response.data.success) {
         setDonations(response.data.data || []);
@@ -95,24 +98,26 @@ export default function MyDonationsScreen() {
   const filterDonations = () => {
     let filtered = [...donations];
 
-    // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter((donation) => 
-        donation.status.toLowerCase() === statusFilter.toLowerCase()
+      filtered = filtered.filter(
+        (donation) =>
+          donation.status.toLowerCase() === statusFilter.toLowerCase()
       );
     }
 
-    // Apply type filter
     if (typeFilter !== "all") {
-      filtered = filtered.filter((donation) => donation.donationType === typeFilter);
+      filtered = filtered.filter(
+        (donation) => donation.donationType === typeFilter
+      );
     }
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((donation) =>
-        donation.title.toLowerCase().includes(query) ||
-        (donation.description && donation.description.toLowerCase().includes(query))
+      filtered = filtered.filter(
+        (donation) =>
+          donation.title.toLowerCase().includes(query) ||
+          (donation.description &&
+            donation.description.toLowerCase().includes(query))
       );
     }
 
@@ -121,7 +126,7 @@ export default function MyDonationsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "approved":
+      case "Accepted":
         return "#34C759";
       case "pending":
         return "#FF9500";
@@ -136,7 +141,7 @@ export default function MyDonationsScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case "approved":
+      case "Accepted":
         return "checkmark-circle";
       case "pending":
         return "time";
@@ -173,7 +178,7 @@ export default function MyDonationsScreen() {
     if (donationType === "giveaway") {
       return "Giveaway";
     }
-    return `${duration} day${duration !== 1 ? 's' : ''}`;
+    return `${duration} day${duration !== 1 ? "s" : ""}`;
   };
 
   const handleWithdrawDonation = async (donationId: string) => {
@@ -187,11 +192,23 @@ export default function MyDonationsScreen() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Implement withdrawal API call here
-              Alert.alert("Success", "Donation request withdrawn successfully");
-              fetchDonations(); // Refresh the list
-            } catch (error) {
-              Alert.alert("Error", "Failed to withdraw donation request");
+              const response = await axios.delete(
+                `${API_BASE_URL}//items/donations/${donationId}/withdraw`
+              );
+
+              if (response.data.success) {
+                Alert.alert(
+                  "Success",
+                  "Donation request withdrawn successfully"
+                );
+                fetchDonations();
+              }
+            } catch (error: any) {
+              Alert.alert(
+                "Error",
+                error.response?.data?.message ||
+                  "Failed to withdraw donation request"
+              );
             }
           },
         },
@@ -199,12 +216,32 @@ export default function MyDonationsScreen() {
     );
   };
 
+  const handleViewDetails = async (donationId: string) => {
+  try {
+    const response = await axios.get(
+      `${API_BASE_URL}/items/donations/${donationId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    if (response.data.success) {
+      router.push({
+        pathname: "/profile/donation-details",
+        params: { donation: JSON.stringify(response.data.data) }
+      });
+    }
+  } catch (error: any) {
+    Alert.alert("Error", "Failed to load donation details");
+  }
+};
+
   const getStats = () => {
     const total = donations.length;
-    const pending = donations.filter(d => d.status === "Pending").length;
-    const approved = donations.filter(d => d.status === "Approved").length;
-    const rejected = donations.filter(d => d.status === "Rejected").length;
-    const completed = donations.filter(d => d.status === "Completed").length;
+    const pending = donations.filter((d) => d.status === "Pending").length;
+    const approved = donations.filter((d) => d.status === "Accepted").length;
+    const rejected = donations.filter((d) => d.status === "Rejected").length;
+    const completed = donations.filter((d) => d.status === "Completed").length;
 
     return { total, pending, approved, rejected, completed };
   };
@@ -221,7 +258,7 @@ export default function MyDonationsScreen() {
               <Ionicons name="cube" size={32} color={COLORS.textSecondary} />
             </View>
           )}
-          
+
           <View style={styles.headerInfo}>
             <Text style={styles.itemTitle} numberOfLines={2}>
               {item.title}
@@ -232,7 +269,12 @@ export default function MyDonationsScreen() {
                 size={14}
                 color={getStatusColor(item.status)}
               />
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: getStatusColor(item.status) },
+                ]}
+              >
                 {item.status}
               </Text>
             </View>
@@ -250,12 +292,16 @@ export default function MyDonationsScreen() {
         <View style={styles.detailsContainer}>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Ionicons name={getTypeIcon(item.donationType)} size={16} color={COLORS.primary} />
+              <Ionicons
+                name={getTypeIcon(item.donationType)}
+                size={16}
+                color={COLORS.primary}
+              />
               <Text style={styles.detailText}>
                 {getDurationText(item.duration, item.donationType)}
               </Text>
             </View>
-            
+
             <View style={styles.detailItem}>
               <Ionicons name="calendar" size={16} color={COLORS.primary} />
               <Text style={styles.detailText}>
@@ -278,12 +324,11 @@ export default function MyDonationsScreen() {
               </Text>
             </TouchableOpacity>
           )}
-          
+
           <TouchableOpacity
             style={[styles.actionButton, styles.detailsButton]}
             onPress={() => {
-              // Navigate to donation details
-            //   router.push(``);
+              handleViewDetails(item._id)
             }}
           >
             <Ionicons name="eye" size={16} color={COLORS.primary} />
@@ -339,19 +384,27 @@ export default function MyDonationsScreen() {
           <Text style={styles.statLabel}>Total</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#FF9500" }]}>{stats.pending}</Text>
+          <Text style={[styles.statNumber, { color: "#FF9500" }]}>
+            {stats.pending}
+          </Text>
           <Text style={styles.statLabel}>Pending</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#34C759" }]}>{stats.approved}</Text>
+          <Text style={[styles.statNumber, { color: "#34C759" }]}>
+            {stats.approved}
+          </Text>
           <Text style={styles.statLabel}>Approved</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>{stats.rejected}</Text>
+          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>
+            {stats.rejected}
+          </Text>
           <Text style={styles.statLabel}>Rejected</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#007AFF" }]}>{stats.completed}</Text>
+          <Text style={[styles.statNumber, { color: "#007AFF" }]}>
+            {stats.completed}
+          </Text>
           <Text style={styles.statLabel}>Completed</Text>
         </View>
       </ScrollView>
@@ -394,7 +447,15 @@ export default function MyDonationsScreen() {
         showsHorizontalScrollIndicator={false}
         style={styles.quickFilters}
       >
-        {(["all", "pending", "approved", "rejected", "completed"] as FilterStatus[]).map((status) => (
+        {(
+          [
+            "all",
+            "pending",
+            "Accepted",
+            "rejected",
+            "completed",
+          ] as FilterStatus[]
+        ).map((status) => (
           <TouchableOpacity
             key={status}
             style={[
@@ -409,7 +470,9 @@ export default function MyDonationsScreen() {
                 statusFilter === status && styles.quickFilterTextActive,
               ]}
             >
-              {status === "all" ? "All" : status.charAt(0).toUpperCase() + status.slice(1)}
+              {status === "all"
+                ? "All"
+                : status.charAt(0).toUpperCase() + status.slice(1)}
             </Text>
           </TouchableOpacity>
         ))}
@@ -460,7 +523,9 @@ export default function MyDonationsScreen() {
                   ? "Try adjusting your filters or search terms"
                   : "Start by donating an item to help others in need!"}
               </Text>
-              {(searchQuery || statusFilter !== "all" || typeFilter !== "all") && (
+              {(searchQuery ||
+                statusFilter !== "all" ||
+                typeFilter !== "all") && (
                 <TouchableOpacity
                   style={styles.clearFiltersButton}
                   onPress={() => {
@@ -495,7 +560,15 @@ export default function MyDonationsScreen() {
           <ScrollView style={styles.modalContent}>
             <View style={styles.filterSection}>
               <Text style={styles.filterSectionTitle}>Status</Text>
-              {(["all", "pending", "approved", "rejected", "completed"] as FilterStatus[]).map((status) => (
+              {(
+                [
+                  "all",
+                  "pending",
+                  "Accepted",
+                  "rejected",
+                  "completed",
+                ] as FilterStatus[]
+              ).map((status) => (
                 <TouchableOpacity
                   key={status}
                   style={styles.filterOption}
@@ -515,7 +588,9 @@ export default function MyDonationsScreen() {
                     }
                   />
                   <Text style={styles.filterOptionText}>
-                    {status === "all" ? "All Statuses" : status.charAt(0).toUpperCase() + status.slice(1)}
+                    {status === "all"
+                      ? "All Statuses"
+                      : status.charAt(0).toUpperCase() + status.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -543,7 +618,9 @@ export default function MyDonationsScreen() {
                     }
                   />
                   <Text style={styles.filterOptionText}>
-                    {type === "all" ? "All Types" : type.charAt(0).toUpperCase() + type.slice(1)}
+                    {type === "all"
+                      ? "All Types"
+                      : type.charAt(0).toUpperCase() + type.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -594,7 +671,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },

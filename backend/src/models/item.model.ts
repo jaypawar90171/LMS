@@ -63,7 +63,6 @@ const itemSchema = new mongoose.Schema<IInventoryItem>(
       enum: ["Available", "Issued", "Lost", "Damaged"],
       default: "Available",
     },
-    // Category-specific fields
     size: {
       type: String,
       enum: ["XS", "S", "M", "L", "XL", "XXL"],

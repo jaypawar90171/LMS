@@ -15,6 +15,8 @@ import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
 import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
 
 interface ProfileData {
   id: string;
@@ -43,11 +45,12 @@ interface ProfileOption {
 }
 
 export default function ProfileScreen() {
-  const [user] = useAtom(userAtom);
+  const [user, setUser] = useAtom(userAtom);
   const [token] = useAtom(tokenAtom);
   const [, logout] = useAtom(logoutAtom);
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -85,6 +88,96 @@ export default function ProfileScreen() {
     }
   };
 
+  const handleChangePhoto = async () => {
+    try {
+      // Request permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission required",
+          "Sorry, we need camera roll permissions to change your profile photo."
+        );
+        return;
+      }
+
+      // Launch image picker
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets && result.assets[0]) {
+        // Compress and resize the image
+        const manipulatedImage = await manipulateAsync(
+          result.assets[0].uri,
+          [{ resize: { width: 500, height: 500 } }],
+          { compress: 0.7, format: SaveFormat.JPEG }
+        );
+
+        // Upload the image using the dedicated endpoint
+        await uploadProfilePhoto(manipulatedImage.uri);
+      }
+    } catch (error: any) {
+      console.error("Error changing photo:", error);
+      Alert.alert("Error", "Failed to change profile photo. Please try again.");
+    }
+  };
+
+  const uploadProfilePhoto = async (imageUri: string) => {
+    try {
+      setUploading(true);
+
+      const formData = new FormData();
+
+      // @ts-ignore - React Native FormData structure
+      formData.append("image", {
+        uri: imageUri,
+        type: "image/jpeg",
+        name: "profile-photo.jpg",
+      });
+
+      // Use the dedicated profile picture update endpoint
+      const response = await axios.put(
+        `${API_BASE_URL}/account/profile/picture`,
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (response.data.success) {
+        const { profilePicture, user: updatedUser } = response.data.data;
+        
+        // Update local profile data
+        setProfileData(prev => prev ? { ...prev, profilePicture } : null);
+        
+        // Update global user state if needed
+        if (updatedUser) {
+          setUser(updatedUser);
+        }
+        
+        Alert.alert("Success", "Profile photo updated successfully!");
+      } else {
+        throw new Error(response.data.message || "Failed to update profile photo");
+      }
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      Alert.alert(
+        "Upload Failed",
+        error.response?.data?.message ||
+          "Failed to upload profile photo. Please try again."
+      );
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const getInitials = (name: string) => {
     return name
       .split(" ")
@@ -108,21 +201,17 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      "Log Out",
-      "Are you sure you want to log out?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Log Out",
-          style: "destructive",
-          onPress: () => {
-            logout();
-            router.replace("/(auth)");
-          },
+    Alert.alert("Log Out", "Are you sure you want to log out?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Log Out",
+        style: "destructive",
+        onPress: () => {
+          logout();
+          router.replace("/(auth)");
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const profileOptions: ProfileOption[] = [
@@ -175,7 +264,7 @@ export default function ProfileScreen() {
       Alert.alert("Coming Soon", "This feature will be available soon!");
       return;
     }
-    
+
     if (option.screen) {
       router.push(option.screen as any);
     } else if (option.action) {
@@ -210,47 +299,62 @@ export default function ProfileScreen() {
 
       {/* Profile Card */}
       <View style={styles.profileCard}>
-        {/* Avatar */}
-        <View style={styles.avatarContainer}>
-          {displayData.profilePicture ? (
-            <Image
-              source={{ uri: displayData.profilePicture }}
-              style={styles.avatar}
-            />
-          ) : (
-            <View style={styles.avatarPlaceholder}>
-              <Text style={styles.avatarText}>
-                {getInitials(displayData.fullName)}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* User Info */}
-        <View style={styles.userInfo}>
-          <Text style={styles.userName}>{displayData.fullName}</Text>
-          <Text style={styles.userEmail}>{displayData.email}</Text>
-          
-          {/* Status Badge */}
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(displayData.status) }]}>
-            <Text style={styles.statusText}>{displayData.status}</Text>
+        {/* Avatar Container */}
+        <View style={styles.avatarSection}>
+          <View style={styles.avatarContainer}>
+            {displayData.profilePicture ? (
+              <Image
+                source={{ uri: displayData.profilePicture }}
+                style={styles.avatar}
+              />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>
+                  {getInitials(displayData.fullName)}
+                </Text>
+              </View>
+            )}
+            
+            {/* Add Photo Button Overlay */}
+            <TouchableOpacity
+              style={styles.addPhotoButton}
+              onPress={handleChangePhoto}
+              disabled={uploading}
+            >
+              {uploading ? (
+                <Ionicons name="cloud-upload-outline" size={20} color="#FFF" />
+              ) : (
+                <Ionicons name="camera-outline" size={20} color="#FFF" />
+              )}
+            </TouchableOpacity>
           </View>
 
-          {/* Role */}
-          {displayData.roles && displayData.roles.length > 0 && (
-            <View style={styles.roleContainer}>
-              <Text style={styles.roleText}>
-                {displayData.roles.map((role: { roleName: string }) => role.roleName).join(", ")}
-              </Text>
+          {/* User Info */}
+          <View style={styles.userInfo}>
+            <Text style={styles.userName}>{displayData.fullName}</Text>
+            <Text style={styles.userEmail}>{displayData.email}</Text>
+            
+            {/* Status Badge */}
+            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(displayData.status) }]}>
+              <Text style={styles.statusText}>{displayData.status}</Text>
             </View>
-          )}
+
+            {/* Role */}
+            {displayData.roles && displayData.roles.length > 0 && (
+              <View style={styles.roleContainer}>
+                <Text style={styles.roleText}>
+                  {displayData.roles.map((role: any) => role.roleName).join(", ")}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
       </View>
 
       {/* Profile Options */}
       <View style={styles.optionsSection}>
         <Text style={styles.sectionTitle}>Account Settings</Text>
-        
+
         {profileOptions.map((option, index) => (
           <TouchableOpacity
             key={option.id}
@@ -261,15 +365,23 @@ export default function ProfileScreen() {
             onPress={() => handleOptionPress(option)}
           >
             <View style={styles.optionLeft}>
-              <Ionicons name={option.icon as any} size={22} color={COLORS.primary} />
+              <Ionicons
+                name={option.icon as any}
+                size={22}
+                color={COLORS.primary}
+              />
               <Text style={styles.optionText}>{option.title}</Text>
             </View>
-            
+
             <View style={styles.optionRight}>
               {option.comingSoon && (
                 <Text style={styles.comingSoonText}>Soon</Text>
               )}
-              <Ionicons name="chevron-forward" size={20} color={COLORS.textSecondary} />
+              <Ionicons
+                name="chevron-forward"
+                size={20}
+                color={COLORS.textSecondary}
+              />
             </View>
           </TouchableOpacity>
         ))}
@@ -278,19 +390,19 @@ export default function ProfileScreen() {
       {/* Additional Info */}
       <View style={styles.infoSection}>
         <Text style={styles.sectionTitle}>Account Information</Text>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Username</Text>
           <Text style={styles.infoValue}>{displayData.username}</Text>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Member Since</Text>
           <Text style={styles.infoValue}>
             {new Date(displayData.createdAt).toLocaleDateString()}
           </Text>
         </View>
-        
+
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Last Login</Text>
           <Text style={styles.infoValue}>
@@ -347,7 +459,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+  avatarSection: {
+    alignItems: "center",
+  },
   avatarContainer: {
+    position: "relative",
     marginBottom: 16,
   },
   avatar: {
@@ -367,6 +483,24 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontSize: 32,
     fontWeight: "600",
+  },
+  addPhotoButton: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: COLORS.primary,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 3,
+    borderColor: COLORS.cardBackground,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   userInfo: {
     alignItems: "center",

@@ -18,6 +18,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* Sidebar */}
       <Sidebar isOpen={isSidebarOpen} />
 
+      {isSidebarOpen && (
+        <div
+          onClick={toggleSidebar}
+          className="fixed inset-0 z-40 bg-black bg-opacity-50 lg:hidden"
+          aria-hidden="true"
+        ></div>
+      )}
+
       {/* Main Content Area */}
       <div
         className={`flex flex-col flex-1 transition-all duration-300 ${

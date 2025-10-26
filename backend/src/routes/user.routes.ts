@@ -9,6 +9,7 @@ import {
   getAllFinesController,
   getCategoriesController,
   getCategoryItemsController,
+  getDonationDetailsController,
   getHistoryController,
   getIssuedItemsController,
   getItemController,
@@ -31,7 +32,9 @@ import {
   updateNotificationPreferenceController,
   updatePasswordController,
   updateProfileController,
+  updateProfilePictureController,
   uploadPhotoController,
+  withdrawDonationController,
   withdrawFromQueueController,
 } from "../controllers/user.controller";
 import { loginUserController } from "../controllers/user.controller";
@@ -113,16 +116,18 @@ router.put("/account/profile", authUser, updateProfileController);
 
 router.put("/account/password", authUser, updatePasswordController);
 
-router.put(
-  "/account/notifications",
-  authUser,
-  updateNotificationPreferenceController
-);
+router.put("/account/notifications", authUser, updateNotificationPreferenceController);
+
+router.put("/account/profile/picture", authUser, upload.single("image"), updateProfilePictureController);
 
 /* ========================= DONATION ========================= */
 router.post("/items/donations/express-interest", authUser, expressDonationInterestController);
 
 router.get("/items/donations/my-donations", authUser, getMyDonationsController);
+
+router.get("/items/donations/:donationId", authUser, getDonationDetailsController);
+
+router.delete("/items/donations/:donationId/withdraw", authUser, withdrawDonationController);
 
 router.post("/upload/image", authUser, upload.single("image"), uploadPhotoController);
 

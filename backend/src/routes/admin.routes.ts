@@ -84,6 +84,7 @@ import {
   getAllRequestedItemsController,
   downloadBatchBarcodeController,
   getItemByScannedBarcodeController,
+  returnItemController,
 } from "../controllers/admin.controller";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
@@ -197,7 +198,7 @@ router.get(
 router.get(
   "/dashboard/summary",
   authUser,
-  authorize(["canViewDashboard"]),
+  // authorize(["canViewDashboard"]),
   getDashboardSummaryController
 );
 
@@ -272,6 +273,8 @@ router.post(
   authorize(["canExtendPeriod"]),
   extendPeriodController
 );
+
+router.post("/issued-items/mark-as-return/:itemId", authUser, returnItemController);
 
 /* ========================= NEW ITEM REQUEST ========================= */
 router.get(
@@ -650,28 +653,24 @@ router.get(
 router.get(
   "/notifications",
   authUser,
-  authorize(["canViewDashboard"]),
   getNotificationsController
 );
 
 router.patch(
   "/notifications/:notificationId/read",
   authUser,
-  authorize(["canViewDashboard"]),
   markAsReadController
 );
 
 router.patch(
   "/notifications/mark-all-read",
   authUser,
-  authorize(["canViewDashboard"]),
   markAllAsReadController
 );
 
 router.delete(
   "/notifications/:notificationId",
   authUser,
-  authorize(["canViewDashboard"]),
   deleteNotificationController
 );
 

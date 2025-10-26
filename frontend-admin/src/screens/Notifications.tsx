@@ -221,7 +221,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.patch(
-        `http://localhost:3000/api/notifications/${notificationId}/read`,
+        `http://localhost:3000/api/admin/notifications/${notificationId}/read`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -245,7 +245,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.patch(
-        "http://localhost:3000/api/notifications/mark-all-read",
+        "http://localhost:3000/api/admin/notifications/mark-all-read",
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -271,7 +271,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.delete(
-        `http://localhost:3000/api/notifications/${notificationId}`,
+        `http://localhost:3000/api/admin/notifications/${notificationId}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 

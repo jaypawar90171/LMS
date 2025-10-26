@@ -30,6 +30,7 @@ import {
   updateNotificationPreferenceService,
   updatePasswordService,
   updateProfileService,
+  withdrawDonationService,
   withdrawFromQueueService,
 } from "../services/user.service";
 import {
@@ -47,6 +48,8 @@ import { success } from "zod";
 import InventoryItem from "../models/item.model";
 import { uploadFile } from "../config/upload";
 import fs from "fs";
+import Donation from "../models/donation.model";
+import User from "../models/user.model";
 
 export const registerUserController = async (req: Request, res: Response) => {
   try {
@@ -1061,6 +1064,59 @@ export const updateNotificationPreferenceController = async (
   }
 };
 
+export const updateProfilePictureController = async(req: Request, res: Response) => {
+  try {
+     const userId = req.user.id;
+    
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "No image file provided",
+      });
+    }
+
+    const uploadResult = await uploadFile(req.file.path);
+    
+    if (!uploadResult || !uploadResult.secure_url) {
+      return res.status(500).json({
+        success: false,
+        message: "Failed to upload image to cloud storage",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { 
+        profile: uploadResult.secure_url,
+        updatedAt: new Date()
+      },
+      { new: true }
+    )
+
+     if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Profile picture updated successfully",
+      data: {
+        profilePicture: uploadResult.secure_url,
+        user: updatedUser
+      }
+    });
+  } catch (error: any) {
+     console.error("Update profile picture error:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+}
+
 export const updatePasswordController = async (req: Request, res: Response) => {
   try {
     if (!req.user || !req.user.id) {
@@ -1163,6 +1219,88 @@ export const getMyDonationsController = async (req: Request, res: Response) => {
       .json({ error: error.message || "Internal server error" });
   }
 };
+
+export const getDonationDetailsController = async(req: Request, res: Response) => {
+  const { donationId } = req.params;
+  const userId = req.user?.id;
+
+  try {
+    if (!req.user || !req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please log in.",
+      });
+    }
+
+    if (!userId) {
+      return res.status(400).json({ message: "userId not found" });
+    }
+
+    const donation = await Donation.findById(donationId)
+      .populate("userId", "fullName email username phoneNumber")
+      .populate("itemType", "name description")
+      .populate("inventoryItemId", "title authorOrCreator description barcode status");
+
+    if (!donation) {
+      return res.status(404).json({
+        success: false,
+        message: "Donation not found",
+      });
+    }
+
+    if (donation.userId._id.toString() !== userId) {
+      return res.status(403).json({
+        success: false,
+        message: "Access denied",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: donation,
+    });
+  } catch (error: any) {
+    console.error("Error fetching donation details:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+}
+
+export const withdrawDonationController  = async(req: Request, res: Response) => {
+  try {
+    const { donationId } = req.params;
+    const userId = req.user?.id;
+
+    if (!donationId) {
+      return res.status(400).json({
+        success: false,
+        message: "Donation ID is required",
+      });
+    }
+
+    const result = await withdrawDonationService(donationId, userId);
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        message: result.message,
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Donation request withdrawn successfully",
+      data: result.withdrawnDonation,
+    });
+  } catch (error: any) {
+     console.error("Error in withdraw donation controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Internal server error",
+    });
+  }
+}
 
 export const uploadPhotoController = async (req: Request, res: Response) => {
   try {

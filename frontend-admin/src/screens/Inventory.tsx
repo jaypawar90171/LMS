@@ -410,7 +410,7 @@ const Inventory = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      <div className="container mx-auto space-y-6">
+      <div className="container mx-auto space-y-6 p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-3xl font-bold text-foreground">

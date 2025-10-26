@@ -49,6 +49,7 @@ import {
   rejectRequestedItemService,
   removeUserFromQueueService,
   resetPasswordAdminService,
+  returnItemService,
   sendReminderService,
   updateAdminPasswordServive,
   updateDonationStatusService,
@@ -1307,11 +1308,7 @@ export const extendPeriodController = async (req: Request, res: Response) => {
       });
     }
 
-    if (
-      !extensionDays ||
-      typeof extensionDays !== "number" ||
-      extensionDays <= 0
-    ) {
+    if (!extensionDays || typeof extensionDays !== "number" || extensionDays <= 0) {
       return res.status(400).json({
         success: false,
         message: "Valid extension days (positive number) is required",
@@ -1339,6 +1336,41 @@ export const extendPeriodController = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const returnItemController = async(req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    const {itemId} = req.params;
+    const {condition} = req.body;
+
+    if (!itemId || !userId || !condition) {
+      return res.status(400).json({
+        success: false,
+        message: "itemId, userId, and condition are required.",
+      });
+    }
+
+    const validConditions = ["Good", "Lost", "Damaged"];
+    if (!validConditions.includes(condition)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid condition. Must be 'Good', 'Lost', or 'Damaged'.",
+      });
+    }
+
+    const result = await returnItemService(itemId, userId, condition);
+
+     res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: error.message || "Error processing item return.",
+    });
+  }
+}
 
 export const getAllRequestedItemsController = async (
   req: Request,
@@ -2605,7 +2637,16 @@ export const removeUserFromQueueController = async (
 
 export const processReturnController = async (req: Request, res: Response) => {
   try {
+    const userId = req.user?.id;
     const { itemId } = req.params;
+    const status = req.body;
+
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Valid userId is required"
+      });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ message: "Invalid itemId" });

@@ -291,7 +291,7 @@ export default function ItemDetailsScreen() {
 
   const handleRequestItem = async () => {
     if (!token || !user?.id || !itemId) return;
-
+    console.log("click on the requets item")
     try {
       const response = await axios.post(
         `${API_BASE_URL}/issue-requests`,

@@ -55,7 +55,6 @@ export const registerUserService = async (data: RegisterDTO) => {
     throw err;
   }
 
-  // Get role from Roles collection
   const userRole = await Role.findOne({ roleName: role });
   if (!userRole) {
     const err: any = new Error(`Role '${role}' not found.`);
@@ -384,7 +383,6 @@ export const dashboardSummaryService = async (userId: string) => {
       return;
     }
 
-    // Calculate estimated wait time (simplified)
     const estimatedWait = userMember?.position * 7;
 
     return {
@@ -397,8 +395,7 @@ export const dashboardSummaryService = async (userId: string) => {
     };
   });
 
-  // Get new arrivals (existing logic)
-  const newArrivals = await InventoryItem.find()
+  const newArrivals = await InventoryItem.find({ status: "Available" })
     .sort({ createdAt: -1 })
     .limit(10)
     .populate("categoryId", "name")
@@ -1627,6 +1624,38 @@ export const getMyDonationsService = async (userId: string) => {
     };
   }
 };
+
+export const withdrawDonationService = async(donationId: string, userId: string) => {
+  try {
+    const donation = await Donation.findById(donationId);
+
+    if (!donation) {
+      return { success: false, message: "Donation not found" };
+    }
+
+    if (donation.userId.toString() !== userId) {
+      return { success: false, message: "You can only withdraw your own donation requests" };
+    }
+
+     if (donation.status !== "Pending") {
+      return { 
+        success: false, 
+        message: `Cannot withdraw donation with status: ${donation.status}. Only pending donations can be withdrawn.` 
+      };
+    }
+
+    const withdrawnDonation = await Donation.findByIdAndDelete(donationId);
+
+    return {
+      success: true,
+      message: "Donation request withdrawn successfully",
+      withdrawnDonation
+    };
+  } catch (error) {
+    console.error("Error withdrawing donation:", error);
+    return { success: false, message: "Internal server error" };
+  }
+}
 
 export const getUserNotificationService = async (userId: string) => {
   const notifications = await Notification.find({ recipientId: userId }).sort({

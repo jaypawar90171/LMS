@@ -2084,14 +2084,26 @@ export const extendPeriodService = async (
   updatedItem?: IIssuedItem;
   message?: string;
 }> => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
-    const issuedItem = await IssuedItem.findById(issuedItemId);
+    const issuedItem = await IssuedItem.findById(issuedItemId)
+      .populate("userId", "fullName email roles")
+      .populate(
+        "itemId",
+        "title authorOrCreator description price quantity availableCopies categoryId subcategoryId"
+      )
+      .session(session);
 
     if (!issuedItem) {
+      await session.abortTransaction();
+      session.endSession();
       return { success: false, message: "Issued item not found" };
     }
 
     if (issuedItem.status === "Returned") {
+      await session.abortTransaction();
+      session.endSession();
       return {
         success: false,
         message: "Cannot extend period for returned item",
@@ -2099,17 +2111,24 @@ export const extendPeriodService = async (
     }
 
     if (issuedItem.extensionCount >= issuedItem.maxExtensionAllowed) {
+      await session.abortTransaction();
+      session.endSession();
       return {
         success: false,
         message: `Maximum extensions (${issuedItem.maxExtensionAllowed}) already reached`,
       };
     }
 
-    if (extensionDays <= 0) {
-      return { success: false, message: "Extension days must be positive" };
+    if (!issuedItem.dueDate) {
+      await session.abortTransaction();
+      session.endSession();
+      return {
+        success: false,
+        message: "Cannot extend - due date not set for this item",
+      };
     }
 
-    const currentDueDate = issuedItem.dueDate || new Date();
+    const currentDueDate = new Date(issuedItem.dueDate);
     const newDueDate = new Date(currentDueDate);
     newDueDate.setDate(newDueDate.getDate() + extensionDays);
 
@@ -2121,7 +2140,7 @@ export const extendPeriodService = async (
           extensionCount: issuedItem.extensionCount + 1,
         },
       },
-      { new: true }
+      { new: true, session }
     )
       .populate("userId", "fullName email roles")
       .populate(
@@ -2136,16 +2155,79 @@ export const extendPeriodService = async (
       );
 
     if (!updatedItem) {
+      await session.abortTransaction();
+      session.endSession();
       return { success: false, message: "Failed to update issued item" };
     }
+
+    await session.commitTransaction();
+    session.endSession();
 
     return {
       success: true,
       updatedItem: updatedItem.toObject() as IIssuedItem,
     };
   } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
     console.error("Error extending period:", error);
     return { success: false, message: "Internal server error" };
+  }
+};
+
+export const returnItemService = async (
+  itemId: string,
+  userId: string,
+  condition: "Good" | "Lost" | "Damaged"
+) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const issuedItem = await IssuedItem.findOne({
+      itemId,
+      status: "Issued",
+    }).session(session);
+
+    if (!issuedItem) {
+      throw new Error("No active issued record found for this user and item.");
+    }
+
+    const item = await InventoryItem.findById(itemId).session(session);
+    if (!item) {
+      throw new Error("Item not found in inventory.");
+    }
+
+    issuedItem.status = "Returned";
+    issuedItem.returnDate = new Date();
+    issuedItem.returnedTo = userId;
+
+    if (condition === "Good") {
+      item.availableCopies += 1;
+      item.status = "Available";
+    } else if (condition === "Damaged") {
+      item.status = "Available";
+    } else if (condition === "Lost") {
+      item.status = "Available";
+    }
+
+    await issuedItem.save({ session });
+    await item.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      message:
+        condition === "Good"
+          ? "Item successfully returned and stock updated."
+          : `Item marked as ${condition}. Quantity unchanged.`,
+      condition,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
   }
 };
 
@@ -2777,26 +2859,22 @@ export const processItemReturn = async (itemId: string) => {
   session.startTransaction();
 
   try {
-    // Find the queue for the returned item
     const queue = await Queue.findOne({ itemId })
       .populate("queueMembers.userId")
       .session(session);
 
     if (!queue || queue.queueMembers.length === 0) {
-      // No queue for this item
       await session.commitTransaction();
       session.endSession();
       return { message: "No queue found for this item" };
     }
 
-    // Check if already processing
     if (queue.isProcessing) {
       await session.commitTransaction();
       session.endSession();
       return { message: "Queue is already being processed" };
     }
 
-    // Find next eligible user (waiting status, lowest position)
     const nextUser = queue.queueMembers
       .filter((member) => member.status === "waiting")
       .sort((a, b) => a.position - b.position)[0];
@@ -2807,18 +2885,15 @@ export const processItemReturn = async (itemId: string) => {
       return { message: "No waiting users in queue" };
     }
 
-    // Mark queue as processing
     queue.isProcessing = true;
     queue.currentNotifiedUser = nextUser.userId._id;
 
-    // Update user status and set notification expiry (24 hours)
     nextUser.status = "notified";
     nextUser.notifiedAt = new Date();
-    nextUser.notificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+    nextUser.notificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
     await queue.save({ session });
 
-    // Send notification to user
     await sendItemAvailableNotification(nextUser.userId, itemId);
 
     await session.commitTransaction();
@@ -2980,7 +3055,6 @@ export const checkExpiredNotifications = async () => {
     queue.currentNotifiedUser = null;
     await queue.save();
 
-    // Process next user
     await processItemReturn(queue.itemId.toString());
   }
 };

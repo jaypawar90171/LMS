@@ -70,7 +70,6 @@ const IssueManagement = () => {
   const [searchItem, setSearchItem] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Fetch data on component mount
   useEffect(() => {
     fetchPendingRequests();
     fetchUsers();
