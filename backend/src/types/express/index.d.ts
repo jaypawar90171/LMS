@@ -1,14 +1,10 @@
 import { JwtPayload } from "jsonwebtoken";
+import { IUser } from "../../interfaces/permission.interface";
 
 declare global {
   namespace Express {
-    // Extend the Request interface
     export interface Request {
-      user?: {
-        id: string;
-        email?: string;
-        role?: string;
-      }
+      user?: IUser
     }
   }
 }

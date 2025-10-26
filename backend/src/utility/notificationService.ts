@@ -6,7 +6,7 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   level: "Info" | "Success" | "Warning" | "Danger";
-  type: "user_registered" | "item_requested" | "donation_submitted" | "item_overdue" | "system_alert" | "force_password_reset" | "fine_created" | "fine_updated" | "fine_deleted" | "fine_payment_recorded" | "fine_waived";
+  type: "user_registered" | "item_requested" | "donation_submitted" | "item_overdue" | "system_alert" | "force_password_reset" | "fine_created" | "fine_updated" | "fine_deleted" | "fine_payment_recorded" | "fine_waived" | "user_activated" | "user_deactivated";
   metadata?: any;
   expiresInDays?: number;
 }

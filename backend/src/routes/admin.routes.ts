@@ -85,7 +85,6 @@ import {
   downloadBatchBarcodeController,
   getItemByScannedBarcodeController,
 } from "../controllers/admin.controller";
-import { authorize } from "../middleware/authorize";
 import { authUser } from "../middleware/auth.middleware";
 import multer from "multer";
 import { upload } from "../config/upload";
@@ -93,6 +92,7 @@ import {
   exportAllUsersReport,
   fetchAllPermissionsService,
 } from "../services/admin.service";
+import { authorize } from "../middleware/authorize";
 
 const router = Router();
 
@@ -111,44 +111,49 @@ router.get("/auth/logout", authUser, logoutController);
 router.put(
   "/users/:userId/status",
   authUser,
-  // authorize(["admin:manageUsers", "admin:approveUser"]),
+  authorize(["canEditUser", "canDeactivateUser"]),
   updateUserStatusController
 );
 
 router.get(
   "/users",
   authUser,
-  // authorize(["admin:viewAllUsers"]),
+  authorize(["canViewUser"]),
   getAllUsersController
 );
 
 router.post(
   "/users",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canCreateUser"]),
   createUserController
 );
 
 router.get(
   "/users/:userId",
   authUser,
-  // authorize(["admin:viewAllUsers"]),
+  authorize(["canViewUser"]),
   getUserDetailsController
 );
 
-router.put("/users/:userId", authUser, updateUserController);
+router.put(
+  "/users/:userId",
+  authUser,
+  authorize(["canEditUser"]),
+  updateUserController
+);
 
 router.put(
   "/users/:userId/reset-password",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canResetUserPassword"]),
   forcePasswordResetController
 );
 
 router.delete(
   "/users/:userId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canDeactivateUser"]),
   deleteUserController
 );
 
@@ -156,42 +161,43 @@ router.delete(
 router.get(
   "/roles",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canViewRoles"]),
   fetchRolesController
 );
 
 router.post(
   "/roles",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canCreateRole"]),
   createRoleController
 );
 
 router.put(
   "/roles/:roleId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canEditRolePermissions"]),
   updateRoleController
 );
 
 router.delete(
   "/roles/:roleId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canDeleteRole"]),
   deleteRoleController
 );
 
-router.get("/permissions", authUser, fetchAllPermissionsController);
+router.get(
+  "/permissions",
+  authUser,
+  authorize(["canViewRoles"]),
+  fetchAllPermissionsController
+);
 
 /* ========================= DASHBOARD ========================= */
 router.get(
   "/dashboard/summary",
   authUser,
-  // authorize([
-  //   "admin:viewAllUsers",
-  //   "admin:viewAllItems",
-  //   "admin:viewAllRentals",
-  // ]),
+  authorize(["canViewDashboard"]),
   getDashboardSummaryController
 );
 
@@ -199,14 +205,14 @@ router.get(
 router.get(
   "/inventory/items",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewItem"]),
   fetchInventoryItemsController
 );
 
 router.post(
   "/inventory/items",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canCreateItem"]),
   upload.single("mediaUrl"),
   createInventoryItemsController
 );
@@ -214,68 +220,85 @@ router.post(
 router.get(
   "/inventory/items/:itemId",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewItem"]),
   fetchSpecificItemController
 );
 
 router.put(
   "/inventory/items/:itemId",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canEditItem"]),
   updateItemController
 );
 
 router.delete(
   "/inventory/items/:itemId",
   authUser,
-  // authorize(["admin:removeItem"]),
+  authorize(["canDeleteItem"]),
   deleteItemController
 );
 
 router.get(
   "/issue-requests/pending",
   authUser,
+  authorize(["canViewIssueRequests"]),
   getPendingIssueRequestsController
 );
 
-router.post("/issue-item", authUser, issueItemController);
+router.post(
+  "/issue-item",
+  authUser,
+  authorize(["canIssueItem"]),
+  issueItemController
+);
 
 router.put(
   "/issue-requests/:requestId/approve",
   authUser,
+  authorize(["canApproveIssueRequest"]),
   approveIssueRequestController
 );
 
 router.put(
   "/issue-requests/:requestId/reject",
   authUser,
+  authorize(["canApproveIssueRequest"]),
   rejectIssueRequestController
 );
 
 router.post(
   "/issued-items/:issuedItemId/extend",
   authUser,
+  authorize(["canExtendPeriod"]),
   extendPeriodController
 );
 
 /* ========================= NEW ITEM REQUEST ========================= */
-router.get("/requested-items", authUser, getAllRequestedItemsController);
+router.get(
+  "/requested-items",
+  authUser,
+  authorize(["canViewItemAcquisitionRequests"]),
+  getAllRequestedItemsController
+);
 
 router.put(
   "/requested-items/:requestId/approve",
   authUser,
+  authorize(["canProcessItemAcquisitionRequests"]),
   approveRequestedItemController
 );
 
 router.put(
   "/requested-items/:requestId/reject",
   authUser,
+  authorize(["canProcessItemAcquisitionRequests"]),
   rejectRequestedItemController
 );
 
 router.delete(
   "/requested-items/:requestId",
   authUser,
+  authorize(["canProcessItemAcquisitionRequests"]),
   deleteRequestedItemController
 );
 
@@ -283,30 +306,35 @@ router.delete(
 router.get(
   "/inventory/categories",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewCategories"]),
   getCategoriesController
 );
 
-router.get("/inventory/categories/:id", authUser, getCategoryByIdController);
+router.get(
+  "/inventory/categories/:id",
+  authUser,
+  authorize(["canViewCategories"]),
+  getCategoryByIdController
+);
 
 router.post(
   "/inventory/categories",
   authUser,
-  // authorize(["admin:addCategory"]),
+  authorize(["canCreateCategory"]),
   createCategoryController
 );
 
 router.put(
   "/inventory/categories/:id",
   authUser,
-  // authorize(["admin:editCategory"]),
+  authorize(["canEditCategory"]),
   updateCategoryController
 );
 
 router.delete(
   "/inventory/categories/:id",
   authUser,
-  // authorize(["admin:deleteCategory"]),
+  authorize(["canDeleteCategory"]),
   deleteCategoryController
 );
 
@@ -314,114 +342,148 @@ router.delete(
 router.get(
   "/fines",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewFines"]),
   getAllFinesController
 );
 
 router.get(
   "/fines/:userId",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewFines"]),
   fetchUserFinesController
 );
 
 router.post(
   "/fines",
   authUser,
-  // authorize(["admin:manageRentals"]),
+  authorize(["canAddManualFine"]),
   createFinesController
 );
 
 router.put(
   "/fines/:fineId",
   authUser,
-  // authorize(["admin:manageRentals"]),
+  authorize(["canEditFine"]),
   updateFineController
 );
 
 router.delete(
   "/fines/:fineId",
   authUser,
-  // authorize(["admin:manageRentals"]),
+  authorize(["canEditFine"]),
   deleteFinesController
 );
 
-router.post("/fines/:fineId/record-payment", authUser, recordPaymentController);
+router.post(
+  "/fines/:fineId/record-payment",
+  authUser,
+  authorize(["canRecordFinePayment"]),
+  recordPaymentController
+);
 
-router.post("/fines/:fineId/waive", authUser, waiveFineController);
+router.post(
+  "/fines/:fineId/waive",
+  authUser,
+  authorize(["canWaiveFine"]),
+  waiveFineController
+);
 
 /* ========================= REPORTS ========================= */
 router.get(
   "/reports/inventory",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewInventoryReport"]),
   getInventoryReportController
 );
 
 router.get(
   "/reports/fines",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewFineReport"]),
   getFinesReportController
 );
 
 router.get(
   "/reports/issued",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewAllocationReport"]),
   getIssuedReportController
 );
 
 router.get(
   "/reports/inventory/pdf",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewInventoryReport", "canExportReports"]),
   getInventoryReportPDF
 );
 
 router.get(
   "/reports/fines/pdf",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewFineReport", "canExportReports"]),
   getFinesReportPDF
 );
 
 router.get(
   "/reports/issued/pdf",
   authUser,
-  // authorize(["admin:viewAllRentals"]),
+  authorize(["canViewAllocationReport", "canExportReports"]),
   getIssuedItemsReportPDF
 );
 
-router.get("/analytics/queues", authUser, getQueueAnalyticsController);
+router.get(
+  "/analytics/queues",
+  authUser,
+  authorize(["canViewQueueReport"]),
+  getQueueAnalyticsController
+);
 
 router.get(
   "/analytics/queues/export",
   authUser,
+  authorize(["canViewQueueReport", "canExportReports"]),
   exportQueueAnalyticsController
 );
 
-router.get("/reports/issued/export", authUser, exportIssuedItemsController);
+router.get(
+  "/reports/issued/export",
+  authUser,
+  authorize(["canViewAllocationReport", "canExportReports"]),
+  exportIssuedItemsController
+);
 
-router.get("/reports/defaulters", authUser, getDefaulterReportController);
+router.get(
+  "/reports/defaulters",
+  authUser,
+  authorize(["canViewDefaulterReport"]),
+  getDefaulterReportController
+);
 
 router.post(
   "/reports/defaulters/send-reminder",
   authUser,
+  authorize(["canSendReminders"]),
   sendReminderController
 );
 
 router.get(
   "/reports/defaulters/export",
   authUser,
+  authorize(["canViewDefaulterReport", "canExportReports"]),
   exportDefaulterReportController
 );
 
-router.get("/reports/all-users", authUser, getAllUsersReportController);
+router.get(
+  "/reports/all-users",
+  authUser,
+  authorize(["canViewUser"]),
+  getAllUsersReportController
+);
 
 router.get(
   "/reports/all-users/export",
   authUser,
+  authorize(["canViewUser", "canExportReports"]),
   exportAllUsersReportController
 );
 
@@ -429,47 +491,49 @@ router.get(
 router.get(
   "/settings/system-restrictions",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canConfigureSystemRestrictions"]),
   getSystemRestrictionsController
 );
 
 router.put(
   "/settings/system-restrictions",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canConfigureNotificationChannels"]),
   updateSystemRestrictionsController
 );
 
 router.get(
   "/settings/notification-templates",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canConfigureNotificationChannels"]),
   getNotificationTemplatesController
 );
 
 router.post(
   "/settings/notofication-templates",
+  authUser,
+  authorize(["canConfigureNotificationChannels"]),
   addNotoficationTemplateController
 );
 
 router.put(
   "/settings/notification-templates/:templateKey",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canConfigureNotificationChannels"]),
   updateNotificationTemplateController
 );
 
 router.get(
   "/settings/profile/:userId",
-  // authUser,
-  // authorize(["admin:viewAllUsers"]),
+  authUser,
+  authorize(["canViewUser"]),
   getAdminProfileController
 );
 
 router.put(
   "/settings/profile/:userId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canEditUser"]),
   upload.single("profile"),
   updateAdminController
 );
@@ -477,14 +541,14 @@ router.put(
 router.put(
   "/settings/profile/password-reset/:userId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canResetUserPassword"]),
   resetPasswordAdminController
 );
 
 router.put(
   "/settings/profile/password/:userId",
   authUser,
-  // authorize(["admin:manageUsers"]),
+  authorize(["canChangeOwnPassword"]),
   updateAdminPasswordController
 );
 
@@ -492,26 +556,28 @@ router.put(
 router.get(
   "/barcode/generate",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canPrintBarcode"]),
   generateBarcodeController
 );
 
 router.get(
   "/barcode/download/:itemId",
   authUser,
-  // authorize(["admin:manageItems"]),
+  authorize(["canPrintBarcode"]),
   downloadBarcodeController
 );
 
 router.get(
   "/barcode/download-batch/:itemId",
   authUser,
+  authorize(["canPrintBarcode"]),
   downloadBatchBarcodeController
 );
 
 router.get(
   "/barcode/lookup/:scannedCode",
   authUser,
+  authorize(["canViewItem"]),
   getItemByScannedBarcodeController
 );
 
@@ -519,14 +585,14 @@ router.get(
 router.get(
   "/donations",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canViewDonationInterests"]),
   getAllDonationsController
 );
 
 router.put(
   "/donations/:donationId/status",
   authUser,
-  // authorize(["admin:viewAllItems"]),
+  authorize(["canApproveDonationInterest"]),
   updateDonationStatusController
 );
 
@@ -534,53 +600,78 @@ router.put(
 router.get(
   "/inventory/items/:itemId/view-queue",
   authUser,
-  // authorize(["admin:viewQueues"]),
+  authorize(["canViewQueue"]),
   viewQueueController
 );
 
 router.post(
   "/inventory/items/queue/:queueId/issue",
   authUser,
+  authorize(["canAllocateItem"]),
   issueItemFromQueueController
 );
 
 router.put(
   "/inventory/items/queue/:queueId/remove-user",
   authUser,
-  // authorize(["admin:removeUserFromQueue"]),
+  authorize(["canRemoveFromQueue"]),
   removeUserFromQueueController
 );
 
 router.post(
   "/inventory/items/:itemId/process-return",
   authUser,
+  authorize(["canReturnItem"]),
   processReturnController
 );
 
-router.post("/queue/:itemId/respond", authUser, userResponseController);
+router.post(
+  "/queue/:itemId/respond",
+  authUser,
+  authorize(["canViewQueue"]),
+  userResponseController
+);
 
 router.post(
   "/queue/check-expired",
   authUser,
+  authorize(["canConfigureReminders"]),
   checkExpiredNotificationsController
 );
 
-router.get("/inventory/queues", authUser, getAllQueuesController);
+router.get(
+  "/inventory/queues",
+  authUser,
+  authorize(["canViewQueue"]),
+  getAllQueuesController
+);
 
 /* ========================= Notifications ========================= */
-router.get("/notifications", authUser, getNotificationsController);
+router.get(
+  "/notifications",
+  authUser,
+  authorize(["canViewDashboard"]),
+  getNotificationsController
+);
 
 router.patch(
   "/notifications/:notificationId/read",
   authUser,
+  authorize(["canViewDashboard"]),
   markAsReadController
 );
 
-router.patch("/notifications/mark-all-read", authUser, markAllAsReadController);
+router.patch(
+  "/notifications/mark-all-read",
+  authUser,
+  authorize(["canViewDashboard"]),
+  markAllAsReadController
+);
 
 router.delete(
   "/notifications/:notificationId",
   authUser,
+  authorize(["canViewDashboard"]),
   deleteNotificationController
 );
 

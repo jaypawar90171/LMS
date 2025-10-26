@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import User from "../models/user.model";
 
 declare global {
   namespace Express {
@@ -24,6 +25,16 @@ export const authUser = (req: Request, res: Response, next: NextFunction) => {
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY!);
+    if (typeof decoded === 'string') {
+  console.log("Token is a string:", decoded);
+  // Handle string case if needed
+} else {
+  console.log("Token is JwtPayload:", decoded);
+  console.log("User ID:", decoded.id); // TypeScript now knows it's JwtPayload
+  console.log("Email:", decoded.email);
+  console.log("Issued at:", decoded.iat);
+  console.log("Expires at:", decoded.exp);
+}
     req.user = decoded;
     console.log(req.user);
     next();

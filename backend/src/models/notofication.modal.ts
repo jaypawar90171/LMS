@@ -32,6 +32,8 @@ const notificationSchema = new Schema<INotification>(
         "donation_submitted",
         "item_overdue",
         "system_alert",
+        "force_password_reset",
+        "fine_created" , "fine_updated" , "fine_deleted" , "fine_payment_recorded" , "fine_waived" , "user_activated" , "user_deactivated"
       ],
       required: true,
     },
