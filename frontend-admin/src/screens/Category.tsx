@@ -70,8 +70,7 @@ const CategoryPage = () => {
   const [currentItem, setCurrentItem] = useState<Category | null>(null);
   const [parentCategory, setParentCategory] = useState<Category | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    () => {
-      // Load expanded categories from localStorage on initial render
+    () =>{
       const saved = localStorage.getItem("expandedCategories");
       return saved ? new Set(JSON.parse(saved)) : new Set();
     }
@@ -90,7 +89,6 @@ const CategoryPage = () => {
         },
       });
 
-      // Backend now returns tree structure directly
       const categoriesData = Array.isArray(response.data.data)
         ? response.data.data
         : [];
@@ -113,13 +111,13 @@ const CategoryPage = () => {
       } else {
         newSet.add(categoryId);
       }
-      // Save to localStorage whenever it changes
+     
       localStorage.setItem("expandedCategories", JSON.stringify([...newSet]));
       return newSet;
     });
   };
 
-  // Add a useEffect to expand parent categories of nested items on initial load
+ 
   useEffect(() => {
     const expandParentCategories = (categories: Category[]) => {
       const parentIds = new Set<string>();
@@ -145,10 +143,9 @@ const CategoryPage = () => {
     if (categories.length > 0) {
       expandParentCategories(categories);
     }
-  }, [categories]); // Only run when categories are loaded
+  }, [categories]); 
 
-  const handleDelete = (category: Category) => {
-    // Check if category has children
+  const handleDelete = (category: Category) =>{
     const hasChildren = category.children && category.children.length > 0;
     if (hasChildren) {
       toast.error("Cannot delete category that has child categories");
@@ -180,7 +177,6 @@ const CategoryPage = () => {
         `${deletedCategory?.name || "Category"} has been deleted successfully.`
       );
 
-      // Refetch categories to get updated tree
       const response = await axios.get(`/inventory/categories?tree=true`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,

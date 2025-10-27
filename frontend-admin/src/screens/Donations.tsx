@@ -92,7 +92,7 @@ export default function DonationManagement() {
 
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/admin/donations`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/donations`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -148,7 +148,7 @@ export default function DonationManagement() {
   ) => {
     const accessToken = localStorage.getItem("accessToken");
     const promise = axios.put(
-      `http://localhost:3000/api/admin/donations/${donationId}/status`,
+      `https://lms-backend1-q5ah.onrender.com/api/admin/donations/${donationId}/status`,
       { status },
       { headers: { Authorization: `Bearer ${accessToken}` } }
     );

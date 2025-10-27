@@ -72,7 +72,7 @@ const QueueDashboard = () => {
 
       
       const response = await axios.get(
-        "http://localhost:3000/api/admin/inventory/queues",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/inventory/queues",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

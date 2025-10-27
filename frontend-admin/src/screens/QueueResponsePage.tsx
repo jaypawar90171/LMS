@@ -1,4 +1,3 @@
-// for user site
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowLeftToLine, CheckCircle, XCircle } from "lucide-react";
@@ -26,7 +25,7 @@ const QueueResponsePage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        `http://localhost:3000/api/inventory/items/${itemId}`,
+        `https://lms-backend1-q5ah.onrender.com/api/inventory/items/${itemId}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -54,7 +53,7 @@ const QueueResponsePage = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:3000/api/queue/${itemId}/respond`,
+        `https://lms-backend1-q5ah.onrender.com/api/queue/${itemId}/respond`,
         { accept },
         {
           headers: {

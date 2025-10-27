@@ -1,7 +1,7 @@
 import axios from "axios";
 import { auth } from "./auth";
 
-const BASE_URL = "http://localhost:3000/api/admin";
+const BASE_URL = "https://lms-backend1-q5ah.onrender.com/api/admin";
 
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
@@ -43,7 +43,7 @@ axiosInstance.interceptors.response.use(
         }
 
         const refreshResponse = await axios.post(
-          `http://localhost:3000/api/admin/auth/refresh`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/auth/refresh`,
           {
             refreshToken,
           }

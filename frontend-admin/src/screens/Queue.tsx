@@ -97,7 +97,7 @@ const QueuePage = () => {
       }
 
       const response = await axios.get(
-        `http://localhost:3000/api/admin/inventory/items/${itemId}/view-queue`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/${itemId}/view-queue`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -152,7 +152,7 @@ const QueuePage = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:3000/api/admin/inventory/items/queue/${queueItem._id}/issue`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/queue/${queueItem._id}/issue`,
         {
           userId: selectedUserId,
         },
@@ -186,7 +186,7 @@ const QueuePage = () => {
       }
 
       const response = await axios.post(
-        `http://localhost:3000/api/admin/inventory/items/${itemId}/process-return`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/${itemId}/process-return`,
         {},
         {
           headers: {
@@ -218,7 +218,7 @@ const QueuePage = () => {
       }
 
       const response = await axios.put(
-        `http://localhost:3000/api/admin/inventory/items/queue/${queueItem._id}/remove-user`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/queue/${queueItem._id}/remove-user`,
         {
           userId: selectedUserId,
         },
@@ -281,7 +281,7 @@ const QueuePage = () => {
         <div>
           <div
             className="flex gap-2 cursor-pointer items-center mb-4"
-            onClick={() => navigate("/inventory")}
+            onClick={() => navigate("/queue-dashboard")}
           >
             <ArrowLeftToLine className="h-4 w-4" />
             <p className="text-md text-gray-600">Back</p>

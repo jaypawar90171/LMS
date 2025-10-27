@@ -78,7 +78,7 @@ export default function IssuedItemsManagement() {
         setLoading(true);
         const token = localStorage.getItem("accessToken");
         const response = await axios.get(
-          "http://localhost:3000/api/admin/reports/issued",
+          "https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued",
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -190,7 +190,7 @@ export default function IssuedItemsManagement() {
     try {
       const token = localStorage.getItem("accessToken");
       await axios.delete(
-        `http://localhost:3000/api/admin/issued-items/${selectedItem.id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/issued-items/${selectedItem.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -225,7 +225,7 @@ export default function IssuedItemsManagement() {
     try {
       const token = localStorage.getItem("accessToken");
       const response = await axios.post(
-        `http://localhost:3000/api/admin/issued-items/mark-as-return/${selectedItem.item.id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/issued-items/mark-as-return/${selectedItem.item.id}`,
         {
           condition: returnCondition,
         },

@@ -443,14 +443,14 @@ export const ItemFormModal = ({
     };
 
     fieldsToShow.forEach((field) => {
-      if (field === "mediaUrl") return; // Handle file separately
+      if (field === "mediaUrl") return; 
       payload[field] = (processedData as any)[field];
     });
 
     const apiEndpoint =
       mode === "add"
-        ? `http://localhost:3000/api/admin/inventory/items`
-        : `http://localhost:3000/api/admin/inventory/items/${itemData?._id}`;
+        ? `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items`
+        : `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/${itemData?._id}`;
 
     try {
       if (mode === "add") {

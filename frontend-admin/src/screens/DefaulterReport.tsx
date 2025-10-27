@@ -54,13 +54,13 @@ interface DefaulterItem {
   dueDate: string;
   daysOverdue: number;
   categoryName: string;
-  userId: string; // Added for reminders
-  itemId: string; // Added for reminders
+  userId: string; 
+  itemId: string; 
 }
 
 interface Category {
   _id: string;
-  name: string; // Changed from categoryName to name
+  name: string;
 }
 
 interface Role {
@@ -102,7 +102,7 @@ const DefaulterReport = () => {
       console.log("Fetching defaulters with params:", params);
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/defaulters",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/defaulters",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -130,7 +130,7 @@ const DefaulterReport = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/inventory/categories",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/inventory/categories",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -152,7 +152,7 @@ const DefaulterReport = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/roles",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/roles",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -175,7 +175,7 @@ const DefaulterReport = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.post(
-        "http://localhost:3000/api/admin/reports/defaulters/send-reminder",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/defaulters/send-reminder",
         {
           issuedItemId: defaulter.issuedItemId,
           userId: defaulter.userId,
@@ -211,7 +211,7 @@ const DefaulterReport = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/defaulters/export",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/defaulters/export",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -465,13 +465,12 @@ const DefaulterReport = () => {
                   {data.length > 0 ? (
                     data.map((item) => (
                       <TableRow key={item.issuedItemId}>
-                        {/* ... other table cells */}
                         <TableCell>
                           <div className="flex space-x-2">
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleSendReminder(item)} // FIXED: Pass the whole defaulter object
+                              onClick={() => handleSendReminder(item)} 
                               disabled={sendingReminders.includes(
                                 item.issuedItemId
                               )}

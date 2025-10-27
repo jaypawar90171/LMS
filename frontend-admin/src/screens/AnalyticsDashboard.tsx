@@ -101,7 +101,7 @@ const AnalyticsDashboard = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/analytics/queues",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/analytics/queues",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -124,7 +124,7 @@ const AnalyticsDashboard = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/analytics/queues/export",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/analytics/queues/export",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -232,7 +232,7 @@ const AnalyticsDashboard = () => {
             </CardContent>
           </Card>
 
-          <Card>
+          {/* <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-orange-700 flex items-center">
                 <Clock className="h-4 w-4 mr-2" />
@@ -245,7 +245,7 @@ const AnalyticsDashboard = () => {
               </p>
               <p className="text-xs text-gray-500">Average across queues</p>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card>
             <CardHeader className="pb-2">

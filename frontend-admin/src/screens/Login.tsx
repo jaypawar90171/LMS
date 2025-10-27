@@ -37,7 +37,7 @@ const LoginPage: React.FC = () => {
 
     try {
       const result = await axios.post(
-        "http://localhost:3000/api/admin/auth/login",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/auth/login",
         {
           email,
           password,

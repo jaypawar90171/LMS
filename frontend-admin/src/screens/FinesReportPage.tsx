@@ -83,7 +83,7 @@ const FinesReportPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/fines",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/fines",
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setDetails(response.data.details || []);
@@ -102,7 +102,7 @@ const FinesReportPage = () => {
 
   const handlePrint = async () => {
     const promise = axios.get(
-      "http://localhost:3000/api/admin/reports/fines/pdf",
+      "https://lms-backend1-q5ah.onrender.com/api/admin/reports/fines/pdf",
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,

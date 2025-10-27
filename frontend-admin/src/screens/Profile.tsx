@@ -102,7 +102,7 @@ export default function Profile() {
 
     console.log(user._id);
     const promise = axios.put(
-      `http://localhost:3000/api/admin/settings/profile/${user._id}`,
+      `https://lms-backend1-q5ah.onrender.com/api/admin/settings/profile/${user._id}`,
       submissionData,
       {
         headers: {

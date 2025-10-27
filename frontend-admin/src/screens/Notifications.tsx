@@ -160,7 +160,7 @@ const Notifications = () => {
       if (readFilter !== "all") params.read = readFilter === "read";
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/notifications",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/notifications",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -171,11 +171,9 @@ const Notifications = () => {
         const allNotifications = response.data.data;
         setAllNotifications(allNotifications);
 
-        // Apply filters including user filter
         const userNotifications = applyAllFilters(allNotifications);
         setFilteredNotifications(userNotifications);
 
-        // Update pagination with filtered count
         setPagination({
           ...response.data.pagination,
           total: userNotifications.length,
@@ -196,7 +194,6 @@ const Notifications = () => {
     fetchNotifications();
   }, []);
 
-  // Re-filter when user changes or filters change
   useEffect(() => {
     if (allNotifications.length > 0) {
       const userNotifications = applyAllFilters(allNotifications);
@@ -221,7 +218,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.patch(
-        `http://localhost:3000/api/admin/notifications/${notificationId}/read`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/notifications/${notificationId}/read`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -245,7 +242,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.patch(
-        "http://localhost:3000/api/admin/notifications/mark-all-read",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/notifications/mark-all-read",
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -271,7 +268,7 @@ const Notifications = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.delete(
-        `http://localhost:3000/api/admin/notifications/${notificationId}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/notifications/${notificationId}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 

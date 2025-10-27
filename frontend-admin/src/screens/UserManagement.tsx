@@ -102,7 +102,7 @@ const UserManagementPage = () => {
       if (!accessToken)
         throw new Error("No access token found. Please log in.");
       const response = await axios.get(
-        `http://localhost:3000/api/admin/users?page=${page}&limit=${USERS_PER_PAGE}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/users?page=${page}&limit=${USERS_PER_PAGE}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setUsers(response.data.users);
@@ -123,7 +123,7 @@ const UserManagementPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        `http://localhost:3000/api/admin/roles`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/roles`,
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -151,11 +151,9 @@ const UserManagementPage = () => {
     }
   }, [users]);
 
-  // --- Filtering and Sorting ---
   useEffect(() => {
     let result = [...users];
 
-    // Search filter
     if (searchTerm.trim()) {
       const lower = searchTerm.toLowerCase();
       result = result.filter(
@@ -167,24 +165,20 @@ const UserManagementPage = () => {
       );
     }
 
-    // Status filter
     if (filters.status !== "all") {
       result = result.filter((u) => u.status === filters.status);
     }
 
-    // Role filter
     if (filters.role !== "all") {
       result = result.filter((u) =>
         u.roles.some((r) => r._id === filters.role)
       );
     }
 
-    // Sorting
     result.sort((a, b) => {
       const fieldA = a[filters.sortBy as keyof User] ?? "";
       const fieldB = b[filters.sortBy as keyof User] ?? "";
 
-      // Handle date sorting for lastLogin
       if (filters.sortBy === "lastLogin") {
         const dateA =
           typeof fieldA === "string" || typeof fieldA === "number"
@@ -208,7 +202,6 @@ const UserManagementPage = () => {
     setFilteredUsers(result);
   }, [users, filters, searchTerm]);
 
-  // --- Action Handlers ---
   const handleOpenFormModal = (
     mode: "add" | "edit",
     user: User | null = null
@@ -238,7 +231,7 @@ const UserManagementPage = () => {
     console.log(newStatus);
     toast.promise(
       axios.put(
-        `http://localhost:3000/api/admin/users/${user._id}/status`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/users/${user._id}/status`,
         { status: newStatus },
         {
           headers: {
@@ -282,7 +275,7 @@ const UserManagementPage = () => {
 
     toast.promise(
       axios.delete(
-        `http://localhost:3000/api/admin/users/${selectedUser._id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/users/${selectedUser._id}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -314,7 +307,7 @@ const UserManagementPage = () => {
 
     toast.promise(
       axios.put(
-        `http://localhost:3000/api/admin/users/${selectedUser._id}/reset-password`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/users/${selectedUser._id}/reset-password`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       ),

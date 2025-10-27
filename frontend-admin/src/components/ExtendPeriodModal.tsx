@@ -85,7 +85,7 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
       const token = localStorage.getItem("accessToken");
       
       const response = await axios.post(
-        `http://localhost:3000/api/admin/issued-items/${item.id}/extend`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/issued-items/${item.id}/extend`,
         {
           extensionDays: parseInt(formData.extensionDays),
         },

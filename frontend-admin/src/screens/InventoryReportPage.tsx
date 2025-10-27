@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, FC } from "react";
 import axios from "axios";
 import { toast } from "sonner";
@@ -44,7 +42,6 @@ ChartJS.register(
   Legend
 );
 
-// Interface for Inventory Data
 interface InventoryItem {
   id: string;
   title: string;
@@ -54,7 +51,6 @@ interface InventoryItem {
   acquisitionDate: string;
 }
 
-// Visuals Component for this specific report
 const InventoryReportVisuals: FC<{ data: InventoryItem[] }> = ({ data }) => {
   const availabilityData = useMemo(() => {
     const available = data.filter((d) => d.availability === "Available").length;
@@ -119,7 +115,6 @@ const InventoryReportVisuals: FC<{ data: InventoryItem[] }> = ({ data }) => {
   );
 };
 
-// Main Page Component
 const InventoryReportPage = () => {
   const [data, setData] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +126,7 @@ const InventoryReportPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/inventory",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/inventory",
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setData(response.data.report || []);
@@ -148,7 +143,7 @@ const InventoryReportPage = () => {
 
   const handlePrint = async () => {
     const promise = axios.get(
-      "http://localhost:3000/api/admin/reports/inventory/pdf",
+      "https://lms-backend1-q5ah.onrender.com/api/admin/reports/inventory/pdf",
       {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("accessToken")}`,

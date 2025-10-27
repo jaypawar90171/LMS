@@ -78,7 +78,7 @@ export default function NotificationSettings() {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/settings/notification-templates",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/settings/notification-templates",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -109,7 +109,7 @@ export default function NotificationSettings() {
     const payload = data;
 
     const promise = axios.put(
-      `http://localhost:3000/api/admin/settings/notification-templates/${key}`,
+      `https://lms-backend1-q5ah.onrender.com/api/admin/settings/notification-templates/${key}`,
       payload,
       {
         headers: {

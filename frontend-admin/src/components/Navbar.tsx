@@ -27,14 +27,13 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
   const [unreadCount, setUnreadCount] = useAtom(unreadNotificationsCountAtom);
   const navigate = useNavigate();
 
-  // Fetch unread notifications count
   const fetchUnreadCount = async () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       if (!accessToken || !user) return;
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/notifications",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/notifications",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params: {
@@ -62,7 +61,6 @@ const Navbar: React.FC<NavbarProps> = ({ isSidebarOpen, onSidebarToggle }) => {
     if (user) {
       fetchUnreadCount();
 
-      // Optional: Refresh count every 30 seconds
       const interval = setInterval(fetchUnreadCount, 30000);
       return () => clearInterval(interval);
     }

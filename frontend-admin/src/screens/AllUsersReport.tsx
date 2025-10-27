@@ -100,7 +100,7 @@ const AllUsersReport = () => {
       console.log("Fetching all users report with params:", params);
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/all-users",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/all-users",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -128,7 +128,7 @@ const AllUsersReport = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/roles",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/roles",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -162,7 +162,7 @@ const AllUsersReport = () => {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/all-users/export",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/all-users/export",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -235,7 +235,7 @@ const AllUsersReport = () => {
     );
   }
 
-  // Calculate summary statistics
+
   const totalUsers = data.length;
   const totalItemsIssued = data.reduce(
     (sum, user) => sum + user.totalItemsIssued,
@@ -424,7 +424,7 @@ const AllUsersReport = () => {
                     <TableHead>Avg. Days Overdue</TableHead>
                     <TableHead>Contact Info</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {/* <TableHead>Actions</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -435,7 +435,7 @@ const AllUsersReport = () => {
                           <div className="space-y-1">
                             <p className="font-medium">{user.userName}</p>
                             <p className="text-sm text-muted-foreground">
-                              {user.employeeId || "No ID"}
+                              {user.userId || "No ID"}
                             </p>
                             <p className="text-xs text-muted-foreground">
                               Joined:{" "}
@@ -494,20 +494,20 @@ const AllUsersReport = () => {
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(user.status)}</TableCell>
-                        <TableCell>
+                        {/* <TableCell>
                           <div className="flex space-x-2">
                             <Button size="sm" variant="outline">
                               <Eye className="h-4 w-4 mr-1" />
                               View
                             </Button>
                             {user.itemsOverdue > 0 && (
-                              <Button size="sm" variant="destructive">
+                              <Button size="sm" variant="destructive" onClick={() => handleRemainder()}>
                                 <Send className="h-4 w-4 mr-1" />
                                 Remind
                               </Button>
                             )}
                           </div>
-                        </TableCell>
+                        </TableCell> */}
                       </TableRow>
                     ))
                   ) : (

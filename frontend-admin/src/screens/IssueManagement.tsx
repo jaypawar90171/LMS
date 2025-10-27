@@ -80,7 +80,7 @@ const IssueManagement = () => {
   try {
     const accessToken = localStorage.getItem("accessToken");
     const response = await axios.get(
-      "http://localhost:3000/api/admin/issue-requests/pending",
+      "https://lms-backend1-q5ah.onrender.com/api/admin/issue-requests/pending",
       {
         headers: { Authorization: `Bearer ${accessToken}` },
       }
@@ -97,7 +97,7 @@ const IssueManagement = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/users",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/users",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -112,7 +112,7 @@ const IssueManagement = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/inventory/items?available=true",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items?available=true",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -133,7 +133,7 @@ const IssueManagement = () => {
   try {
     const accessToken = localStorage.getItem("accessToken");
     const response = await axios.post(
-      "http://localhost:3000/api/admin/issue-item",
+      "https://lms-backend1-q5ah.onrender.com/api/admin/issue-item",
       {
         userId: selectedUser,
         itemId: selectedItem,
@@ -159,7 +159,7 @@ const IssueManagement = () => {
   try {
     const accessToken = localStorage.getItem("accessToken");
     const response = await axios.put(
-      `http://localhost:3000/api/admin/issue-requests/${requestId}/approve`,
+      `https://lms-backend1-q5ah.onrender.com/api/admin/issue-requests/${requestId}/approve`,
       {},
       {
         headers: { Authorization: `Bearer ${accessToken}` },
@@ -178,7 +178,7 @@ const IssueManagement = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       await axios.put(
-        `http://localhost:3000/api/admin/issue-requests/${requestId}/reject`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/issue-requests/${requestId}/reject`,
         {},
         {
           headers: { Authorization: `Bearer ${accessToken}` },

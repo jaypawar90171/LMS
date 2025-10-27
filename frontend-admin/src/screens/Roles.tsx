@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useEffect, useState } from "react";
 import {
   Card,
@@ -43,7 +41,7 @@ const RolesManagementPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/roles",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/roles",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -91,7 +89,7 @@ const RolesManagementPage = () => {
     if (!selectedRole) return;
     toast.promise(
       axios.delete(
-        `http://localhost:3000/api/admin/roles/${selectedRole._id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/roles/${selectedRole._id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -103,7 +101,7 @@ const RolesManagementPage = () => {
         success: () => {
           setIsDeleteModalOpen(false);
           setSelectedRole(null);
-          fetchData(); // Refresh the list
+          fetchData(); 
           return "Role deleted successfully.";
         },
         error: (err) => err.response?.data?.error || "Failed to delete role.",

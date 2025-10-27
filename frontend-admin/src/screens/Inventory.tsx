@@ -155,14 +155,14 @@ const Inventory = () => {
       }
       const [inventoryResponse, categoriesResponse] = await Promise.all([
         axios.get(
-          `http://localhost:3000/api/admin/inventory/items?page=${page}&limit=${USERS_PER_PAGE}`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items?page=${page}&limit=${USERS_PER_PAGE}`,
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,
             },
           }
         ),
-        axios.get("http://localhost:3000/api/admin/inventory/categories", {
+        axios.get("https://lms-backend1-q5ah.onrender.com/api/admin/inventory/categories", {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -300,7 +300,7 @@ const Inventory = () => {
         return;
       }
       const response = await axios.get(
-        `http://localhost:3000/api/admin/inventory/items/${itemId}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/${itemId}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -338,7 +338,7 @@ const Inventory = () => {
       }
 
       await axios.delete(
-        `http://localhost:3000/api/admin/inventory/items/${selectedItem._id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items/${selectedItem._id}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

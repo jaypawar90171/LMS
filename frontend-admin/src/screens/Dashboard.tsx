@@ -60,7 +60,7 @@ const DashboardPage: React.FC = () => {
         }
 
         const result = await axios.get(
-          "http://localhost:3000/api/admin/dashboard/summary",
+          "https://lms-backend1-q5ah.onrender.com/api/admin/dashboard/summary",
           {
             headers: {
               Authorization: `Bearer ${accessToken}`,

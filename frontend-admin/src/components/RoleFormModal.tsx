@@ -80,8 +80,8 @@ export const RoleFormModal = ({
   const onSubmit = async (data: RoleFormData) => {
     const apiEndpoint =
       mode === "add"
-        ? `http://localhost:3000/api/admin/roles`
-        : `http://localhost:3000/api/admin/roles/${roleData?._id}`;
+        ? `https://lms-backend1-q5ah.onrender.com/api/admin/roles`
+        : `https://lms-backend1-q5ah.onrender.com/api/admin/roles/${roleData?._id}`;
 
     const apiMethod = mode === "add" ? axios.post : axios.put;
 

@@ -118,7 +118,7 @@ const RequestedItems = () => {
       if (endDate) params.endDate = format(endDate, "yyyy-MM-dd");
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/requested-items",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/requested-items",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
           params,
@@ -157,7 +157,7 @@ const RequestedItems = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.put(
-        `http://localhost:3000/api/admin/requested-items/${itemId}/approve`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/requested-items/${itemId}/approve`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -179,7 +179,7 @@ const RequestedItems = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.put(
-        `http://localhost:3000/api/admin/requested-items/${itemId}/reject`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/requested-items/${itemId}/reject`,
         {},
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
@@ -209,7 +209,7 @@ const RequestedItems = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.delete(
-        `http://localhost:3000/api/admin/requested-items/${itemId}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/requested-items/${itemId}`,
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
 

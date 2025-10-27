@@ -73,7 +73,7 @@ export const IssuedItemDetailsModal: React.FC<IssuedItemDetailsModalProps> = ({
         return;
       }
       const response = await axios.get(
-        `http://localhost:3000/api/admin/barcode/download-batch/${item.item.id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/barcode/download-batch/${item.item.id}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

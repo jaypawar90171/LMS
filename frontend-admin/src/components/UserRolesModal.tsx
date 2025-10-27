@@ -41,7 +41,7 @@ export const UserRolesModal = ({
     const fetchPermissions = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/admin/permissions`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/permissions`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -82,7 +82,7 @@ export const UserRolesModal = ({
   const handleSaveChanges = async () => {
     toast.promise(
       axios.put(
-        `http://localhost:3000/api/admin/users/${user._id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/users/${user._id}`,
         { permissions: additionalPermissions },
         {
           headers: {

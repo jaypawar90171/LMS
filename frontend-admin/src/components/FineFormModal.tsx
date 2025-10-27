@@ -126,8 +126,8 @@ export const FineFormModal = ({
 
     const apiEndpoint =
       mode === "add"
-        ? `http://localhost:3000/api/admin/fines`
-        : `http://localhost:3000/api/admin/fines/${fineData?._id}`;
+        ? `https://lms-backend1-q5ah.onrender.com/api/admin/fines`
+        : `https://lms-backend1-q5ah.onrender.com/api/admin/fines/${fineData?._id}`;
 
     const apiMethod = mode === "add" ? axios.post : axios.put;
 

@@ -73,7 +73,7 @@ export default function SystemRestrictions() {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/admin/settings/system-restrictions",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/settings/system-restrictions",
         { headers: { Authorization: `Bearer ${accessToken}` } }
       );
       setFormData(response.data.data);
@@ -115,7 +115,7 @@ export default function SystemRestrictions() {
     if (!formData) return;
 
     const promise = axios.put(
-      "http://localhost:3000/api/admin/settings/system-restrictions",
+      "https://lms-backend1-q5ah.onrender.com/api/admin/settings/system-restrictions",
       formData,
       {
         headers: {

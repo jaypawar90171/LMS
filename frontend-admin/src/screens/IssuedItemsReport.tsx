@@ -73,15 +73,14 @@ const IssuedItemsReportPage = () => {
   const [data, setData] = useState<ReportItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // Function to fetch data from the backend
+  
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get<ApiResponse>(
-        "http://localhost:3000/api/admin/reports/issued",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued",
         {
           headers: { Authorization: `Bearer ${accessToken}` },
         }
@@ -106,7 +105,7 @@ const IssuedItemsReportPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/issued/pdf",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued/pdf",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -135,7 +134,7 @@ const IssuedItemsReportPage = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
       const response = await axios.get(
-        "http://localhost:3000/api/admin/reports/issued/export",
+        "https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued/export",
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

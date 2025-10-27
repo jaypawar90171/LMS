@@ -73,7 +73,7 @@ const BarcodeScannerPage: React.FC = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       const response = await axios.get<ApiResponse>(
-        `http://localhost:3000/api/admin/barcode/lookup/${scannedCode}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/barcode/lookup/${scannedCode}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -104,7 +104,7 @@ const BarcodeScannerPage: React.FC = () => {
       const accessToken = localStorage.getItem("accessToken");
 
       await axios.post(
-        `http://localhost:3000/api/admin/issued-items/mark-as-return/${foundItem.item._id}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/issued-items/mark-as-return/${foundItem.item._id}`,
         { condition },
         {
           headers: {
@@ -114,7 +114,7 @@ const BarcodeScannerPage: React.FC = () => {
       );
 
       const response = await axios.get<ApiResponse>(
-        `http://localhost:3000/api/admin/barcode/lookup/${foundItem.item.barcode}`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/barcode/lookup/${foundItem.item.barcode}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,

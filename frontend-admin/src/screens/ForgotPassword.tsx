@@ -29,9 +29,12 @@ const ForgotPasswordPage: React.FC = () => {
     setLoading(true);
 
     try {
-      await axios.post("http://localhost:3000/api/admin/auth/forgot-password", {
-        email,
-      });
+      await axios.post(
+        "https://lms-backend1-q5ah.onrender.com/api/admin/auth/forgot-password",
+        {
+          email,
+        }
+      );
       setIsEmailSent(true);
       setSuccessMessage(
         "A password reset link has been sent to your email address."
@@ -52,9 +55,12 @@ const ForgotPasswordPage: React.FC = () => {
     setError("");
     setSuccessMessage("");
     try {
-      await axios.post("http://localhost:3000/api/admin/auth/forgot-password", {
-        email,
-      });
+      await axios.post(
+        "https://lms-backend1-q5ah.onrender.com/api/admin/auth/forgot-password",
+        {
+          email,
+        }
+      );
       setSuccessMessage("Email resent successfully!");
     } catch (err: any) {
       setError("Failed to resend email. Please try again.");

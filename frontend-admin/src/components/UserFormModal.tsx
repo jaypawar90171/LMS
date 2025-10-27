@@ -136,7 +136,7 @@ export const UserFormModal = ({
       if (isOpen) {
         try {
           const response = await axios.get(
-            `http://localhost:3000/api/admin/permissions`,
+            `https://lms-backend1-q5ah.onrender.com/api/admin/permissions`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -212,12 +212,11 @@ export const UserFormModal = ({
     }
   }, [selectedCountry, selectedState, setValue, getValues]);
 
-  // Fetch employees for family members
   useEffect(() => {
     const fetchEmployees = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/admin/users?role=employee`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/users?role=employee`,
           {
             headers: {
               Authorization: `Bearer ${localStorage.getItem("accessToken")}`,
@@ -413,7 +412,7 @@ export const UserFormModal = ({
 
       if (mode === "add") {
         response = await axios.post(
-          `http://localhost:3000/api/admin/users`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/users`,
           payload,
           {
             headers: {
@@ -424,7 +423,7 @@ export const UserFormModal = ({
         );
       } else {
         response = await axios.put(
-          `http://localhost:3000/api/admin/users/${userData?._id}`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/users/${userData?._id}`,
           payload,
           {
             headers: {

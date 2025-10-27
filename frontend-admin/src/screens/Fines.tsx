@@ -59,6 +59,13 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 
 interface PaymentData {
   amountPaid: number;
@@ -139,10 +146,13 @@ const FinesManagement = () => {
   const [waiverData, setWaiverData] = useState<WaiverData>({
     waiverReason: "",
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
   const Navigate = useNavigate();
+  const USERS_PER_PAGE = 10;
 
-  const fetchFines = async () => {
+  const fetchFines = async (page: number) => {
     try {
       setLoading(true);
       const accessToken = localStorage.getItem("accessToken");
@@ -152,7 +162,7 @@ const FinesManagement = () => {
         return;
       }
       const response = await axios.get(
-        "http://localhost:3000/api/admin/fines",
+        `https://lms-backend1-q5ah.onrender.com/api/admin/fines?page=${page}&limit=${USERS_PER_PAGE}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -165,6 +175,9 @@ const FinesManagement = () => {
         : [];
       setFines(finesData);
       console.log(finesData);
+
+      setTotalPages(response.data.totalPages || 1);
+      setCurrentPage(page);
 
       // Calculate statistics
       const totalFines = finesData.length;
@@ -195,7 +208,7 @@ const FinesManagement = () => {
   };
 
   useEffect(() => {
-    fetchFines();
+    fetchFines(1);
   }, []);
 
   useEffect(() => {
@@ -294,7 +307,7 @@ const FinesManagement = () => {
       }
 
       toast.promise(
-        axios.delete(`http://localhost:3000/api/admin/fines/${fineId}`, {
+        axios.delete(`https://lms-backend1-q5ah.onrender.com/api/admin/fines/${fineId}`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
@@ -304,7 +317,7 @@ const FinesManagement = () => {
           success: () => {
             setIsDeleteModalOpen(false);
             setSelectedFine(null);
-            fetchFines();
+            fetchFines(1);
             return "Fine deleted successfully.";
           },
           error: (err) =>
@@ -322,10 +335,10 @@ const FinesManagement = () => {
       if (!accessToken) return;
 
       const [usersRes, itemsRes] = await Promise.all([
-        axios.get("http://localhost:3000/api/admin/users", {
+        axios.get("https://lms-backend1-q5ah.onrender.com/api/admin/users", {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
-        axios.get("http://localhost:3000/api/admin/inventory/items", {
+        axios.get("https://lms-backend1-q5ah.onrender.com/api/admin/inventory/items", {
           headers: { Authorization: `Bearer ${accessToken}` },
         }),
       ]);
@@ -354,7 +367,7 @@ const FinesManagement = () => {
 
       toast.promise(
         axios.post(
-          `http://localhost:3000/api/admin/fines/${selectedFine._id}/record-payment`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/fines/${selectedFine._id}/record-payment`,
           paymentData,
           {
             headers: {
@@ -373,7 +386,7 @@ const FinesManagement = () => {
               referenceId: "",
               notes: "",
             });
-            fetchFines();
+            fetchFines(1);
             return `Payment of ₹${paymentData.amountPaid} recorded successfully.`;
           },
           error: (err) =>
@@ -397,7 +410,7 @@ const FinesManagement = () => {
 
       toast.promise(
         axios.post(
-          `http://localhost:3000/api/admin/fines/${selectedFine._id}/waive`,
+          `https://lms-backend1-q5ah.onrender.com/api/admin/fines/${selectedFine._id}/waive`,
           waiverData,
           {
             headers: {
@@ -411,7 +424,7 @@ const FinesManagement = () => {
             setIsWaiveFineModalOpen(false);
             setSelectedFine(null);
             setWaiverData({ waiverReason: "" });
-            fetchFines();
+            fetchFines(1);
             return "Fine waived successfully.";
           },
           error: (err) =>
@@ -639,6 +652,11 @@ const FinesManagement = () => {
         </Card>
 
         {/* Fines Table */}
+         <div className="flex items-center justify-between">
+  <p className="text-sm text-muted-foreground">
+    Showing {Math.min(currentPage * USERS_PER_PAGE, stats.totalFines)} of {stats.totalFines} items
+  </p>
+</div>
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
@@ -811,6 +829,39 @@ const FinesManagement = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 py-2 text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       <FineDetailsModal
@@ -833,7 +884,7 @@ const FinesManagement = () => {
         fineData={editFine}
         allUsers={allUsers}
         allItems={allItems}
-        onSuccess={() => fetchFines()}
+        onSuccess={() => fetchFines(1)}
       />
 
       {/* Record Payment Modal */}
