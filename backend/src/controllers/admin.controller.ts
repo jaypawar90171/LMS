@@ -2500,7 +2500,32 @@ export const getItemByScannedBarcodeController = async (
       return res.status(404).json({ error: "No item found with this barcode" });
     }
 
-    return res.status(200).json(item);
+    const issuedItem = await IssuedItem.findOne({ 
+      itemId: item._id,
+      status: "Issued" 
+    }).populate("userId", "name email") 
+    .populate("issuedBy", "name email") 
+    .populate("returnedTo", "name email") 
+    .populate("fineId");
+
+    const responseData = {
+      item: item.toObject(),
+      issuedInfo: issuedItem ? {
+        issuedDate: issuedItem.issuedDate,
+        dueDate: issuedItem.dueDate,
+        issuedBy: issuedItem.issuedBy,
+        userId: issuedItem.userId,
+        returnedTo: issuedItem.returnedTo,
+        returnDate: issuedItem.returnDate,
+        status: issuedItem.status,
+        extensionCount: issuedItem.extensionCount,
+        maxExtensionAllowed: issuedItem.maxExtensionAllowed,
+        fineId: issuedItem.fineId,
+        isOverdue: issuedItem.dueDate ? new Date() > issuedItem.dueDate : false
+      } : null
+    };
+
+    return res.status(200).json(responseData);
   } catch (error: any) {
     console.log("Error in barcode lookup", error);
     const statusCode = error.statusCode || 500;

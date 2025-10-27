@@ -25,7 +25,7 @@ const issuedItemSchema = new mongoose.Schema<IIssuedItem>(
     issuedBy: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      default: new Types.ObjectId("68b5a390c3a9af30dbdf3be7"),
+      default: new Types.ObjectId("68fa1a2802aaa82c9a2c9f48"),
     },
     returnedTo: {
       type: Schema.Types.ObjectId,

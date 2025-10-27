@@ -1,5 +1,6 @@
 import React, { useState, FormEvent } from "react";
 import axios from "axios";
+import { toast } from "sonner";
 
 interface Category {
   _id: any;
@@ -7,16 +8,35 @@ interface Category {
   description: string;
   parentCategoryId: any | null;
 }
+
+interface IssuedInfo {
+  issuedDate: string;
+  dueDate: string | null;
+  issuedBy: any;
+  userId: any;
+  returnedTo: any | null;
+  returnDate: string | null;
+  status: "Issued" | "Returned";
+  extensionCount: number;
+  maxExtensionAllowed: number;
+  fineId: any | null;
+  isOverdue: boolean;
+}
+
 interface FoundItem {
-  id: string;
+  _id: string;
   title: string;
   categoryId: Category;
   barcode: string;
   quantity: number;
   availableCopies: number;
   description?: string;
-  location?: string;
   status?: "Available" | "Issued" | "Lost" | "Damaged";
+}
+
+interface ApiResponse {
+  item: FoundItem;
+  issuedInfo: IssuedInfo | null;
 }
 
 interface ApiError {
@@ -24,11 +44,17 @@ interface ApiError {
   message?: string;
 }
 
+interface ReturnItemRequest {
+  condition: "Good" | "Lost" | "Damaged";
+}
+
 const BarcodeScannerPage: React.FC = () => {
   const [scannedCode, setScannedCode] = useState<string>("");
-  const [foundItem, setFoundItem] = useState<FoundItem | null>(null);
+  const [foundItem, setFoundItem] = useState<ApiResponse | null>(null);
   const [error, setError] = useState<string>("");
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isReturning, setIsReturning] = useState<boolean>(false);
+  const [showReturnModal, setShowReturnModal] = useState<boolean>(false);
 
   const handleScanSubmit = async (
     e: FormEvent<HTMLFormElement>
@@ -46,7 +72,7 @@ const BarcodeScannerPage: React.FC = () => {
     try {
       const accessToken = localStorage.getItem("accessToken");
 
-      const response = await axios.get<FoundItem>(
+      const response = await axios.get<ApiResponse>(
         `http://localhost:3000/api/admin/barcode/lookup/${scannedCode}`,
         {
           headers: {
@@ -70,6 +96,50 @@ const BarcodeScannerPage: React.FC = () => {
     }
   };
 
+  const handleReturnItem = async (condition: "Good" | "Lost" | "Damaged") => {
+    if (!foundItem?.issuedInfo) return;
+
+    setIsReturning(true);
+    try {
+      const accessToken = localStorage.getItem("accessToken");
+
+      await axios.post(
+        `http://localhost:3000/api/admin/issued-items/mark-as-return/${foundItem.item._id}`,
+        { condition },
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      const response = await axios.get<ApiResponse>(
+        `http://localhost:3000/api/admin/barcode/lookup/${foundItem.item.barcode}`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      setFoundItem(response.data);
+      setShowReturnModal(false);
+
+      setError("");
+      toast.success("Item marked as return successfully");
+    } catch (err: unknown) {
+      console.error("Error returning item:", err);
+      if (axios.isAxiosError(err) && err.response?.data) {
+        const errorData = err.response.data as ApiError;
+        setError(errorData.message || "Failed to return item");
+      } else {
+        setError("An unexpected error occurred while returning the item");
+      }
+    } finally {
+      setIsReturning(false);
+    }
+  };
+
   const getStatusColor = (status?: string): string => {
     switch (status) {
       case "Available":
@@ -85,22 +155,14 @@ const BarcodeScannerPage: React.FC = () => {
     }
   };
 
-  const getStatusText = (status?: string): string => {
-    switch (status) {
-      case "Available":
-        return "Available";
-      case "checked-out":
-        return "Checked Out";
-      case "maintenance":
-        return "Under Maintenance";
-      default:
-        return "Unknown Status";
-    }
+  const formatDate = (dateString: string | null): string => {
+    if (!dateString) return "N/A";
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
@@ -213,25 +275,29 @@ const BarcodeScannerPage: React.FC = () => {
             </div>
 
             <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Basic Information */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Item Information */}
                 <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                    Item Details
+                  </h4>
+
                   <div>
                     <label className="text-sm font-medium text-gray-500">
                       Title
                     </label>
                     <p className="mt-1 text-lg font-semibold text-gray-900">
-                      {foundItem.title}
+                      {foundItem.item.title}
                     </p>
                   </div>
 
-                  {foundItem.description && (
+                  {foundItem.item.description && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">
                         Description
                       </label>
                       <p className="mt-1 text-gray-700">
-                        {foundItem.description}
+                        {foundItem.item.description}
                       </p>
                     </div>
                   )}
@@ -241,28 +307,16 @@ const BarcodeScannerPage: React.FC = () => {
                       Category
                     </label>
                     <p className="mt-1 text-gray-700">
-                      {foundItem.categoryId.name}
+                      {foundItem.item.categoryId.name}
                     </p>
                   </div>
 
-                  {foundItem.location && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-500">
-                        Location
-                      </label>
-                      <p className="mt-1 text-gray-700">{foundItem.location}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* Status and Quantities */}
-                <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-500">
                       Barcode
                     </label>
                     <p className="mt-1 font-mono text-gray-900 bg-gray-100 px-3 py-2 rounded">
-                      {foundItem.barcode}
+                      {foundItem.item.barcode}
                     </p>
                   </div>
 
@@ -272,7 +326,7 @@ const BarcodeScannerPage: React.FC = () => {
                         Total Quantity
                       </label>
                       <p className="text-2xl font-bold text-blue-700">
-                        {foundItem.quantity}
+                        {foundItem.item.quantity}
                       </p>
                     </div>
 
@@ -281,30 +335,114 @@ const BarcodeScannerPage: React.FC = () => {
                         Available Copies
                       </label>
                       <p className="text-2xl font-bold text-green-700">
-                        {foundItem.availableCopies}
+                        {foundItem.item.availableCopies}
                       </p>
                     </div>
                   </div>
 
-                  {foundItem.status && (
+                  {foundItem.item.status && (
                     <div>
                       <label className="text-sm font-medium text-gray-500">
-                        Status
+                        Item Status
                       </label>
                       <div className="mt-1 flex items-center">
                         <div
                           className="w-3 h-3 rounded-full mr-2"
                           style={{
-                            backgroundColor: getStatusColor(foundItem.status),
+                            backgroundColor: getStatusColor(
+                              foundItem.item.status
+                            ),
                           }}
                         ></div>
                         <span
                           className="font-medium"
-                          style={{ color: getStatusColor(foundItem.status) }}
+                          style={{
+                            color: getStatusColor(foundItem.item.status),
+                          }}
                         >
-                          {getStatusText(foundItem.status)}
+                          {foundItem.item.status}
                         </span>
                       </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Issued Information */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-semibold text-gray-900 border-b pb-2">
+                    Issuance Details
+                  </h4>
+
+                  {foundItem.issuedInfo ? (
+                    <>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                        <div className="flex items-center mb-2">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
+                          <span className="font-semibold text-yellow-800">
+                            Currently Issued
+                          </span>
+                        </div>
+                        {foundItem.issuedInfo.isOverdue && (
+                          <div className="bg-red-50 border border-red-200 rounded p-2 mt-2">
+                            <span className="text-red-700 font-medium text-sm">
+                              ⚠ Overdue Item
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Issued Date
+                          </label>
+                          <p className="mt-1 text-gray-700">
+                            {formatDate(foundItem.issuedInfo.issuedDate)}
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="text-sm font-medium text-gray-500">
+                            Due Date
+                          </label>
+                          <p className="mt-1 text-gray-700">
+                            {formatDate(foundItem.issuedInfo.dueDate)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-sm font-medium text-gray-500">
+                          Extensions Used
+                        </label>
+                        <p className="mt-1 text-gray-700">
+                          {foundItem.issuedInfo.extensionCount} /{" "}
+                          {foundItem.issuedInfo.maxExtensionAllowed}
+                        </p>
+                      </div>
+
+                      {foundItem.issuedInfo.fineId && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <label className="text-sm font-medium text-red-600">
+                            Fine Applied
+                          </label>
+                          <p className="text-red-700 text-sm mt-1">
+                            This item has an associated fine
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                      <div className="flex items-center justify-center mb-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                        <span className="font-semibold text-green-800">
+                          Not Currently Issued
+                        </span>
+                      </div>
+                      <p className="text-green-700 text-sm">
+                        This item is available for issuance
+                      </p>
                     </div>
                   )}
                 </div>
@@ -313,7 +451,7 @@ const BarcodeScannerPage: React.FC = () => {
               {/* Action Buttons */}
               <div className="mt-6 pt-6 border-t border-gray-200 flex space-x-3">
                 <button
-                  onClick={() => setScannedCode(foundItem.barcode)}
+                  onClick={() => setScannedCode(foundItem.item.barcode)}
                   className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors font-medium"
                 >
                   Rescan This Item
@@ -327,11 +465,77 @@ const BarcodeScannerPage: React.FC = () => {
                 >
                   Scan New Item
                 </button>
+                {foundItem.issuedInfo && (
+                  <button
+                    onClick={() => setShowReturnModal(true)}
+                    className="flex-1 bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Mark as Return
+                  </button>
+                )}
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {showReturnModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Mark Item as Returned
+              </h3>
+            </div>
+
+            <div className="p-6">
+              <p className="text-gray-700 mb-4">
+                Please select the condition of the returned item:
+              </p>
+
+              <div className="space-y-3">
+                {(["Good", "Damaged", "Lost"] as const).map((condition) => (
+                  <button
+                    key={condition}
+                    onClick={() => handleReturnItem(condition)}
+                    disabled={isReturning}
+                    className="w-full text-left p-3 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium">{condition}</span>
+                      {condition === "Good" && (
+                        <span className="text-green-600 text-sm">
+                          ✓ Restocks item
+                        </span>
+                      )}
+                      {condition === "Damaged" && (
+                        <span className="text-orange-600 text-sm">
+                          ⚠ No restock
+                        </span>
+                      )}
+                      {condition === "Lost" && (
+                        <span className="text-red-600 text-sm">
+                          ✗ No restock
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+              <button
+                onClick={() => setShowReturnModal(false)}
+                disabled={isReturning}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
