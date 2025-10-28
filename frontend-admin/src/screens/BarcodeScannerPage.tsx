@@ -113,27 +113,38 @@ const BarcodeScannerPage: React.FC = () => {
         }
       );
 
-      const response = await axios.get<ApiResponse>(
-        `https://lms-backend1-q5ah.onrender.com/api/admin/barcode/lookup/${foundItem.item.barcode}`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      setFoundItem(response.data);
-      setShowReturnModal(false);
-
-      setError("");
       toast.success("Item marked as return successfully");
+      setShowReturnModal(false);
+      setError("");
+
+      try {
+        const response = await axios.get<ApiResponse>(
+          `https://lms-backend1-q5ah.onrender.com/api/admin/barcode/lookup/${foundItem.item.barcode}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+          }
+        );
+        setFoundItem(response.data);
+      } catch (refetchError) {
+        console.error(
+          "Failed to refetch item data after return:",
+          refetchError
+        );
+      }
     } catch (err: unknown) {
       console.error("Error returning item:", err);
       if (axios.isAxiosError(err) && err.response?.data) {
         const errorData = err.response.data as ApiError;
-        setError(errorData.message || "Failed to return item");
+        const errorMessage = errorData.message || "Failed to return item";
+        setError(errorMessage);
+        toast.error(errorMessage);
       } else {
-        setError("An unexpected error occurred while returning the item");
+        const errorMessage =
+          "An unexpected error occurred while returning the item";
+        setError(errorMessage);
+        toast.error(errorMessage);
       }
     } finally {
       setIsReturning(false);

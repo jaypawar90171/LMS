@@ -1,5 +1,3 @@
-// fine.model.ts
-
 import mongoose, { Schema } from "mongoose";
 import { IFine } from "../interfaces/fine.interface";
 

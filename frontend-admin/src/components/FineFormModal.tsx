@@ -107,7 +107,7 @@ export const FineFormModal = ({
           amountIncurred: 0,
           amountPaid: 0,
           status: "Outstanding",
-          paymentMethod: undefined,
+          paymentMethod: "Cash",
           transactionId: "",
         });
       }
@@ -117,11 +117,14 @@ export const FineFormModal = ({
   const onSubmit = async (data: FineFormData) => {
     const payload = {
       ...data,
-      paymentDetails: {
-        paymentMethod: data.paymentMethod,
-        transactionId: data.transactionId,
-      },
-      managedByAdminId: user?._id
+      paymentDetails: [
+        {
+          amountPaid: data.amountPaid ?? 0,
+          paymentMethod: data.paymentMethod ?? "Cash",
+          transactionId: data.transactionId || "",
+        },
+      ],
+      managedByAdminId: user?._id,
     };
 
     const apiEndpoint =

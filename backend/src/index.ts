@@ -1,5 +1,7 @@
 import express, { Request, Response } from "express";
 import dotenv from "dotenv";
+dotenv.config();  
+
 import morgan from "morgan";
 import cors from "cors";
 import connect from "./config/db";
@@ -9,7 +11,6 @@ import rateLimiter from "./middleware/rateLimiter";
 import { startCronJobs } from "./config/cronJobs";
 import { initializeCronJob } from "./config/cron";
 
-dotenv.config();
 connect();
 
 const app = express();

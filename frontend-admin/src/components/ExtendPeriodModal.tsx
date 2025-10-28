@@ -18,6 +18,7 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
   onSuccess,
 }) => {
   const [loading, setLoading] = useState(false);
+  
 
   const formatDate = (dateString: string) => {
     if (dateString === "-") return "-";
@@ -28,8 +29,16 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
     const currentDueDate = new Date(item.dueDate);
     const newDueDate = new Date(currentDueDate);
     newDueDate.setDate(newDueDate.getDate() + extensionDays);
-    return newDueDate.toISOString().split('T')[0];
+    return newDueDate.toISOString().split("T")[0];
   };
+
+  const [extensionDays, setExtensionDays] = useState("7");
+const [newDueDate, setNewDueDate] = useState(calculateNewDueDate(7));
+
+const handleExtensionChange = (value: string) => {
+  setExtensionDays(value);
+  setNewDueDate(calculateNewDueDate(parseInt(value)));
+};
 
   const fields = [
     {
@@ -62,6 +71,7 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
         { value: "21", label: "21 days" },
         { value: "30", label: "30 days" },
       ],
+      onchange: handleExtensionChange
     },
     {
       type: "text" as const,
@@ -76,14 +86,14 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
     currentDueDate: formatDate(item.dueDate),
     extensionsUsed: `${item.extensionCount} / ${item.maxExtensionAllowed}`,
     extensionDays: "7",
-    newDueDate: calculateNewDueDate(7),
+    newDueDate: newDueDate,
   };
 
   const handleSubmit = async (formData: Record<string, any>) => {
     try {
       setLoading(true);
       const token = localStorage.getItem("accessToken");
-      
+
       const response = await axios.post(
         `https://lms-backend1-q5ah.onrender.com/api/admin/issued-items/${item.id}/extend`,
         {
@@ -100,27 +110,31 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
       toast.success("Due date extended successfully!");
       onOpenChange(false);
     } catch (error: any) {
-      toast.error(
-        error.response?.data?.message || "Failed to extend due date"
-      );
+      toast.error(error.response?.data?.message || "Failed to extend due date");
     } finally {
       setLoading(false);
     }
   };
 
   // Update new due date when extension days change
-  const handleFormDataChange = (formData: Record<string, any>, setFormData: any) => {
+  const handleFormDataChange = (
+    formData: Record<string, any>,
+    setFormData: any
+  ) => {
     if (formData.extensionDays) {
       const newDueDate = calculateNewDueDate(parseInt(formData.extensionDays));
       setFormData((prev: any) => ({ ...prev, newDueDate }));
     }
   };
 
-  const enhancedFields = fields.map(field => 
-    field.name === "extensionDays" 
+  const enhancedFields = fields.map((field) =>
+    field.name === "extensionDays"
       ? {
           ...field,
-          renderAdornment: (formData: Record<string, any>, setFormData: any) => (
+          renderAdornment: (
+            formData: Record<string, any>,
+            setFormData: any
+          ) => (
             <button
               type="button"
               className="text-sm text-blue-600 hover:text-blue-700"
@@ -128,7 +142,7 @@ export const ExtendPeriodModal: React.FC<ExtendPeriodModalProps> = ({
             >
               Update
             </button>
-          )
+          ),
         }
       : field
   );

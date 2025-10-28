@@ -38,6 +38,13 @@ import {
   RefreshCw,
   ArrowUpDown,
 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { toast } from "sonner";
 import axios from "axios";
 import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
@@ -50,6 +57,8 @@ interface FilterState {
   sortBy: string;
   sortOrder: "asc" | "desc";
 }
+
+const USERS_PER_PAGE = 10;
 
 export default function IssuedItemsManagement() {
   const [loading, setLoading] = useState(true);
@@ -72,19 +81,24 @@ export default function IssuedItemsManagement() {
     "Good" | "Lost" | "Damaged" | ""
   >("");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+
   useEffect(() => {
-    const fetchIssuedItems = async () => {
+    const fetchIssuedItems = async (page = currentPage) => {
       try {
         setLoading(true);
         const token = localStorage.getItem("accessToken");
         const response = await axios.get(
-          "https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued",
+          `https://lms-backend1-q5ah.onrender.com/api/admin/reports/issued?page=${page}&limit=${USERS_PER_PAGE}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
             },
           }
         );
+
+        setTotalPages(response.data.totalPages || response.data.pagination?.totalPages || 1);
 
         if (!response) {
           throw new Error("Failed to fetch issued items");
@@ -657,6 +671,39 @@ export default function IssuedItemsManagement() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 py-2 text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
 
       {/* Modals */}

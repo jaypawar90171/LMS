@@ -230,16 +230,16 @@ export const forgotPasswordService = async (email: any) => {
         <p>Dear ${oldUser.username || oldUser.email},</p>
         <p>We received a request to reset the password for your account.</p>
         <p>Please click the button below to reset your password. This link is valid for <strong>1 Hour</strong>.</p>
-        <a href="http://localhost:3000/api/user/auth/reset-password/${
+        <a href="https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${
           oldUser._id
         }/${token}" 
            style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
            Reset Password
         </a>
         <p style="margin-top: 20px;">If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-        <p><a href="http://localhost:3000/api/user/auth/reset-password/${
+        <p><a href="https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${
           oldUser._id
-        }/${token}">http://localhost:3000/api/admin/auth/reset-password/${
+        }/${token}">https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${
       oldUser._id
     }/${token}</a></p>
         <p style="color: #888;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
@@ -259,7 +259,7 @@ export const forgotPasswordService = async (email: any) => {
     throw err;
   }
 
-  const link = `http://localhost:3000/api/user/auth/reset-password/${oldUser._id}/${token}`;
+  const link = `https://lms-backend1-q5ah.onrender.com/api/user/auth/reset-password/${oldUser._id}/${token}`;
   return link;
 };
 
@@ -624,6 +624,14 @@ export const withdrawFromQueueService = async (
   userId: string
 ) => {
   try {
+    const user = await User.findById(userId).lean();
+
+    if (!user) {
+      const err: any = new Error("User not found for fine creation.");
+      err.statusCode = 404;
+      throw err;
+    }
+
     const queue = await Queue.findById(queueId);
 
     if (!queue) {
@@ -647,6 +655,34 @@ export const withdrawFromQueueService = async (
     });
 
     await queue.save();
+
+    const adminRoles = await Role.find({
+      roleName: { $in: ["Admin", "Librarian", "SuperAdmin"] },
+    });
+    const adminRoleIds = adminRoles.map((role) => role._id);
+    const adminUsers = await User.find({ roles: { $in: adminRoleIds } });
+
+    const adminNotificationPromises = adminUsers.map((admin) =>
+      NotificationService.createNotification({
+        recipientId: admin._id.toString(),
+        title: "Withdraw From Queue",
+        message: `User ${user.fullName} has withdraw himself from an queue .`,
+        level: "Info",
+        type: "withdraw_queue",
+        metadata: {},
+      })
+    );
+
+    const userNotificationPromise = NotificationService.createNotification({
+      recipientId: userId,
+      title: "Extension Successful",
+      message: `You have withdraw yourself from the queue for an item ${queue.itemId}`,
+      level: "Success",
+      type: "withdraw_queue",
+      metadata: {},
+    });
+
+    await Promise.all([...adminNotificationPromises, userNotificationPromise]);
 
     return { message: "Successfully withdrawn from queue" };
   } catch (error) {
@@ -707,6 +743,34 @@ export const extendIssuedItemService = async (
     { userId: user.id, name: user.fullName, role: roleNames },
     `${user.fullName} requested for extend period for the item ${itemId}`
   );
+
+  const adminRoles = await Role.find({
+    roleName: { $in: ["Admin", "Librarian", "SuperAdmin"] },
+  });
+  const adminRoleIds = adminRoles.map((role) => role._id);
+  const adminUsers = await User.find({ roles: { $in: adminRoleIds } });
+
+  const adminNotificationPromises = adminUsers.map((admin) =>
+    NotificationService.createNotification({
+      recipientId: admin._id.toString(),
+      title: "Issued Item Period Extended",
+      message: `User ${user.fullName} has extended the issued period for item ${itemId}.`,
+      level: "Info",
+      type: "extend_period",
+      metadata: {},
+    })
+  );
+
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: userId,
+    title: "Extension Successful",
+    message: `Your issued item (ID: ${itemId}) has been successfully extended. New due date: ${newDueDate.toDateString()}.`,
+    level: "Success",
+    type: "extend_period",
+    metadata: {},
+  });
+
+  await Promise.all([...adminNotificationPromises, userNotificationPromise]);
 
   return issuedItem;
 };
@@ -814,13 +878,30 @@ export const returnItemRequestService = async (
     await issuedItem.save();
   }
 
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "ITEM_RETURN_REQUEST",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} requested for item return for the item ${itemId}`
-  );
+  const emailSubject = "Item Returned Successfully";
+  const emailBody = `
+        Hi ${user.fullName},
+        
+        Your item ${inventoryItem.title} has been successfully returned to the LMS.
+        
+        Please log in to your account for more details.
+        
+        Regards,
+        Library Management Team
+      `;
+
+  await sendEmail(user.email, emailSubject, emailBody);
+
+  await NotificationService.createNotification({
+    recipientId: userId,
+    title: "Item Returned Successfully",
+    message: `Your item "${inventoryItem.title}" has been successfully returned to the LMS.`,
+    level: "Success",
+    type: "item return",
+    metadata: {
+      itemName: inventoryItem.title,
+    },
+  });
 
   return {
     issuedItem,
@@ -962,84 +1043,6 @@ export const getHistoryService = async (userId: string) => {
   };
 };
 
-// export const createIssueRequestService = async (userId: string, itemId: string) => {
-//   // Check if item exists and is available
-//   const item = await InventoryItem.findById(itemId);
-//   if (!item) {
-//     const err: any = new Error("Item not found");
-//     err.statusCode = 404;
-//     throw err;
-//   }
-
-//   if (item.availableCopies <= 0) {
-//     const err: any = new Error("Item not available");
-//     err.statusCode = 400;
-//     throw err;
-//   }
-
-//   if (item.status !== "Available") {
-//     const err: any = new Error(`Item is ${item.status}`);
-//     err.statusCode = 400;
-//     throw err;
-//   }
-
-//   // Check if user already has a pending request for this item
-//   const existingRequest = await IssueRequest.findOne({
-//     userId,
-//     itemId,
-//     status: "pending"
-//   });
-
-//   if (existingRequest) {
-//     const err: any = new Error("You already have a pending request for this item");
-//     err.statusCode = 400;
-//     throw err;
-//   }
-
-//   // Check user eligibility (no overdue items, max limit, etc.)
-//   const overdueItems = await IssuedItem.find({
-//     userId,
-//     dueDate: { $lt: new Date() },
-//     status: "Issued"
-//   });
-
-//   if (overdueItems.length > 0) {
-//     const err: any = new Error(`You have ${overdueItems.length} overdue item(s)`);
-//     err.statusCode = 400;
-//     throw err;
-//   }
-
-//   // Check max issue limit
-//   const currentIssuedItems = await IssuedItem.countDocuments({
-//     userId,
-//     status: "Issued"
-//   });
-
-//   const maxIssuedItems = 5; // Configurable
-//   if (currentIssuedItems >= maxIssuedItems) {
-//     const err: any = new Error(`You have reached maximum issue limit of ${maxIssuedItems} items`);
-//     err.statusCode = 400;
-//     throw err;
-//   }
-
-//   // Create issue request
-//   const issueRequest = new IssueRequest({
-//     userId,
-//     itemId,
-//     status: "pending"
-//   });
-
-//   await issueRequest.save();
-
-//   // Populate the response
-//   await issueRequest.populate("itemId", "title authorOrCreator categoryId");
-
-//   return {
-//     message: "Issue request submitted successfully. Waiting for admin approval.",
-//     request: issueRequest
-//   };
-// };
-
 const checkUserEligibility = async (userId: Types.ObjectId) => {
   // Check if user has any overdue items
   const overdueItems = await IssuedItem.find({
@@ -1087,7 +1090,7 @@ const issueItemImmediately = async (
   const item = await InventoryItem.findById(itemId).session(session);
   if (!item) throw new Error("Item not found");
 
-  const user = await User.findById(userId).populate("roles");
+  const user = await User.findById(userId).populate("roles").session(session);
 
   if (!user) {
     const err: any = new Error("User not found.");
@@ -1116,18 +1119,14 @@ const issueItemImmediately = async (
   await item.save({ session });
 
   // Send notification
-  await sendIssueNotification(userId, item.title, dueDate, "immediate");
 
-  await session.commitTransaction();
-  session.endSession();
-
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "ITEM_ISSUED",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} has issued an item ${issuedItem.itemId}`
-  );
+  // const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  // await logActivity(
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   "ITEM_ISSUED",
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   `${user.fullName} has issued an item ${issuedItem.itemId}`
+  // );
 
   return {
     message: "Item issued successfully",
@@ -1135,7 +1134,9 @@ const issueItemImmediately = async (
       _id: issuedItem._id,
       itemTitle: item.title,
       dueDate: issuedItem.dueDate,
+      itemId: issuedItem.itemId,
     },
+    user: user,
     type: "immediate",
   };
 };
@@ -1145,7 +1146,6 @@ const addUserToQueue = async (
   itemId: string,
   session: mongoose.ClientSession
 ) => {
-  // Find or create queue for the item
   let queue = await Queue.findOne({ itemId }).session(session);
 
   if (!queue) {
@@ -1156,7 +1156,7 @@ const addUserToQueue = async (
     });
   }
 
-  const user = await User.findById(userId).populate("roles");
+  const user = await User.findById(userId).populate("roles").session(session);
 
   if (!user) {
     const err: any = new Error("User not found.");
@@ -1186,23 +1186,25 @@ const addUserToQueue = async (
 
   await queue.save({ session });
 
+  const item = await InventoryItem.findById(itemId).session(session);
+  if (!item) throw new Error("Item not found");
+
   // Send queue position notification
-  await sendQueuePositionNotification(userId, itemId, position);
+  // await sendQueuePositionNotification(userId, itemId, position);
 
-  await session.commitTransaction();
-  session.endSession();
-
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "USER_ADDED_TO_QUEUE",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `${user.fullName} has been added to queue for an item ${itemId}`
-  );
+  // const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  // await logActivity(
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   "USER_ADDED_TO_QUEUE",
+  //   { userId: user.id, name: user.fullName, role: roleNames },
+  //   `${user.fullName} has been added to queue for an item ${itemId}`
+  // );
 
   return {
     message: `Item is currently unavailable. You have been added to the queue at position ${position}.`,
     queuePosition: position,
+    user: user,
+    item: item,
     type: "queued",
   };
 };
@@ -1285,34 +1287,143 @@ export const createIssueRequestService = async (
   itemId: string
 ) => {
   const session = await mongoose.startSession();
-  session.startTransaction();
+  let result: any;
 
   try {
-    const item = await InventoryItem.findById(itemId).session(session);
-    if (!item) {
-      const err: any = new Error("Item not found");
-      err.statusCode = 404;
-      throw err;
+    result = await session.withTransaction(async () => {
+      const item = await InventoryItem.findById(itemId).session(session);
+      if (!item) {
+        const err: any = new Error("Item not found");
+        err.statusCode = 404;
+        throw err;
+      }
+
+      const eligibility = await checkUserEligibility(
+        new mongoose.Types.ObjectId(userId)
+      );
+      if (!eligibility.eligible) {
+        const err: any = new Error(eligibility.reason);
+        err.statusCode = 400;
+        throw err;
+      }
+
+      if (item.availableCopies > 0 && item.status === "Available") {
+        return await issueItemImmediately(userId, itemId, session);
+      } else {
+        return await addUserToQueue(userId, itemId, session);
+      }
+    });
+
+    const { user } = result;
+    const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+    const actor = { userId: user.id, name: user.fullName, role: roleNames };
+
+    const adminRoles = ["Admin", "librarian", "superAdmin"];
+    const roles = await Role.find({ roleName: { $in: adminRoles } });
+    const roleIds = roles.map((r) => r._id);
+    const adminUsers = await User.find({ roles: { $in: roleIds } });
+
+    if (result.type === "immediate") {
+      await sendIssueNotification(
+        userId,
+        result.issuedItem.itemTitle,
+        result.issuedItem.dueDate,
+        "immediate"
+      );
+
+      const adminNotificationPromises = adminUsers.map((admin) =>
+        NotificationService.createNotification({
+          recipientId: admin._id.toString(),
+          title: "Item Issued",
+          message: `User ${user.fullName} (${user.email}) has issued the item "${result.issuedItem.itemTitle}".`,
+          level: "Info",
+          type: "item_issued",
+          metadata: {
+            userId: user.id.toString(),
+            itemId: itemId.toString(),
+            issueType: "immediate",
+            dueDate: result.issuedItem.dueDate,
+          },
+        })
+      );
+
+      const userNotificationPromise = NotificationService.createNotification({
+        recipientId: user.id.toString(),
+        title: "Item Issued Successfully",
+        message: `You have successfully issued the item "${
+          result.issuedItem.itemTitle
+        }". Please return it by ${new Date(
+          result.issuedItem.dueDate
+        ).toLocaleDateString()}.`,
+        level: "Success",
+        type: "item_issued",
+        metadata: {
+          itemId: itemId.toString(),
+          dueDate: result.issuedItem.dueDate,
+        },
+      });
+
+      await Promise.all([
+        ...adminNotificationPromises,
+        userNotificationPromise,
+      ]);
+
+      await logActivity(
+        actor,
+        "ITEM_ISSUED",
+        actor,
+        `${user.fullName} has issued an item ${result.issuedItem.itemId}`
+      );
+    } else if (result.type === "queued") {
+      await sendQueuePositionNotification(
+        userId,
+        result.item._id.toString(),
+        result.queuePosition
+      );
+
+      const adminNotificationPromises = adminUsers.map((admin) =>
+        NotificationService.createNotification({
+          recipientId: admin._id.toString(),
+          title: "User Added to Queue",
+          message: `User ${user.fullName} (${user.email}) has been added to the queue for item "${result.item.title}".`,
+          level: "Info",
+          type: "user_added_to_queue",
+          metadata: {
+            userId: user.id.toString(),
+            itemId: itemId.toString(),
+            queuePosition: result.queuePosition,
+          },
+        })
+      );
+
+      const userNotificationPromise = NotificationService.createNotification({
+        recipientId: user.id.toString(),
+        title: "Added to Queue",
+        message: `You have been added to the queue for the item "${result.item.title}". Your current position is ${result.queuePosition}.`,
+        level: "Info",
+        type: "user_added_to_queue",
+        metadata: {
+          itemId: itemId.toString(),
+          queuePosition: result.queuePosition,
+        },
+      });
+
+      await Promise.all([
+        ...adminNotificationPromises,
+        userNotificationPromise,
+      ]);
+
+      await logActivity(
+        actor,
+        "USER_ADDED_TO_QUEUE",
+        actor,
+        `${user.fullName} has been added to queue for item ${result.item._id}`
+      );
     }
 
-    const eligibility = await checkUserEligibility(
-      new mongoose.Types.ObjectId(userId)
-    );
-    if (!eligibility.eligible) {
-      const err: any = new Error(eligibility.reason);
-      err.statusCode = 400;
-      throw err;
-    }
-
-    if (item.availableCopies > 0 && item.status === "Available") {
-      return await issueItemImmediately(userId, itemId, session);
-    } else {
-      return await addUserToQueue(userId, itemId, session);
-    }
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
+    return result;
+  } finally {
+    await session.endSession();
   }
 };
 
@@ -1401,6 +1512,45 @@ export const updateProfileService = async (
   }
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+
+  const adminRoles = ["Admin", "librarian", "superAdmin"];
+  const roles = await Role.find({ roleName: { $in: adminRoles } });
+  const roleIds = roles.map((r) => r._id);
+
+  const adminUsers = await User.find({
+    roles: { $in: roleIds },
+  });
+
+  const adminNotificationPromises = adminUsers.map((admin) =>
+    NotificationService.createNotification({
+      recipientId: admin._id.toString(),
+      title: "User Profile Updated",
+      message: `User ${user.fullName} (${user.email}) has updated their profile information.`,
+      level: "Info",
+      type: "profile_updated",
+      metadata: {
+        userId: user.id.toString(),
+        updatedBy: user.fullName,
+        updatedFields: Object.keys(updates),
+      },
+    })
+  );
+
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: user.id.toString(),
+    title: "Profile Updated Successfully",
+    message:
+      "Your profile information has been successfully updated. If this was not done by you, please contact support immediately.",
+    level: "Success",
+    type: "profile_updated",
+    metadata: {
+      userId: user.id.toString(),
+      updatedFields: Object.keys(updates),
+    },
+  });
+
+  await Promise.all([...adminNotificationPromises, userNotificationPromise]);
+
   await logActivity(
     { userId: user.id, name: user.fullName, role: roleNames },
     "USER_UPDATED",
@@ -1428,6 +1578,41 @@ export const updateNotificationPreferenceService = async (
   }
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+
+  const adminRoles = ["Admin", "librarian", "superAdmin"];
+  const roles = await Role.find({ roleName: { $in: adminRoles } });
+  const roleIds = roles.map((r) => r._id);
+
+  const adminUsers = await User.find({
+    roles: { $in: roleIds },
+  });
+
+  const adminNotificationPromises = adminUsers.map((admin) =>
+    NotificationService.createNotification({
+      recipientId: admin._id.toString(),
+      title: "User Updated Notification Preferences",
+      message: `User ${user.fullName} (${user.email}) has updated their notification preferences.`,
+      level: "Info",
+      type: "notification_preference_updated",
+      metadata: {
+        userId: user.id.toString(),
+        updatedBy: user.fullName,
+      },
+    })
+  );
+
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: user.id.toString(),
+    title: "Notification Preferences Updated",
+    message:
+      "Your notification settings have been successfully updated. You will now receive alerts based on your selected preferences.",
+    level: "Success",
+    type: "notification_preference_updated",
+    metadata: { userId: user.id.toString() },
+  });
+
+  await Promise.all([...adminNotificationPromises, userNotificationPromise]);
+
   await logActivity(
     { userId: user.id, name: user.fullName, role: roleNames },
     "USER_UPDATED",
@@ -1446,6 +1631,7 @@ export const updatePasswordService = async (
   const user = await User.findById(userId)
     .select("+password")
     .populate("roles");
+
   if (!user) {
     const err: any = new Error("User not found");
     err.statusCode = 404;
@@ -1465,6 +1651,41 @@ export const updatePasswordService = async (
   await user.save();
 
   const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+
+  const adminRoles = ["Admin", "librarian", "superAdmin"];
+  const roles = await Role.find({ roleName: { $in: adminRoles } });
+  const roleIds = roles.map((r) => r._id);
+
+  const adminUsers = await User.find({
+    roles: { $in: roleIds },
+  });
+
+  const adminNotificationPromises = adminUsers.map((admin) =>
+    NotificationService.createNotification({
+      recipientId: admin._id.toString(),
+      title: "Password Changed by User",
+      message: `User ${user.fullName} (${user.email}) has successfully changed their password.`,
+      level: "Info",
+      type: "password_changed",
+      metadata: {
+        userId: user.id.toString(),
+        changedBy: user.fullName,
+      },
+    })
+  );
+
+  const userNotificationPromise = NotificationService.createNotification({
+    recipientId: user.id.toString(),
+    title: "Password Changed Successfully",
+    message:
+      "Your account password has been updated successfully. If you did not make this change, please contact support immediately.",
+    level: "Success",
+    type: "password_changed",
+    metadata: { userId: user.id.toString() },
+  });
+
+  await Promise.all([...adminNotificationPromises, userNotificationPromise]);
+
   await logActivity(
     { userId: user.id, name: user.fullName, role: roleNames },
     "PASSWORD_CHANGED",
@@ -1625,37 +1846,95 @@ export const getMyDonationsService = async (userId: string) => {
   }
 };
 
-export const withdrawDonationService = async(donationId: string, userId: string) => {
+export const withdrawDonationService = async (
+  donationId: string,
+  userId: string
+) => {
   try {
     const donation = await Donation.findById(donationId);
+
+    const user = await User.findById(userId).populate("roles");
+
+    if (!user) {
+      const err: any = new Error("User not found.");
+      err.statusCode = 404;
+      throw err;
+    }
 
     if (!donation) {
       return { success: false, message: "Donation not found" };
     }
 
     if (donation.userId.toString() !== userId) {
-      return { success: false, message: "You can only withdraw your own donation requests" };
+      return {
+        success: false,
+        message: "You can only withdraw your own donation requests",
+      };
     }
 
-     if (donation.status !== "Pending") {
-      return { 
-        success: false, 
-        message: `Cannot withdraw donation with status: ${donation.status}. Only pending donations can be withdrawn.` 
+    if (donation.status !== "Pending") {
+      return {
+        success: false,
+        message: `Cannot withdraw donation with status: ${donation.status}. Only pending donations can be withdrawn.`,
       };
     }
 
     const withdrawnDonation = await Donation.findByIdAndDelete(donationId);
 
+    const roleNames = ["Admin", "librarian", "superAdmin"];
+    const roles = await Role.find({ roleName: { $in: roleNames } });
+    const roleIds = roles.map((role) => role._id);
+
+    const adminUsers = await User.find({
+      roles: { $in: roleIds },
+    });
+
+    const adminNotificationPromises = adminUsers.map((admin) =>
+      NotificationService.createNotification({
+        recipientId: admin._id.toString(),
+        title: "Donation Withdrawed Successfully",
+        message: `User ${userId} withdrawed a donation: "${donation.title}".`,
+        level: "Success",
+        type: "donation_submitted",
+        metadata: {
+          userId: userId.toString(),
+          title: donation.title,
+        },
+      })
+    );
+
+    const userNotificationPromise = NotificationService.createNotification({
+      recipientId: userId,
+      title: "Donation Withdrawed Successfully",
+      message: `Your donation "${donation.title}" has been withdrawed successfully`,
+      level: "Success",
+      type: "donation_withdrawed",
+      metadata: {
+        userId: userId.toString(),
+        title: donation.title,
+      },
+    });
+
+    await Promise.all([...adminNotificationPromises, userNotificationPromise]);
+
+    const roleName = user.roles.map((role: any) => role.roleName).join(", ");
+    await logActivity(
+      { userId: user.id, name: user.fullName, role: roleName },
+      "Doantion Withdrawed",
+      { userId: user.id, name: user.fullName, role: roleName },
+      `${donation.title}" has been withdrawed successfully`
+    );
+
     return {
       success: true,
       message: "Donation request withdrawn successfully",
-      withdrawnDonation
+      withdrawnDonation,
     };
   } catch (error) {
     console.error("Error withdrawing donation:", error);
     return { success: false, message: "Internal server error" };
   }
-}
+};
 
 export const getUserNotificationService = async (userId: string) => {
   const notifications = await Notification.find({ recipientId: userId }).sort({

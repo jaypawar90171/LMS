@@ -1308,7 +1308,11 @@ export const extendPeriodController = async (req: Request, res: Response) => {
       });
     }
 
-    if (!extensionDays || typeof extensionDays !== "number" || extensionDays <= 0) {
+    if (
+      !extensionDays ||
+      typeof extensionDays !== "number" ||
+      extensionDays <= 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Valid extension days (positive number) is required",
@@ -1337,11 +1341,11 @@ export const extendPeriodController = async (req: Request, res: Response) => {
   }
 };
 
-export const returnItemController = async(req: Request, res: Response) => {
+export const returnItemController = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const {itemId} = req.params;
-    const {condition} = req.body;
+    const { itemId } = req.params;
+    const { condition } = req.body;
 
     if (!itemId || !userId || !condition) {
       return res.status(400).json({
@@ -1360,7 +1364,7 @@ export const returnItemController = async(req: Request, res: Response) => {
 
     const result = await returnItemService(itemId, userId, condition);
 
-     res.status(200).json({
+    res.status(200).json({
       success: true,
       data: result,
     });
@@ -1370,7 +1374,7 @@ export const returnItemController = async(req: Request, res: Response) => {
       message: error.message || "Error processing item return.",
     });
   }
-}
+};
 
 export const getAllRequestedItemsController = async (
   req: Request,
@@ -1727,12 +1731,20 @@ export const getCategoryByIdController = async (
 };
 
 export const getAllFinesController = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+
   try {
-    const fines = await getAllFinesService();
+    const { fines, totalItems } = await getAllFinesService(page, limit);
 
     return res.status(200).json({
       message: "Fines fetched successfully",
       fines,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+      },
     });
   } catch (error: any) {
     if (error.statusCode === 404) {
@@ -1771,7 +1783,7 @@ export const fetchUserFinesController = async (req: Request, res: Response) => {
 export const createFinesController = async (req: Request, res: Response) => {
   try {
     const adminId = req.user.id;
-    const validatedData = FineSchema.parse(req.body);
+    const validatedData = FineUpdateSchema.parse(req.body);
     const {
       userId,
       itemId,
@@ -1781,11 +1793,11 @@ export const createFinesController = async (req: Request, res: Response) => {
       paymentDetails = [],
     } = validatedData;
 
-    if (!Types.ObjectId.isValid(userId)) {
+    if (!userId || !Types.ObjectId.isValid(userId)) {
       return res.status(400).json({ error: "Invalid userId" });
     }
 
-    if (!Types.ObjectId.isValid(itemId)) {
+    if (!itemId || !Types.ObjectId.isValid(itemId)) {
       return res.status(400).json({ error: "Invalid itemId" });
     }
 
@@ -2047,9 +2059,19 @@ export const getIssuedReportController = async (
   req: Request,
   res: Response
 ) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+
   try {
-    const report = await getIssuedReportService();
-    res.status(200).json({ report });
+    const { report, totalItems } = await getIssuedReportService(page, limit);
+    res.status(200).json({
+      report,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+      },
+    });
   } catch (error: any) {
     res
       .status(500)
@@ -2500,29 +2522,34 @@ export const getItemByScannedBarcodeController = async (
       return res.status(404).json({ error: "No item found with this barcode" });
     }
 
-    const issuedItem = await IssuedItem.findOne({ 
+    const issuedItem = await IssuedItem.findOne({
       itemId: item._id,
-      status: "Issued" 
-    }).populate("userId", "name email") 
-    .populate("issuedBy", "name email") 
-    .populate("returnedTo", "name email") 
-    .populate("fineId");
+      status: "Issued",
+    })
+      .populate("userId", "name email")
+      .populate("issuedBy", "name email")
+      .populate("returnedTo", "name email")
+      .populate("fineId");
 
     const responseData = {
       item: item.toObject(),
-      issuedInfo: issuedItem ? {
-        issuedDate: issuedItem.issuedDate,
-        dueDate: issuedItem.dueDate,
-        issuedBy: issuedItem.issuedBy,
-        userId: issuedItem.userId,
-        returnedTo: issuedItem.returnedTo,
-        returnDate: issuedItem.returnDate,
-        status: issuedItem.status,
-        extensionCount: issuedItem.extensionCount,
-        maxExtensionAllowed: issuedItem.maxExtensionAllowed,
-        fineId: issuedItem.fineId,
-        isOverdue: issuedItem.dueDate ? new Date() > issuedItem.dueDate : false
-      } : null
+      issuedInfo: issuedItem
+        ? {
+            issuedDate: issuedItem.issuedDate,
+            dueDate: issuedItem.dueDate,
+            issuedBy: issuedItem.issuedBy,
+            userId: issuedItem.userId,
+            returnedTo: issuedItem.returnedTo,
+            returnDate: issuedItem.returnDate,
+            status: issuedItem.status,
+            extensionCount: issuedItem.extensionCount,
+            maxExtensionAllowed: issuedItem.maxExtensionAllowed,
+            fineId: issuedItem.fineId,
+            isOverdue: issuedItem.dueDate
+              ? new Date() > issuedItem.dueDate
+              : false,
+          }
+        : null,
     };
 
     return res.status(200).json(responseData);
@@ -2540,11 +2567,20 @@ export const getAllDonationsController = async (
   res: Response
 ) => {
   try {
-    const donations = await getAllDonationService();
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const {donations, totalDonations} = await getAllDonationService(page, limit);
+
     return res.status(200).json({
       success: true,
       message: "Donations fetched successfully",
       data: donations,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalDonations / limit),
+        totalDonations,
+      },
     });
   } catch (error: any) {
     return res.status(500).json({
@@ -2609,7 +2645,7 @@ export const issueItemFromQueueController = async (
   res: Response
 ) => {
   try {
-    const adminId = req.user._id;
+    const adminId = req.user.id;
     const { queueId } = req.params;
     const { userId } = req.body;
 
@@ -2669,7 +2705,14 @@ export const processReturnController = async (req: Request, res: Response) => {
     if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
       return res.status(400).json({
         success: false,
-        message: "Valid userId is required"
+        message: "Valid userId is required",
+      });
+    }
+
+    if (!itemId) {
+      return res.status(400).json({
+        success: false,
+        message: "ItemId is required",
       });
     }
 
@@ -2759,16 +2802,30 @@ export const fetchAllPermissionsController = async (
 
 export const getAllQueuesController = async (req: Request, res: Response) => {
   try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const skip = (page - 1) * limit;
+
+    const totalQueues = await Queue.countDocuments({});
+
     const queues = await Queue.find()
       .populate("itemId", "title status availableCopies categoryId")
       .populate("queueMembers.userId", "fullName email")
       .populate("currentNotifiedUser", "fullName")
-      .sort({ updatedAt: -1 });
+      .sort({ updatedAt: -1 })
+      .limit(limit)
+      .skip(skip);
 
     return res.status(200).json({
       success: true,
       message: "All queues fetched successfully",
       data: queues,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalQueues / limit),
+        totalQueues
+      }
     });
   } catch (error: any) {
     console.error("Error in getAllQueuesController:", error);

@@ -40,6 +40,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -69,6 +76,8 @@ interface Donation {
   updatedAt: string;
 }
 
+const USERS_PER_PAGE = 10;
+
 export default function DonationManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -83,8 +92,10 @@ export default function DonationManagement() {
   const [filters, setFilters] = useState({
     status: "all",
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
 
-  const fetchData = async () => {
+  const fetchData = async (page = currentPage) => {
     setLoading(true);
     setError(null);
     const accessToken = localStorage.getItem("accessToken");
@@ -92,7 +103,7 @@ export default function DonationManagement() {
 
     try {
       const response = await axios.get(
-        `https://lms-backend1-q5ah.onrender.com/api/admin/donations`,
+        `https://lms-backend1-q5ah.onrender.com/api/admin/donations?page=${page}&limit=${USERS_PER_PAGE}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -102,6 +113,10 @@ export default function DonationManagement() {
 
       const data: Donation[] = response.data.data;
       setDonations(data);
+      console.log("pagination" , response.data);
+      setTotalPages(
+        response.data.totalPages || response.data.pagination?.totalPages || 1
+      );
 
       setStats({
         total: data.length,
@@ -378,9 +393,7 @@ export default function DonationManagement() {
                     <TableCell>{donation.title}</TableCell>
                     <TableCell>{donation.itemType.name}</TableCell>
                     <TableCell>
-                      <Badge
-                        variant= "outline"
-                      >
+                      <Badge variant="outline">
                         {getDonationType(donation)}
                       </Badge>
                     </TableCell>
@@ -428,6 +441,39 @@ export default function DonationManagement() {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 py-2 text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

@@ -234,64 +234,64 @@ export default function ItemDetailsScreen() {
     }
   };
 
-  const handleReturnItem = async () => {
-    if (!token || !itemId) return;
+  // const handleReturnItem = async () => {
+  //   if (!token || !itemId) return;
 
-    try {
-      Alert.alert(
-        "Return Item",
-        `Are you sure you want to return "${itemDetails?.title}"?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Return",
-            onPress: async () => {
-              try {
-                await axios.post(
-                  `${API_BASE_URL}/items/${itemId}/return-item`,
-                  {},
-                  {
-                    headers: { Authorization: `Bearer ${token}` },
-                  }
-                );
+  //   try {
+  //     Alert.alert(
+  //       "Return Item",
+  //       `Are you sure you want to return "${itemDetails?.title}"?`,
+  //       [
+  //         { text: "Cancel", style: "cancel" },
+  //         {
+  //           text: "Return",
+  //           onPress: async () => {
+  //             try {
+  //               await axios.post(
+  //                 `${API_BASE_URL}/items/${itemId}/return-item`,
+  //                 {},
+  //                 {
+  //                   headers: { Authorization: `Bearer ${token}` },
+  //                 }
+  //               );
 
-                Alert.alert("Success", "Item returned successfully");
-                router.back();
-              } catch (error: any) {
-                if (error.response) {
-                  console.error(
-                    "Failed to return item. Server responded with:",
-                    error.response.data
-                  );
-                  const errorMessage =
-                    error.response.data.message || "Failed to return item";
-                  Alert.alert("Error", errorMessage);
-                } else if (error.request) {
-                  console.error(
-                    "Failed to return item. No response from server:",
-                    error.request
-                  );
-                  Alert.alert(
-                    "Network Error",
-                    "Could not connect to the server."
-                  );
-                } else {
-                  console.error("Error setting up the request:", error.message);
-                  Alert.alert("Error", "An unexpected error occurred.");
-                }
-              }
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("Error showing confirmation:", error);
-    }
-  };
+  //               Alert.alert("Success", "Item returned successfully");
+  //               router.back();
+  //             } catch (error: any) {
+  //               if (error.response) {
+  //                 console.error(
+  //                   "Failed to return item. Server responded with:",
+  //                   error.response.data
+  //                 );
+  //                 const errorMessage =
+  //                   error.response.data.message || "Failed to return item";
+  //                 Alert.alert("Error", errorMessage);
+  //               } else if (error.request) {
+  //                 console.error(
+  //                   "Failed to return item. No response from server:",
+  //                   error.request
+  //                 );
+  //                 Alert.alert(
+  //                   "Network Error",
+  //                   "Could not connect to the server."
+  //                 );
+  //               } else {
+  //                 console.error("Error setting up the request:", error.message);
+  //                 Alert.alert("Error", "An unexpected error occurred.");
+  //               }
+  //             }
+  //           },
+  //         },
+  //       ]
+  //     );
+  //   } catch (error) {
+  //     console.error("Error showing confirmation:", error);
+  //   }
+  // };
 
   const handleRequestItem = async () => {
     if (!token || !user?.id || !itemId) return;
-    console.log("click on the requets item")
+    console.log("click on the requets item");
     try {
       const response = await axios.post(
         `${API_BASE_URL}/issue-requests`,
@@ -312,16 +312,16 @@ export default function ItemDetailsScreen() {
     } catch (error: any) {
       if (error.response) {
         console.error(
-          "Failed to fetch new arrivals. Server responded with:",
+          "Failed to request an item. Server responded with:",
           error.response.data
         );
 
         const errorMessage =
-          error.response.data.message || "Failed to load new arrivals";
+          error.response.data.message || "Failed to requets an item";
         Alert.alert("Error", errorMessage);
       } else if (error.request) {
         console.error(
-          "Failed to fetch new arrivals. No response from server:",
+          "Failed to request an item. No response from server:",
           error.request
         );
         Alert.alert("Network Error", "Could not connect to the server.");
@@ -508,13 +508,13 @@ export default function ItemDetailsScreen() {
               </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               style={[styles.actionButton, styles.primaryButton]}
               onPress={handleReturnItem}
             >
               <Ionicons name="return-up-back-outline" size={20} color="#FFF" />
               <Text style={styles.actionButtonText}>Return Item</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </>
         )}
 
@@ -617,7 +617,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   secondaryButton: {
-    backgroundColor: "#FF9500", 
+    backgroundColor: "#FF9500",
   },
   dangerButton: {
     backgroundColor: "#FF3B30",

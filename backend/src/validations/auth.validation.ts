@@ -153,31 +153,28 @@ export const FineSchema = z.object({
   userId: z.string().min(1, "userId is required"),
   itemId: z.string().min(1, "itemId is required"),
   reason: z.enum(["Overdue", "Damaged", "Lost item"], {
-    message: "reason must be either 'Overdue' or 'Damaged'",
+    message: "reason must be either 'Overdue', 'Damaged', or 'Lost item'",
   }),
   amountIncurred: z.number().positive("amountIncurred must be greater than 0"),
-  amountPaid: z
-    .number()
-    .min(0, "amountPaid cannot be negative")
-    .optional()
-    .default(0),
-  outstandingAmount: z
-    .number()
-    .min(0, "outstandingAmount cannot be negative")
-    .optional(),
+  amountPaid: z.number().min(0).optional().default(0),
+  outstandingAmount: z.number().min(0).optional(),
   paymentDetails: z
     .array(
       z.object({
+        amountPaid: z.number().min(0, "amountPaid is required"),
         paymentMethod: z.enum(["Cash", "Card", "Online Transfer"]),
         transactionId: z.string().trim().optional(),
+        paymentDate: z.date().optional(),
         notes: z.string().trim().optional(),
+        recordedBy: z.string().optional(),
       })
     )
     .optional()
     .default([]),
   dateIncurred: z.date().optional(),
   dateSettled: z.date().nullable().optional(),
-  status: z.enum(["Outstanding", "Paid"]).optional(),
+  status: z.enum(["Outstanding", "Paid", "Waived"]).optional(),
+  waiverReason: z.string().optional(),
 });
 
 export const FineUpdateSchema = FineSchema.partial();

@@ -16,6 +16,13 @@ import {
   Filter,
   TrendingUp,
 } from "lucide-react";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
 import axios from "axios";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -54,14 +61,19 @@ interface QueueItem {
   updatedAt: string;
 }
 
+const USERS_PER_PAGE = 10;
+
 const QueueDashboard = () => {
   const navigate = useNavigate();
   const [queues, setQueues] = useState<QueueItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState("all"); 
+  const [filter, setFilter] = useState("all");
 
-  const fetchAllQueues = async () => {
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const fetchAllQueues = async (page = currentPage) => {
     setIsLoading(true);
     try {
       const accessToken = localStorage.getItem("accessToken");
@@ -70,9 +82,8 @@ const QueueDashboard = () => {
         return;
       }
 
-      
       const response = await axios.get(
-        "https://lms-backend1-q5ah.onrender.com/api/admin/inventory/queues",
+        `https://lms-backend1-q5ah.onrender.com/api/admin/inventory/queues?page=${page}&limit=${USERS_PER_PAGE}`,
         {
           headers: {
             Authorization: `Bearer ${accessToken}`,
@@ -80,6 +91,9 @@ const QueueDashboard = () => {
         }
       );
       setQueues(response.data.data || []);
+      setTotalPages(
+        response.data.totalPages || response.data.pagination?.totalPages || 1
+      );
     } catch (error: any) {
       console.error("Error fetching queues:", error);
       toast.error(error.response?.data?.message || "Failed to fetch queues.");
@@ -144,9 +158,7 @@ const QueueDashboard = () => {
 
   const getUrgentQueues = () => {
     return queues.filter(
-      (queue) =>
-        queue.queueMembers.length >= 5 || 
-        queue.isProcessing 
+      (queue) => queue.queueMembers.length >= 5 || queue.isProcessing
     );
   };
 
@@ -418,6 +430,39 @@ const QueueDashboard = () => {
             </Table>
           </CardContent>
         </Card>
+
+        {/* Pagination */}
+        <Pagination>
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious
+                href="#"
+                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                className={
+                  currentPage === 1 ? "pointer-events-none opacity-50" : ""
+                }
+              />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-4 py-2 text-sm">
+                Page {currentPage} of {totalPages}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext
+                href="#"
+                onClick={() =>
+                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+                }
+                className={
+                  currentPage === totalPages
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                }
+              />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

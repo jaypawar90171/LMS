@@ -6,7 +6,29 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   level: "Info" | "Success" | "Warning" | "Danger";
-  type: "user_registered" | "item_requested" | "donation_submitted" | "item_overdue" | "system_alert" | "force_password_reset" | "fine_created" | "fine_updated" | "fine_deleted" | "fine_payment_recorded" | "fine_waived" | "user_activated" | "user_deactivated";
+  type:
+    | "user_registered"
+    | "item_requested"
+    | "donation_submitted"
+    | "item_overdue"
+    | "item return"
+    | "system_alert"
+    | "force_password_reset"
+    | "fine_created"
+    | "fine_updated"
+    | "fine_deleted"
+    | "fine_payment_recorded"
+    | "fine_waived"
+    | "user_activated"
+    | "user_deactivated"
+    | "donation_withdrawed"
+    | "password_changed"
+    | "notification_preference_updated"
+    | "item_issued"
+    | "user_added_to_queue"
+    | "extend_period"
+    | "withdraw_queue"
+    | "profile_updated";
   metadata?: any;
   expiresInDays?: number;
 }
@@ -20,7 +42,7 @@ export class NotificationService {
       level,
       type,
       metadata = {},
-      expiresInDays
+      expiresInDays,
     } = params;
 
     const notificationData: any = {
@@ -33,8 +55,7 @@ export class NotificationService {
       read: false,
     };
 
-    
-  if (expiresInDays) {
+    if (expiresInDays) {
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
       notificationData.expiresAt = expiresAt;
@@ -62,27 +83,25 @@ export class NotificationService {
       level,
       read,
       page = 1,
-      limit = 20
+      limit = 20,
     } = filters;
 
     const query: any = {};
 
-    
-  if (startDate || endDate) {
+    if (startDate || endDate) {
       query.createdAt = {};
       if (startDate) query.createdAt.$gte = startDate;
       if (endDate) query.createdAt.$lte = endDate;
     }
 
-    
-  if (type) query.type = type;
+    if (type) query.type = type;
     if (level) query.level = level;
     if (read !== undefined) query.read = read;
 
     const skip = (page - 1) * limit;
 
     const notifications = await Notification.find(query)
-      .populate('recipientId', 'fullName email')
+      .populate("recipientId", "fullName email")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -96,8 +115,8 @@ export class NotificationService {
         page,
         limit,
         total,
-        pages: Math.ceil(total / limit)
-      }
+        pages: Math.ceil(total / limit),
+      },
     };
   }
 
@@ -119,7 +138,7 @@ export class NotificationService {
   static async getUnreadCount(recipientId: string) {
     return await Notification.countDocuments({
       recipientId: new Types.ObjectId(recipientId),
-      read: false
+      read: false,
     });
   }
 
@@ -129,7 +148,7 @@ export class NotificationService {
 
   static async cleanupExpiredNotifications() {
     return await Notification.deleteMany({
-      expiresAt: { $lte: new Date() }
+      expiresAt: { $lte: new Date() },
     });
   }
 }

@@ -8,6 +8,7 @@ import {
   RefreshControl,
   StyleSheet,
   Alert,
+  TouchableOpacity,
 } from "react-native";
 import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
@@ -41,6 +42,8 @@ export default function HomeScreen() {
   );
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const router = useRouter();
 
   const fetchDashboardData = async () => {
@@ -55,6 +58,16 @@ export default function HomeScreen() {
         headers: { Authorization: `Bearer ${token}` },
       });
       setDashboardData(response.data.data);
+
+      const notifResponse = await axios.get(`${API_BASE_URL}/notifications`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (notifResponse.data.success) {
+        const notifications = notifResponse.data.data.notifications || [];
+        const unread = notifications.filter((notif: any) => !notif.read).length;
+        setUnreadCount(unread);
+      }
     } catch (error: any) {
       if (error.response) {
         console.error(
@@ -79,6 +92,32 @@ export default function HomeScreen() {
       setRefreshing(false);
     }
   };
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!token) return;
+
+      try {
+        const response = await axios.get(`${API_BASE_URL}/notifications`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.data.success) {
+          const notifications = response.data.data.notifications || [];
+          const unread = notifications.filter(
+            (notif: any) => !notif.read
+          ).length;
+          setUnreadCount(unread);
+        }
+      } catch (error) {
+        console.error("Failed to fetch notification count:", error);
+      }
+    };
+
+    if (token) {
+      fetchUnreadCount();
+    }
+  }, [token]);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -189,10 +228,6 @@ export default function HomeScreen() {
     });
   };
 
-  const handleScan = () => {
-    Alert.alert("Scan", "Scan functionality coming soon!");
-  };
-
   const handleRequestBook = () => {
     router.push({
       pathname: "/(tabs)/home/request-new-item",
@@ -282,9 +317,24 @@ export default function HomeScreen() {
             </View>
           )}
         </View>
-        <View style={styles.welcomeIcon}>
-          <Ionicons name="library-outline" size={32} color={COLORS.primary} />
-        </View>
+
+        <TouchableOpacity
+          style={styles.notificationIconContainer}
+          onPress={() => router.push("/(tabs)/profile/notifications")}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={24}
+            color={COLORS.primary}
+          />
+          {unreadCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </Text>
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.overviewGrid}>
@@ -333,23 +383,28 @@ export default function HomeScreen() {
           <Text style={styles.emptyStateText}>No currently issued items</Text>
         </View>
       ) : (
-        getCurrentIssuedItems().map((item: any) => (
+        <>
+          {/* Show only the first item */}
           <ItemCard
-            key={item._id}
-            title={item.itemId?.title || "Unknown Title"}
-            subtitle={item.itemId?.authorOrCreator}
-            imageUrl={item.itemId?.mediaUrl}
-            status={item.status || "Issued"}
-            statusColor={item.isOverdue ? "#FF3B30" : COLORS.primary}
-            dueInfo={
-              item.isOverdue
-                ? `Overdue by ${item.daysOverdue} days`
-                : `Due in ${item.daysRemaining} days`
+            key={getCurrentIssuedItems()[0]._id}
+            title={getCurrentIssuedItems()[0].itemId?.title || "Unknown Title"}
+            subtitle={getCurrentIssuedItems()[0].itemId?.authorOrCreator}
+            imageUrl={getCurrentIssuedItems()[0].itemId?.mediaUrl}
+            status={getCurrentIssuedItems()[0].status || "Issued"}
+            statusColor={
+              getCurrentIssuedItems()[0].isOverdue ? "#FF3B30" : COLORS.primary
             }
-            showOverdue={!!item.isOverdue}
-            onPress={() => handleItemPress(item, "issued")}
+            dueInfo={
+              getCurrentIssuedItems()[0].isOverdue
+                ? `Overdue by ${getCurrentIssuedItems()[0].daysOverdue} days`
+                : `Due in ${getCurrentIssuedItems()[0].daysRemaining} days`
+            }
+            showOverdue={!!getCurrentIssuedItems()[0].isOverdue}
+            onPress={() =>
+              handleItemPress(getCurrentIssuedItems()[0], "issued")
+            }
           />
-        ))
+        </>
       )}
 
       {/* Overdue Items */}
@@ -397,27 +452,31 @@ export default function HomeScreen() {
           <Text style={styles.emptyStateText}>No items in queue</Text>
         </View>
       ) : (
-        getQueuedItems().map((item: any) => {
-          const pos =
-            typeof item.position === "number"
-              ? `Position ${item.position}`
-              : undefined;
-          const wait = item.estimatedWaitTime
-            ? ` • ${item.estimatedWaitTime}`
-            : "";
-          return (
-            <ItemCard
-              key={item._id}
-              title={item.itemId?.title || "Unknown Title"}
-              subtitle={item.itemId?.authorOrCreator}
-              imageUrl={item.itemId?.mediaUrl}
-              positionInfo={`${pos || "In queue"}${wait}`}
-              status={`Queue Size: ${item.totalQueueLength ?? "-"}`}
-              statusColor={"#FF9500"}
-              onPress={() => handleItemPress(item, "queued")}
-            />
-          );
-        })
+        <>
+          {/* Show only the first queued item */}
+          {(() => {
+            const firstItem = getQueuedItems()[0];
+            const pos =
+              typeof firstItem.position === "number"
+                ? `Position ${firstItem.position}`
+                : undefined;
+            const wait = firstItem.estimatedWaitTime
+              ? ` • ${firstItem.estimatedWaitTime}`
+              : "";
+            return (
+              <ItemCard
+                key={firstItem._id}
+                title={firstItem.itemId?.title || "Unknown Title"}
+                subtitle={firstItem.itemId?.authorOrCreator}
+                imageUrl={firstItem.itemId?.mediaUrl}
+                positionInfo={`${pos || "In queue"}${wait}`}
+                status={`Queue Size: ${firstItem.totalQueueLength ?? "-"}`}
+                statusColor={"#FF9500"}
+                onPress={() => handleItemPress(firstItem, "queued")}
+              />
+            );
+          })()}
+        </>
       )}
 
       {/* New Arrivals */}
@@ -520,6 +579,23 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  moreItemsButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: COLORS.cardBackground,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginBottom: 20,
+    gap: 8,
+  },
+  moreItemsText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    fontWeight: "600",
+  },
   welcomeText: {
     fontSize: 28,
     fontWeight: "700",
@@ -582,6 +658,32 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: COLORS.textSecondary,
     fontWeight: "600",
+  },
+  notificationIconContainer: {
+    position: "relative",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: `${COLORS.primary}15`,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badge: {
+    position: "absolute",
+    top: -2,
+    right: -2,
+    backgroundColor: "#FF3B30",
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: "#FFFFFF",
+    fontSize: 10,
+    fontWeight: "bold",
   },
   emptyState: {
     backgroundColor: COLORS.cardBackground,

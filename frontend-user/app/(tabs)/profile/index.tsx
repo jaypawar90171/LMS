@@ -302,9 +302,9 @@ export default function ProfileScreen() {
         {/* Avatar Container */}
         <View style={styles.avatarSection}>
           <View style={styles.avatarContainer}>
-            {displayData.profilePicture ? (
+            {displayData.profile ? (
               <Image
-                source={{ uri: displayData.profilePicture }}
+                source={{ uri: displayData.profile }}
                 style={styles.avatar}
               />
             ) : (

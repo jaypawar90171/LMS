@@ -607,6 +607,7 @@ router.get(
   viewQueueController
 );
 
+//allocate item for the user from the queue itself
 router.post(
   "/inventory/items/queue/:queueId/issue",
   authUser,
@@ -621,6 +622,7 @@ router.put(
   removeUserFromQueueController
 );
 
+//this endpoint is for notify the next user in the queue
 router.post(
   "/inventory/items/:itemId/process-return",
   authUser,

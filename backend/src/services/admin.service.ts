@@ -153,16 +153,16 @@ export const forgotPasswordService = async (email: any) => {
         <p>Dear ${oldUser.username || oldUser.email},</p>
         <p>We received a request to reset the password for your account.</p>
         <p>Please click the button below to reset your password. This link is valid for <strong>1 Hour</strong>.</p>
-        <a href="http://localhost:3000/api/admin/auth/reset-password/${
+        <a href="https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${
           oldUser._id
         }/${token}" 
            style="display: inline-block; padding: 10px 20px; font-size: 16px; color: #fff; background-color: #007BFF; text-decoration: none; border-radius: 5px;">
            Reset Password
         </a>
         <p style="margin-top: 20px;">If the button above doesn't work, you can also copy and paste the following link into your browser:</p>
-        <p><a href="http://localhost:3000/api/admin/auth/reset-password/${
+        <p><a href="https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${
           oldUser._id
-        }/${token}">http://localhost:3000/api/admin/auth/reset-password/${
+        }/${token}">https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${
       oldUser._id
     }/${token}</a></p>
         <p style="color: #888;">If you did not request a password reset, please ignore this email. Your password will remain unchanged.</p>
@@ -182,7 +182,7 @@ export const forgotPasswordService = async (email: any) => {
     throw err;
   }
 
-  const link = `http://localhost:3000/api/admin/auth/reset-password/${oldUser._id}/${token}`;
+  const link = `https://lms-backend1-q5ah.onrender.com/api/admin/auth/reset-password/${oldUser._id}/${token}`;
   if (oldUser.phoneNumber) {
     const message = `Hi ${oldUser.fullName}, you requested a password reset. Use this link (valid for 1 hour): ${link}`;
     sendWhatsAppMessage(oldUser.phoneNumber, message);
@@ -951,12 +951,11 @@ export const updateCategoryService = async (categoryId: string, data: any) => {
     throw err;
   }
 
-  // Check if name is being changed and if it conflicts with existing category at same level
   if (name && name !== category.name) {
     const existingCategory = await Category.findOne({
       name,
       parentCategoryId: category.parentCategoryId,
-      _id: { $ne: categoryId }, // Exclude current category
+      _id: { $ne: categoryId },
     });
 
     if (existingCategory) {
@@ -968,7 +967,6 @@ export const updateCategoryService = async (categoryId: string, data: any) => {
     }
   }
 
-  // Update category fields
   if (name) category.name = name;
   if (description !== undefined) category.description = description;
   if (defaultReturnPeriod !== undefined)
@@ -1037,12 +1035,23 @@ export const getCategoryByIdService = async (categoryId: string) => {
   };
 };
 
-export const getAllFinesService = async () => {
+export const getAllFinesService = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+   const totalItems = await Fine.countDocuments({});
+
+   if (totalItems === 0) {
+    return { items: [], totalItems: 0 };
+  }
+
   const fines = await Fine.find()
     .populate("userId", "username email")
-    .populate("itemId", "title");
+    .populate("itemId", "title")
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .skip(skip);
 
-  return fines || "";
+  return {fines, totalItems};
 };
 
 export const fetchUserFinesService = async (userId: any) => {
@@ -1668,7 +1677,10 @@ export const getFinesReportService = async () => {
   };
 };
 
-export const getIssuedReportService = async () => {
+export const getIssuedReportService = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const totalItems = await IssuedItem.countDocuments({});
   const records = await IssuedItem.find()
     .populate("userId", "fullName email roles")
     .populate(
@@ -1681,9 +1693,11 @@ export const getIssuedReportService = async () => {
       "fineId",
       "userId itemId reason amountIncurred amountPaid outstandingAmount"
     )
+    .limit(limit)
+    .skip(skip)
     .lean();
 
-  return records.map((record: any) => ({
+  const mappedRecords = records.map((record: any) => ({
     id: record._id,
     status: record.status || "Issued",
 
@@ -1751,6 +1765,11 @@ export const getIssuedReportService = async () => {
       ? new Date(record.updatedAt).toISOString().split("T")[0]
       : "-",
   }));
+
+  return {
+    report: mappedRecords,
+    totalItems: totalItems,
+  };
 };
 
 export const getQueueAnalytics = async (startDate?: Date, endDate?: Date) => {
@@ -2824,12 +2843,18 @@ export const generateBarcodePDF = async (itemId: string, res: Response) => {
   }
 };
 
-export const getAllDonationService = async () => {
+export const getAllDonationService = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+  const totalDonations = await Donation.countDocuments({});
+
   const donations = await Donation.find()
     .populate({ path: "userId", select: "fullName email" })
-    .populate({ path: "itemType", select: "name description" });
+    .populate({ path: "itemType", select: "name description" })
+    .limit(limit)
+    .skip(skip);
 
-  return donations || "";
+  return {donations , totalDonations};
 };
 
 export const updateDonationStatusService = async (
@@ -2854,6 +2879,7 @@ export const updateDonationStatusService = async (
   return donation;
 };
 
+//this endpoint is for notify the next user in the queue
 export const processItemReturn = async (itemId: string) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -3064,8 +3090,8 @@ const sendItemAvailableNotification = async (user: any, itemId: string) => {
   if (!item) return;
 
   const message = `The item "${item.title}" is now available! You have 24 hours to accept this item. Please respond to this message.`;
-  const acceptLink = `${process.env.FRONTEND_URL}/queue/respond?itemId=${itemId}&accept=true`;
-  const declineLink = `${process.env.FRONTEND_URL}/queue/respond?itemId=${itemId}&accept=false`;
+  const acceptLink = `https://lms-backend1-q5ah.onrender.com/api/user/queue/respond?itemId=${itemId}&accept=true`;
+  const declineLink = `https://lms-backend1-q5ah.onrender.com/api/user/queue/respond?itemId=${itemId}&accept=false`;
 
   if (user.notificationPreference?.email) {
     const emailHtml = `
