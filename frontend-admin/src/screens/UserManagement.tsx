@@ -550,7 +550,7 @@ const UserManagementPage = () => {
                 {filteredUsers.map((user) => (
                   <TableRow key={user._id} className="hover:bg-muted/30">
                     <TableCell className="text-xs text-muted-foreground font-mono">
-                      {user._id.slice(-8)}
+                      {user?.employeeId?.slice(-8) || "N/A"}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">

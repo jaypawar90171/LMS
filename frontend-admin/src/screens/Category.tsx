@@ -13,6 +13,7 @@ import {
   FolderOpen,
   ChevronRight,
   ChevronDown,
+  ArrowLeftToLine,
 } from "lucide-react";
 import axios from "@/lib/axios";
 import { Card, CardContent } from "@/components/ui/card";
@@ -194,7 +195,6 @@ const CategoryPage = () => {
     }
   };
 
-  // Helper function to find category by ID in tree
   const findCategoryById = (
     categories: Category[],
     id: string
@@ -231,11 +231,9 @@ const CategoryPage = () => {
         },
       });
 
-      // Backend returns { message: "Category created successfully", category: category }
       const newCategory: Category = response.data.category;
 
       if (newCategory && newCategory._id && newCategory.name) {
-        // Refetch categories to get updated tree structure
         const categoriesResponse = await axios.get(
           `/inventory/categories?tree=true`,
           {
@@ -246,7 +244,7 @@ const CategoryPage = () => {
         );
         setCategories(categoriesResponse.data.data || []);
 
-        // Expand parent category and save to localStorage
+       
         if (parentCategory) {
           setExpandedCategories((prev) => {
             const newSet = new Set(prev);
@@ -264,7 +262,6 @@ const CategoryPage = () => {
         if (parentCategory) {
           setIsAddChildOpen(false);
           setParentCategory(null);
-          // Expand parent category when adding a child
           setExpandedCategories((prev) =>
             new Set(prev).add(parentCategory._id)
           );
@@ -278,7 +275,6 @@ const CategoryPage = () => {
     } catch (error: any) {
       console.error("Error adding category:", error);
 
-      // Handle backend validation errors
       if (error.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
         const errorMessage = validationErrors
@@ -328,10 +324,8 @@ const CategoryPage = () => {
         }
       );
 
-      // Backend returns { message: "Category updated successfully", category: category }
       const updatedCategory: Category = response.data.category;
 
-      // Refetch categories to get updated tree
       const categoriesResponse = await axios.get(
         `/inventory/categories?tree=true`,
         {
@@ -348,7 +342,6 @@ const CategoryPage = () => {
     } catch (error: any) {
       console.error("Error editing category:", error);
 
-      // Handle backend validation errors
       if (error.response?.data?.errors) {
         const validationErrors = error.response.data.errors;
         const errorMessage = validationErrors
@@ -368,7 +361,6 @@ const CategoryPage = () => {
     setIsAddChildOpen(true);
   };
 
-  // Flatten categories for search
   const flattenCategories = (categories: Category[]): Category[] => {
     let result: Category[] = [];
     categories.forEach((category) => {
@@ -380,7 +372,7 @@ const CategoryPage = () => {
     return result;
   };
 
-  // Filter categories based on search
+ 
   const getFilteredCategories = () => {
     if (!search) return categories;
 
@@ -391,7 +383,7 @@ const CategoryPage = () => {
         category.description.toLowerCase().includes(search.toLowerCase())
     );
 
-    // Rebuild tree structure from filtered flat categories
+   
     const rebuildTree = (
       categories: Category[],
       filteredIds: Set<string>
@@ -517,6 +509,13 @@ const CategoryPage = () => {
         {/* Header */}
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="space-y-1">
+            <div
+            className="flex gap-2 cursor-pointer items-center mb-4"
+            onClick={() => navigate("/inventory")}
+          >
+            <ArrowLeftToLine className="h-4 w-4" />
+            <p className="text-md text-gray-600">Back</p>
+          </div>
             <h1 className="text-3xl font-bold text-foreground">
               Category Management
             </h1>

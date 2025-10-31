@@ -75,9 +75,10 @@ router.get("/inventory/categories/:itemId", authUser, getItemController);
 
 router.get("/:userId/requests", authUser, getRequestedItemsController);
 
-router.post("/issue-requests", authUser, createIssueRequestController);
+//previous flow of user request item
+// router.post("/issue-requests", authUser, createIssueRequestController);
 
-// router.post("/:userId/requests", authUser, requestItemController);
+router.post("/:itemId/request-item", authUser, requestItemController);
 
 router.get("/items/:itemId/extend-period", authUser, extendIssuedItemController);
 

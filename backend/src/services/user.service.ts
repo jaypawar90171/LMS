@@ -514,54 +514,83 @@ export const getRequestedItemsSerice = async (userId: string) => {
   return requestedItems || [];
 };
 
-export const requestItemService = async (
-  userId: string,
-  validatedData: any
-) => {
-  const { title, authorOrCreator, itemType, reasonForRequest } = validatedData;
+export const requestItemService = async (userId: string, itemId: string) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-  const user = await User.findById(userId).populate("roles");
-  if (!user) {
-    const err: any = new Error("User not found.");
-    err.statusCode = 404;
-    throw err;
+  try {
+    const user = await User.findById(userId).populate("roles").session(session);
+    if (!user) {
+      const err: any = new Error("User not found.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const item = await InventoryItem.findById(itemId).session(session);
+    if (!item) {
+      const err: any = new Error("Item not found in inventory.");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    const existingRequest = await ItemRequest.findOne({
+      userId,
+      itemId: itemId,
+      status: "pending",
+    }).session(session);
+
+    if (existingRequest) {
+      const err: any = new Error(
+        "You have already requested this item and it's still pending"
+      );
+      err.statusCode = 400;
+      throw err;
+    }
+
+    // Check if item is available
+    const isItemAvailable = item.quantity > 0 && item.status == "Available";
+
+    if (isItemAvailable) {
+      const newRequest = new ItemRequest({
+        userId,
+        itemId: itemId,
+        status: "pending",
+        requestedAt: new Date(),
+      });
+
+      await newRequest.save({ session });
+
+      const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+
+      await logActivity(
+        { userId: user.id, name: user.fullName, role: roleNames },
+        "ITEM_REQUESTED",
+        { userId: user.id, name: user.fullName, role: roleNames },
+        `${user.fullName} requested item ${item.title}`
+      );
+
+      await session.commitTransaction();
+
+      return {
+        request: newRequest,
+        message: "Item requested successfully",
+        type: "direct_request",
+      };
+    } else {
+      const queueResult = await addUserToQueue(userId, itemId, session);
+      await session.commitTransaction();
+
+      return {
+        ...queueResult,
+        type: "queued",
+      };
+    }
+  } catch (error: any) {
+    await session.abortTransaction();
+    throw error;
+  } finally {
+    session.endSession();
   }
-
-  const existingRequest = await ItemRequest.findOne({
-    userId,
-    title: title,
-    status: "Pending",
-  });
-
-  if (existingRequest) {
-    const err: any = new Error(
-      "You have already requested this item and it's still pending"
-    );
-    err.statusCode = 400;
-    throw err;
-  }
-
-  const newRequest = new ItemRequest({
-    userId,
-    title: title,
-    authorOrCreator: authorOrCreator,
-    itemType: itemType,
-    reasonForRequest: reasonForRequest,
-    status: "Pending",
-  });
-
-  await newRequest.save();
-
-  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-
-  await logActivity(
-    { userId: user.id, name: user.fullName, role: roleNames },
-    "ITEM_REQUESTED",
-    { userId: user.id, name: user.fullName, role: roleNames },
-    `Password for ${user.fullName} has been reset sucessfully`
-  );
-
-  return newRequest;
 };
 
 export const getQueuedItemsService = async (userId: any) => {
@@ -1189,16 +1218,13 @@ const addUserToQueue = async (
   const item = await InventoryItem.findById(itemId).session(session);
   if (!item) throw new Error("Item not found");
 
-  // Send queue position notification
-  // await sendQueuePositionNotification(userId, itemId, position);
-
-  // const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
-  // await logActivity(
-  //   { userId: user.id, name: user.fullName, role: roleNames },
-  //   "USER_ADDED_TO_QUEUE",
-  //   { userId: user.id, name: user.fullName, role: roleNames },
-  //   `${user.fullName} has been added to queue for an item ${itemId}`
-  // );
+  const roleNames = user.roles.map((role: any) => role.roleName).join(", ");
+  await logActivity(
+    { userId: user.id, name: user.fullName, role: roleNames },
+    "USER_ADDED_TO_QUEUE",
+    { userId: user.id, name: user.fullName, role: roleNames },
+    `${user.fullName} has been added to queue for an item ${itemId}`
+  );
 
   return {
     message: `Item is currently unavailable. You have been added to the queue at position ${position}.`,

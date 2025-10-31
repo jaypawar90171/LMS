@@ -113,7 +113,7 @@ export default function DonationManagement() {
 
       const data: Donation[] = response.data.data;
       setDonations(data);
-      console.log("pagination" , response.data);
+      console.log("pagination", response.data);
       setTotalPages(
         response.data.totalPages || response.data.pagination?.totalPages || 1
       );
@@ -223,18 +223,18 @@ export default function DonationManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex justify-center items-center">
+        <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 mx-auto mb-6"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 absolute top-0 left-1/2 transform -translate-x-1/2"></div>
           </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">
-              Loading Report Data
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
+              Loading Donations
             </h3>
-            <p className="text-muted-foreground">
-              Fetching your latest records...
+            <p className="text-gray-600 animate-pulse">
+              Fetching your latest data...
             </p>
           </div>
         </div>
@@ -244,26 +244,28 @@ export default function DonationManagement() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardContent className="pt-6">
-            <div className="text-center space-y-4">
-              <div className="h-12 w-12 bg-destructive/10 rounded-full flex items-center justify-center mx-auto">
-                <Package className="h-6 w-6 text-destructive" />
-              </div>
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-foreground">
-                  Error Loading Report
-                </h3>
-                <p className="text-muted-foreground">{error}</p>
-              </div>
-              <Button onClick={() => {}} variant="outline">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Try Again
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex justify-center items-center h-screen">
+        <div className="text-center p-8 bg-red-50 rounded-xl border border-red-200">
+          <div className="h-12 w-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg
+              className="h-6 w-6 text-red-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-red-800 mb-2">
+            Error Loading Donations
+          </h3>
+          <p className="text-red-600">{error}</p>
+        </div>
       </div>
     );
   }
@@ -405,35 +407,35 @@ export default function DonationManagement() {
                       {new Date(donation.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      {donation.status === "Pending" && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem
-                              className="text-emerald-600"
-                              onClick={() =>
-                                handleUpdateStatus(donation._id, "Accepted")
-                              }
-                            >
-                              <ThumbsUp className="mr-2 h-4 w-4" />
-                              <span>Accept</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-destructive"
-                              onClick={() =>
-                                handleUpdateStatus(donation._id, "Rejected")
-                              }
-                            >
-                              <ThumbsDown className="mr-2 h-4 w-4" />
-                              <span>Reject</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            className="text-emerald-600"
+                            onClick={() =>
+                              handleUpdateStatus(donation._id, "Accepted")
+                            }
+                            disabled={donation.status !== "Pending"}
+                          >
+                            <ThumbsUp className="mr-2 h-4 w-4" />
+                            <span>Accept</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-destructive"
+                            onClick={() =>
+                              handleUpdateStatus(donation._id, "Rejected")
+                            }
+                            disabled={donation.status !== "Pending"}
+                          >
+                            <ThumbsDown className="mr-2 h-4 w-4" />
+                            <span>Reject</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}

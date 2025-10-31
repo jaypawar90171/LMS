@@ -389,20 +389,48 @@ export const requestItemController = async (req: Request, res: Response) => {
       });
     }
 
-    const { userId } = req.params;
-    const validatedData = itemRequestUpdateSchema.parse(req.body);
+    const { itemId } = req.params;
+    const userId = req.user?.id;
 
     if (!Types.ObjectId.isValid(userId) || !userId) {
       return res.status(400).json({ error: "Invalid userId" });
     }
 
-    const request = await requestItemService(userId, validatedData);
+    if (!Types.ObjectId.isValid(itemId) || !itemId) {
+      return res.status(400).json({ error: "Invalid itemId" });
+    }
 
-    return res.status(201).json({
-      success: true,
-      message: "Item requested successfully",
-      request,
-    });
+    const result = await requestItemService(userId, itemId);
+
+    if (result.type === "direct_request") {
+      return res.status(201).json({
+        success: true,
+        message: "Item requested successfully",
+        data: {
+          request: result.request,
+          type: result.type,
+        },
+      });
+    } else {
+      if ("queuePosition" in result && "user" in result && "item" in result) {
+        return res.status(200).json({
+          success: true,
+          message: result.message,
+          data: {
+            queuePosition: result.queuePosition,
+            user: result.user,
+            item: result.item,
+            type: result.type,
+          },
+        });
+      } else {
+        return res.status(200).json({
+          success: true,
+          message: result.message,
+          data: result,
+        });
+      }
+    }
   } catch (error: any) {
     return res.status(error.statusCode || 500).json({
       message: error.message || "Something went wrong",
@@ -1064,10 +1092,13 @@ export const updateNotificationPreferenceController = async (
   }
 };
 
-export const updateProfilePictureController = async(req: Request, res: Response) => {
+export const updateProfilePictureController = async (
+  req: Request,
+  res: Response
+) => {
   try {
-     const userId = req.user.id;
-    
+    const userId = req.user.id;
+
     if (!req.file) {
       return res.status(400).json({
         success: false,
@@ -1076,7 +1107,7 @@ export const updateProfilePictureController = async(req: Request, res: Response)
     }
 
     const uploadResult = await uploadFile(req.file.path);
-    
+
     if (!uploadResult || !uploadResult.secure_url) {
       return res.status(500).json({
         success: false,
@@ -1086,14 +1117,14 @@ export const updateProfilePictureController = async(req: Request, res: Response)
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      { 
+      {
         profile: uploadResult.secure_url,
-        updatedAt: new Date()
+        updatedAt: new Date(),
       },
       { new: true }
-    )
+    );
 
-     if (!updatedUser) {
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: "User not found",
@@ -1105,17 +1136,17 @@ export const updateProfilePictureController = async(req: Request, res: Response)
       message: "Profile picture updated successfully",
       data: {
         profilePicture: uploadResult.secure_url,
-        user: updatedUser
-      }
+        user: updatedUser,
+      },
     });
   } catch (error: any) {
-     console.error("Update profile picture error:", error);
+    console.error("Update profile picture error:", error);
     res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
     });
   }
-}
+};
 
 export const updatePasswordController = async (req: Request, res: Response) => {
   try {
@@ -1220,7 +1251,10 @@ export const getMyDonationsController = async (req: Request, res: Response) => {
   }
 };
 
-export const getDonationDetailsController = async(req: Request, res: Response) => {
+export const getDonationDetailsController = async (
+  req: Request,
+  res: Response
+) => {
   const { donationId } = req.params;
   const userId = req.user?.id;
 
@@ -1239,7 +1273,10 @@ export const getDonationDetailsController = async(req: Request, res: Response) =
     const donation = await Donation.findById(donationId)
       .populate("userId", "fullName email username phoneNumber")
       .populate("itemType", "name description")
-      .populate("inventoryItemId", "title authorOrCreator description barcode status");
+      .populate(
+        "inventoryItemId",
+        "title authorOrCreator description barcode status"
+      );
 
     if (!donation) {
       return res.status(404).json({
@@ -1266,9 +1303,12 @@ export const getDonationDetailsController = async(req: Request, res: Response) =
       message: error.message || "Internal server error",
     });
   }
-}
+};
 
-export const withdrawDonationController  = async(req: Request, res: Response) => {
+export const withdrawDonationController = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { donationId } = req.params;
     const userId = req.user?.id;
@@ -1294,13 +1334,13 @@ export const withdrawDonationController  = async(req: Request, res: Response) =>
       data: result.withdrawnDonation,
     });
   } catch (error: any) {
-     console.error("Error in withdraw donation controller:", error);
+    console.error("Error in withdraw donation controller:", error);
     return res.status(500).json({
       success: false,
       message: error.message || "Internal server error",
     });
   }
-}
+};
 
 export const uploadPhotoController = async (req: Request, res: Response) => {
   try {

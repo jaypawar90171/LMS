@@ -37,6 +37,7 @@ import {
   AlertTriangle,
   RefreshCw,
   ArrowUpDown,
+  ArrowLeftToLine,
 } from "lucide-react";
 import {
   Pagination,
@@ -51,6 +52,7 @@ import { DeleteConfirmationModal } from "@/components/DeleteConfirmationModal";
 import { IssuedItemDetailsModal } from "@/components/IssuedItemDetailsModal";
 import { ExtendPeriodModal } from "@/components/ExtendPeriodModal";
 import { IssuedItem } from "@/interfaces/issuedItem";
+import { useNavigate } from "react-router-dom";
 
 interface FilterState {
   status: string;
@@ -83,6 +85,8 @@ export default function IssuedItemsManagement() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(0);
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchIssuedItems = async (page = currentPage) => {
@@ -329,17 +333,17 @@ export default function IssuedItemsManagement() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex justify-center items-center">
+        <div className="text-center">
           <div className="relative">
-            <div className="animate-spin rounded-full h-12 w-12 border-4 border-muted mx-auto"></div>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary absolute top-0 left-1/2 transform -translate-x-1/2"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 mx-auto mb-6"></div>
+            <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-blue-600 absolute top-0 left-1/2 transform -translate-x-1/2"></div>
           </div>
-          <div className="space-y-2">
-            <h3 className="text-lg font-semibold text-foreground">
+          <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/20">
+            <h3 className="text-xl font-bold text-slate-800 mb-2">
               Loading Issued Items
             </h3>
-            <p className="text-muted-foreground">
+            <p className="text-gray-600 animate-pulse">
               Fetching your latest data...
             </p>
           </div>
@@ -382,6 +386,13 @@ export default function IssuedItemsManagement() {
       <div className="container mx-auto space-y-6">
         {/* Header */}
         <div className="space-y-1">
+          <div
+            className="flex gap-2 cursor-pointer items-center mb-4"
+            onClick={() => navigate("/inventory")}
+          >
+            <ArrowLeftToLine className="h-4 w-4" />
+            <p className="text-md text-gray-600">Back</p>
+          </div>
           <h1 className="text-3xl font-bold text-foreground">
             Issued Items Management
           </h1>

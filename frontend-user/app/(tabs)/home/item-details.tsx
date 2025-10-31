@@ -294,11 +294,7 @@ export default function ItemDetailsScreen() {
     console.log("click on the requets item");
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/issue-requests`,
-        {
-          itemId,
-          userId: user.id,
-        },
+        `${API_BASE_URL}/${itemId}/issue-requests`,
         {
           headers: { Authorization: `Bearer ${token}` },
         }
