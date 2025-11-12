@@ -303,7 +303,7 @@ export const createUserController = async (req: Request, res: Response) => {
       });
     }
 
-    if (relationshipType === "Employee") {
+    if (relationshipType === "Employee" || relationshipType === "employee") {
       if (!employeeId) {
         return res.status(400).json({
           error: "Employee ID is required for employees",
@@ -317,7 +317,7 @@ export const createUserController = async (req: Request, res: Response) => {
           error: "Employee ID already exists",
         });
       }
-    } else if (relationshipType === "Family Member") {
+    } else if (relationshipType === "Family Member" || relationshipType === "family member" || relationshipType === "family") {
       if (!associatedEmployeeId) {
         return res.status(400).json({
           error: "Associated employee ID is required for family members",

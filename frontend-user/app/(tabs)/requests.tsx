@@ -177,7 +177,7 @@ export default function RequestsScreen() {
   if (type === "requested") {
     const requestedItem = item as RequestedItem;
     router.push({
-      pathname: "/(tabs)/home/requested-item-details",
+      pathname: "/(stack)/requested-item-details",
       params: {
         itemId: requestedItem._id,
       },
@@ -185,7 +185,7 @@ export default function RequestsScreen() {
   } else {
     const issuedItem = item as IssuedItem;
     router.push({
-      pathname: "/(tabs)/home/overdue-item-details",
+      pathname: "/(stack)/overdue-item-details",
       params: {
         itemId: issuedItem.itemId._id, 
         itemData: JSON.stringify({
@@ -228,7 +228,6 @@ export default function RequestsScreen() {
   };
 
   const calculateFineAmount = (daysOverdue: number): number => {
-    // Simple fine calculation: $5 per day overdue
     return daysOverdue * 5;
   };
 
@@ -477,7 +476,7 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 15,
-    backgroundColor: COLORS.backgroundColor,
+    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
@@ -493,7 +492,7 @@ const styles = StyleSheet.create({
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: COLORS.backgroundColor,
+    backgroundColor: COLORS.background,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },

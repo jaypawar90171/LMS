@@ -953,12 +953,44 @@ export const requestNewItemService = async (
     throw err;
   }
 
+  let categoryData: any = {};
+  let subCategoryData: any = undefined;
+
+  if (mongoose.Types.ObjectId.isValid(category)) {
+    const existingCategory = await Category.findById(category);
+    if (!existingCategory) {
+      const err: any = new Error("Invalid category selected.");
+      err.statusCode = 400;
+      throw err;
+    }
+    categoryData = {
+      categoryId: new Types.ObjectId(category),
+      categoryName: existingCategory.name,
+      isCustomCategory: false
+    };
+
+    if (subCategory && mongoose.Types.ObjectId.isValid(subCategory)) {
+      const existingSubCategory = await Category.findById(subCategory);
+      if (existingSubCategory) {
+        subCategoryData = {
+          subCategoryId: new Types.ObjectId(subCategory),
+          subCategoryName: existingSubCategory.name
+        };
+      }
+    }
+  } else {
+    categoryData = {
+      categoryName: category,
+      isCustomCategory: true
+    };
+  }
+
   const newItemRequest = new NewItemRequest({
     userId: new Types.ObjectId(userId),
     name,
     description,
-    category,
-    subCategory,
+    ...categoryData,
+    ...(subCategoryData || {}),
     reason,
     quantity,
   });

@@ -1,81 +1,104 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, Image, TouchableOpacity, FlatList, type ListRenderItemInfo } from "react-native"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { useAtom } from "jotai"
-import { tokenAtom } from "@/store/authStore"
-import apiClient from "@/constants/api"
-import { Ionicons } from "@expo/vector-icons"
-import COLORS from "@/constants/color"
+import { useEffect, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  Image,
+  TouchableOpacity,
+  FlatList,
+  type ListRenderItemInfo,
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { useAtom } from "jotai";
+import { tokenAtom } from "@/store/authStore";
+import apiClient from "@/constants/api";
+import { Ionicons } from "@expo/vector-icons";
+import COLORS from "@/constants/color";
 
 type Item = {
-  _id: string
-  title: string
-  authorOrCreator?: string
-  status: string
-  availableCopies: number
-  quantity: number
-  mediaUrl?: string
-}
+  _id: string;
+  title: string;
+  authorOrCreator?: string;
+  status: string;
+  availableCopies: number;
+  quantity: number;
+  mediaUrl?: string;
+};
 
 export default function ItemsListScreen() {
-  const { categoryId, categoryName } = useLocalSearchParams()
-  const [items, setItems] = useState<Item[]>([])
-  const [loading, setLoading] = useState(true)
-  const [token] = useAtom(tokenAtom)
-  const router = useRouter()
+  const { categoryId, categoryName } = useLocalSearchParams();
+  const [items, setItems] = useState<Item[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [token] = useAtom(tokenAtom);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchItems = async () => {
       try {
-        const response = await apiClient.get(`/inventory/categories/items/${categoryId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setItems(response.data.data || [])
+        const response = await apiClient.get(
+          `/inventory/categories/items/${categoryId}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+          }
+        );
+        setItems(response.data.data || []);
       } catch (error) {
-        console.error("Error fetching items:", error)
+        console.error("Error fetching items:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    if (token) fetchItems()
-  }, [token, categoryId])
+    };
+    if (token) fetchItems();
+  }, [token, categoryId]);
 
   const handleItemPress = (item: Item) => {
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: { itemId: item._id, itemType: "new" },
-    })
-  }
+    });
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case "Available":
-        return "#34C759"
+        return "#34C759";
       case "Issued":
-        return COLORS.primary
+        return COLORS.primary;
       default:
-        return "#FF9500"
+        return "#FF9500";
     }
-  }
+  };
 
   if (loading) {
     return (
       <View style={styles.centered}>
         <Text style={styles.loadingText}>Loading items...</Text>
       </View>
-    )
+    );
   }
 
   const renderItem = ({ item }: ListRenderItemInfo<Item>) => {
     return (
-      <TouchableOpacity activeOpacity={0.85} style={styles.itemCard} onPress={() => handleItemPress(item)}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={styles.itemCard}
+        onPress={() => handleItemPress(item)}
+      >
         {item.mediaUrl ? (
-          <Image source={{ uri: item.mediaUrl }} style={styles.itemImage} resizeMode="cover" />
+          <Image
+            source={{ uri: item.mediaUrl }}
+            style={styles.itemImage}
+            resizeMode="cover"
+          />
         ) : (
           <View style={[styles.itemImage, styles.placeholderImage]}>
-            <Ionicons name="cube-outline" size={32} color={COLORS.textSecondary} />
+            <Ionicons
+              name="cube-outline"
+              size={32}
+              color={COLORS.textSecondary}
+            />
           </View>
         )}
 
@@ -84,7 +107,11 @@ export default function ItemsListScreen() {
             <Text style={styles.itemTitle} numberOfLines={2}>
               {item.title}
             </Text>
-            <Ionicons name="chevron-forward" size={18} color={COLORS.textSecondary} />
+            <Ionicons
+              name="chevron-forward"
+              size={18}
+              color={COLORS.textSecondary}
+            />
           </View>
 
           {item.authorOrCreator ? (
@@ -94,9 +121,25 @@ export default function ItemsListScreen() {
           ) : null}
 
           <View style={styles.itemMeta}>
-            <View style={[styles.statusBadge, { borderColor: getStatusColor(item.status) + "40" }]}>
-              <View style={[styles.statusDot, { backgroundColor: getStatusColor(item.status) }]} />
-              <Text style={[styles.statusText, { color: getStatusColor(item.status) }]} numberOfLines={1}>
+            <View
+              style={[
+                styles.statusBadge,
+                { borderColor: getStatusColor(item.status) + "40" },
+              ]}
+            >
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: getStatusColor(item.status) },
+                ]}
+              />
+              <Text
+                style={[
+                  styles.statusText,
+                  { color: getStatusColor(item.status) },
+                ]}
+                numberOfLines={1}
+              >
                 {item.status}
               </Text>
             </View>
@@ -107,8 +150,8 @@ export default function ItemsListScreen() {
           </View>
         </View>
       </TouchableOpacity>
-    )
-  }
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -130,17 +173,23 @@ export default function ItemsListScreen() {
         />
       ) : (
         <View style={styles.emptyState}>
-          <Ionicons name="cube-outline" size={48} color={COLORS.textSecondary} />
+          <Ionicons
+            name="cube-outline"
+            size={48}
+            color={COLORS.textSecondary}
+          />
           <Text style={styles.emptyStateTitle}>No Items Found</Text>
-          <Text style={styles.emptyStateText}>There are no items available in this category yet.</Text>
+          <Text style={styles.emptyStateText}>
+            There are no items available in this category yet.
+          </Text>
         </View>
       )}
     </View>
-  )
+  );
 }
 
-const CARD_MIN_HEIGHT = 132
-const IMAGE_SIZE = 104 
+const CARD_MIN_HEIGHT = 132;
+const IMAGE_SIZE = 104;
 
 const styles = StyleSheet.create({
   container: {
@@ -272,4 +321,4 @@ const styles = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
   },
-})
+});

@@ -40,14 +40,12 @@ export default function CategoryDetailsScreen() {
           if (cat.categoryType !== "subcategory" || !cat.parentCategoryId) {
             return false;
           }
-          // Check if parentCategoryId is a populated object
           if (
             typeof cat.parentCategoryId === "object" &&
             cat.parentCategoryId !== null
           ) {
             return cat.parentCategoryId._id === categoryId;
           }
-          // Check if parentCategoryId is just a string ID
           if (typeof cat.parentCategoryId === "string") {
             return cat.parentCategoryId === categoryId;
           }

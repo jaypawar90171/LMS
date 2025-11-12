@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAtom } from "jotai";
@@ -23,7 +24,36 @@ export default function RequestNewItemScreen() {
   const [user] = useAtom(userAtom);
   const [token] = useAtom(tokenAtom);
   const [loading, setLoading] = useState(false);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showSubcategoryPicker, setShowSubcategoryPicker] = useState(false);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+const [customCategory, setCustomCategory] = useState("");
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
   const router = useRouter();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(
+        `${API_BASE_URL}/inventory/categories`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      const allCats = response.data.data;
+      setAllCategories(allCats); 
+      setCategories(allCats.filter((cat: any) => cat.categoryType === "parent"));
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -35,7 +65,28 @@ export default function RequestNewItemScreen() {
     quantity: "1",
   });
 
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      category: categoryId,
+      subCategory: "",
+    }));
+    
+    const subs = allCategories.filter(
+      (cat: any) =>
+        cat.categoryType === "subcategory" &&
+        cat.parentCategoryId &&
+        (typeof cat.parentCategoryId === "string"
+          ? cat.parentCategoryId === categoryId
+          : cat.parentCategoryId._id === categoryId)
+    );
+    setSubcategories(subs);
+    
+    if (errors.category) {
+      setErrors(prev => ({ ...prev, category: "" }));
+    }
+  };
+
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
@@ -46,8 +97,16 @@ export default function RequestNewItemScreen() {
       newErrors.name = "Title must be at least 2 characters long";
     }
 
-    if (!formData.category.trim()) {
-      newErrors.category = "Category is required";
+    if (showCustomCategory) {
+      if (!customCategory.trim()) {
+        newErrors.category = "Custom category is required";
+      } else if (customCategory.trim().length < 2) {
+        newErrors.category = "Category must be at least 2 characters long";
+      }
+    } else {
+      if (!formData.category.trim()) {
+        newErrors.category = "Category is required";
+      }
     }
 
     if (!formData.reason.trim()) {
@@ -93,14 +152,14 @@ export default function RequestNewItemScreen() {
       const requestData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        category: formData.category.trim(),
-        subCategory: formData.subCategory.trim() || undefined,
+        category: showCustomCategory ? customCategory.trim() : formData.category.trim(),
+        subCategory: !showCustomCategory && formData.subCategory ? formData.subCategory : undefined,
         reason: formData.reason.trim(),
         quantity: parseInt(formData.quantity),
       };
 
       const response = await axios.post(
-        `${API_BASE_URL}/items/request-item`,
+        `${API_BASE_URL}/items/new/request-item`,
         requestData,
         {
           headers: { Authorization: `Bearer ${token}` },
@@ -139,6 +198,9 @@ export default function RequestNewItemScreen() {
       reason: "",
       quantity: "1",
     });
+    setCustomCategory("");
+    setShowCustomCategory(false);
+    setSubcategories([]);
     setErrors({});
   };
 
@@ -217,38 +279,65 @@ export default function RequestNewItemScreen() {
             <Text style={styles.label}>
               Category <Text style={styles.required}>*</Text>
             </Text>
-            <TextInput
-              style={[styles.textInput, errors.category && styles.inputError]}
-              placeholder="Enter category (e.g., Books, Electronics, Tools)"
-              placeholderTextColor={COLORS.textSecondary}
-              value={formData.category}
-              onChangeText={(value) => handleInputChange("category", value)}
-              maxLength={50}
-            />
-            {errors.category ? (
-              <Text style={styles.errorText}>{errors.category}</Text>
+            {showCustomCategory ? (
+              <View>
+                <TextInput
+                  style={[styles.textInput, errors.category && styles.inputError]}
+                  placeholder="Enter custom category"
+                  placeholderTextColor={COLORS.textSecondary}
+                  value={customCategory}
+                  onChangeText={(value) => {
+                    setCustomCategory(value);
+                    if (errors.category) {
+                      setErrors(prev => ({ ...prev, category: "" }));
+                    }
+                  }}
+                  maxLength={50}
+                />
+                <TouchableOpacity
+                  style={styles.switchToDropdown}
+                  onPress={() => {
+                    setShowCustomCategory(false);
+                    setCustomCategory("");
+                    setFormData(prev => ({ ...prev, category: "" }));
+                  }}
+                >
+                  <Text style={styles.switchText}>Choose from list instead</Text>
+                </TouchableOpacity>
+              </View>
             ) : (
-              <Text style={styles.helperText}>
-                General category of the item
-              </Text>
+              <TouchableOpacity
+                style={[styles.textInput, errors.category && styles.inputError]}
+                onPress={() => setShowCategoryPicker(true)}
+              >
+                <Text style={formData.category ? styles.selectedText : styles.placeholderText}>
+                  {formData.category 
+                    ? categories.find(c => c._id === formData.category)?.name 
+                    : "Select category"}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {errors.category && (
+              <Text style={styles.errorText}>{errors.category}</Text>
             )}
           </View>
 
-          {/* Subcategory (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Subcategory (Optional)</Text>
-            <TextInput
-              style={styles.textInput}
-              placeholder="Enter subcategory (e.g., Fiction, Programming, Cookware)"
-              placeholderTextColor={COLORS.textSecondary}
-              value={formData.subCategory}
-              onChangeText={(value) => handleInputChange("subCategory", value)}
-              maxLength={50}
-            />
-            <Text style={styles.helperText}>
-              More specific classification if applicable
-            </Text>
-          </View>
+          {/* Subcategory */}
+          {subcategories.length > 0 && (
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Subcategory (Optional)</Text>
+              <TouchableOpacity
+                style={styles.textInput}
+                onPress={() => setShowSubcategoryPicker(true)}
+              >
+                <Text style={formData.subCategory ? styles.selectedText : styles.placeholderText}>
+                  {formData.subCategory 
+                    ? subcategories.find(s => s._id === formData.subCategory)?.name 
+                    : "Select subcategory"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Quantity */}
           <View style={styles.inputGroup}>
@@ -351,6 +440,86 @@ export default function RequestNewItemScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Category Picker Modal */}
+        <Modal
+        visible={showCategoryPicker}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCategoryPicker(false)}
+        >
+        <View style={styles.modalOverlay}>
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerHeader}>
+              <Text style={styles.pickerTitle}>Select Category</Text>
+              <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
+                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {categories.map((cat) => (
+                <TouchableOpacity
+                  key={cat._id}
+                  style={styles.pickerItem}
+                  onPress={() => {
+                    handleCategoryChange(cat._id);
+                    setShowCategoryPicker(false);
+                    setShowCustomCategory(false);
+                  }}
+                >
+                  <Text style={styles.pickerItemText}>{cat.name}</Text>
+                </TouchableOpacity>
+              ))}
+              {/* Add Other Option */}
+              <TouchableOpacity
+                style={[styles.pickerItem, styles.otherOption]}
+                onPress={() => {
+                  setShowCategoryPicker(false);
+                  setShowCustomCategory(true);
+                  setFormData(prev => ({ ...prev, category: "other" }));
+                  setSubcategories([]);
+                }}
+              >
+                <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+                <Text style={[styles.pickerItemText, styles.otherOptionText]}>Other (Custom Category)</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+        </Modal>
+
+{/* Subcategory Picker Modal */}
+<Modal
+  visible={showSubcategoryPicker}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowSubcategoryPicker(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.pickerContainer}>
+      <View style={styles.pickerHeader}>
+        <Text style={styles.pickerTitle}>Select Subcategory</Text>
+        <TouchableOpacity onPress={() => setShowSubcategoryPicker(false)}>
+          <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView>
+        {subcategories.map((subcat) => (
+          <TouchableOpacity
+            key={subcat._id}
+            style={styles.pickerItem}
+            onPress={() => {
+              setFormData(prev => ({ ...prev, subCategory: subcat._id }));
+              setShowSubcategoryPicker(false);
+            }}
+          >
+            <Text style={styles.pickerItemText}>{subcat.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -489,5 +658,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: COLORS.textSecondary,
     lineHeight: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  pickerContainer: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '70%',
+  },
+  pickerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.textPrimary,
+  },
+  pickerItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+  },
+  selectedText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },
+  otherOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  otherOptionText: {
+    color: COLORS.primary,
+    fontWeight: '600',
+  },
+  switchToDropdown: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  switchText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    textDecorationLine: 'underline',
   },
 });

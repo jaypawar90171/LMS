@@ -146,7 +146,6 @@ export default function ItemDetailsScreen() {
                     {
                       text: "OK",
                       onPress: () => {
-                        // Optionally refresh the item details to show updated status
                         fetchItemDetails();
                       },
                     },
@@ -158,7 +157,9 @@ export default function ItemDetailsScreen() {
                 if (error.response) {
                   const errorMessage =
                     error.response.data.message ||
+                    error.response.data.error ||
                     "Failed to request extension";
+
                   Alert.alert("Error", errorMessage);
                 } else if (error.request) {
                   Alert.alert(
@@ -214,16 +215,16 @@ export default function ItemDetailsScreen() {
     } catch (error: any) {
       if (error.response) {
         console.error(
-          "Failed to fetch new arrivals. Server responded with:",
+          "Failed to withdraw from queue. Server responded with:",
           error.response.data
         );
 
         const errorMessage =
-          error.response.data.message || "Failed to load new arrivals";
+          error.response.data.message || "Failed to withdraw from queue";
         Alert.alert("Error", errorMessage);
       } else if (error.request) {
         console.error(
-          "Failed to fetch new arrivals. No response from server:",
+          "Failed to withdraw from queue.. No response from server:",
           error.request
         );
         Alert.alert("Network Error", "Could not connect to the server.");
@@ -290,11 +291,12 @@ export default function ItemDetailsScreen() {
   // };
 
   const handleRequestItem = async () => {
-    if (!token || !user?.id || !itemId) return;
     console.log("click on the requets item");
+    if (!token || !user?.id || !itemId) return;
     try {
       const response = await axios.post(
-        `${API_BASE_URL}/${itemId}/issue-requests`,
+        `${API_BASE_URL}/${itemId}/request-item`,
+        {},
         {
           headers: { Authorization: `Bearer ${token}` },
         }

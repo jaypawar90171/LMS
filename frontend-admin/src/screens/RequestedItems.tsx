@@ -61,8 +61,11 @@ interface RequestedItem {
   };
   name: string;
   description: string;
-  category: string;
-  subCategory?: string;
+  categoryId: string;
+  categoryName: string;
+  isCustomCategory: boolean;
+  subCategoryId: string;
+  subCategoryName: string;
   reason: string;
   quantity: number;
   status: "pending" | "approved" | "rejected";
@@ -132,7 +135,7 @@ const RequestedItems = () => {
         const uniqueCategories = [
           ...new Set(
             response.data.data.requests.map(
-              (item: RequestedItem) => item.category
+              (item: RequestedItem) => item.categoryName
             )
           ),
         ] as string[];
@@ -489,14 +492,14 @@ const RequestedItems = () => {
                             <div className="text-sm text-muted-foreground line-clamp-2">
                               {item.description}
                             </div>
-                            {item.subCategory && (
+                            {item.subCategoryName && (
                               <div className="text-xs text-muted-foreground">
-                                Sub: {item.subCategory}
+                                Sub: {item.subCategoryName}
                               </div>
                             )}
                           </div>
                         </TableCell>
-                        <TableCell>{getCategoryBadge(item.category)}</TableCell>
+                        <TableCell>{getCategoryBadge(item.categoryName)}</TableCell>
                         <TableCell>
                           <Badge variant="secondary" className="text-lg">
                             {item.quantity}

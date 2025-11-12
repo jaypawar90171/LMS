@@ -71,6 +71,8 @@ export default function RootLayout() {
           <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           {/* Tab group screens */}
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          {/* Other screens */}
+          <Stack.Screen name="(stack)" options={{ headerShown: false }} />
         </Stack>
         <StatusBar style="dark" />
       </SafeScreen>

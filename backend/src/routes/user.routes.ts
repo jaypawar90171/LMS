@@ -89,7 +89,7 @@ router.get("/items/new-arrivals", authUser, getNewArrivalsController);
 router.get("/history", authUser, getHistoryController);
 
 /* ========================= New Requested Items ========================= */
-router.post("/items/request-item", authUser, requestNewItemController);
+router.post("/items/new/request-item", authUser, requestNewItemController);
 
 router.get("/items/requested-items", authUser, getNewRequestedItemController);
 

@@ -219,7 +219,7 @@ export default function HomeScreen() {
     type: "issued" | "queued" | "new" | "overdue"
   ) => {
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: {
         itemId: item.itemId?._id || item._id,
         itemType: type,
@@ -408,15 +408,24 @@ export default function HomeScreen() {
       )}
 
       {/* Overdue Items */}
-      {getOverdueItems().length > 0 && (
-        <>
-          <SectionHeader
-            title="Overdue Items"
-            count={getOverdueItems().length}
-            showAction={true}
-            actionText={`View All (${getOverdueItems().length})`}
-            onActionPress={handleViewAllIssued}
+      <SectionHeader
+        title="Overdue Items"
+        count={getOverdueItems().length}
+        showAction={true}
+        actionText={`View All (${getOverdueItems().length})`}
+        onActionPress={handleViewAllIssued}
+      />
+      {getOverdueItems().length == 0 ? (
+        <View style={styles.emptyState}>
+          <Ionicons
+            name="document-text-outline"
+            size={32}
+            color={COLORS.textSecondary}
           />
+          <Text style={styles.emptyStateText}>No currently overdue items</Text>
+        </View>
+      ) : (
+        <>
           {getOverdueItems().map((item: any) => (
             <ItemCard
               key={item._id}

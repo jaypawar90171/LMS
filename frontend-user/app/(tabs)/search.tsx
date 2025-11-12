@@ -136,7 +136,7 @@ export default function Search() {
   const handleItemPress = (item: any) => {
     Keyboard.dismiss();
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: {
         itemId: item._id,
         itemType: "new",

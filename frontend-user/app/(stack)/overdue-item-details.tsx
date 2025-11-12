@@ -81,41 +81,41 @@ export default function OverdueItemDetailsScreen() {
     }
   };
 
-  const handleReturnItem = async () => {
-    if (!token || !itemId) return;
+  // const handleReturnItem = async () => {
+  //   if (!token || !itemId) return;
 
-    try {
-      Alert.alert(
-        "Return Item",
-        `Are you sure you want to return "${itemDetails?.title}"?`,
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Return",
-            onPress: async () => {
-              try {
-                await axios.post(
-                  `${API_BASE_URL}/items/${itemId}/return-item`,
-                  {},
-                  {
-                    headers: { Authorization: `Bearer ${token}` },
-                  }
-                );
+  //   try {
+  //     Alert.alert(
+  //       "Return Item",
+  //       `Are you sure you want to return "${itemDetails?.title}"?`,
+  //       [
+  //         { text: "Cancel", style: "cancel" },
+  //         {
+  //           text: "Return",
+  //           onPress: async () => {
+  //             try {
+  //               await axios.post(
+  //                 `${API_BASE_URL}/items/${itemId}/return-item`,
+  //                 {},
+  //                 {
+  //                   headers: { Authorization: `Bearer ${token}` },
+  //                 }
+  //               );
 
-                Alert.alert("Success", "Item returned successfully");
-                router.back();
-              } catch (error: any) {
-                console.error("Failed to return item:", error);
-                Alert.alert("Error", "Failed to return item");
-              }
-            },
-          },
-        ]
-      );
-    } catch (error) {
-      console.error("Error showing confirmation:", error);
-    }
-  };
+  //               Alert.alert("Success", "Item returned successfully");
+  //               router.back();
+  //             } catch (error: any) {
+  //               console.error("Failed to return item:", error);
+  //               Alert.alert("Error", "Failed to return item");
+  //             }
+  //           },
+  //         },
+  //       ]
+  //     );
+  //   } catch (error) {
+  //     console.error("Error showing confirmation:", error);
+  //   }
+  // };
 
   const calculateFineAmount = (daysOverdue: number): number => {
     return daysOverdue * 5; // $5 per day
@@ -137,7 +137,7 @@ export default function OverdueItemDetailsScreen() {
     );
   }
 
-  // Parse the additional overdue data passed from requests screen
+  
   const overdueData = itemData ? JSON.parse(itemData as string) : {};
   const daysOverdue = overdueData.daysOverdue || 0;
   const fineAmount = overdueData.fineAmount || calculateFineAmount(daysOverdue);
@@ -239,7 +239,7 @@ export default function OverdueItemDetailsScreen() {
       </View>
 
       {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
+      {/* <View style={styles.actionsContainer}>
         <TouchableOpacity
           style={[styles.actionButton, styles.primaryButton]}
           onPress={handleReturnItem}
@@ -257,7 +257,7 @@ export default function OverdueItemDetailsScreen() {
             Pay Fine
           </Text>
         </TouchableOpacity>
-      </View>
+      </View> */}
     </ScrollView>
   );
 }

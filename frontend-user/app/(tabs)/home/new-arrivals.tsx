@@ -66,7 +66,7 @@ export default function NewArrivalsScreen() {
 
   const handleItemPress = (item: any) => {
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: {
         itemId: item._id,
         itemType: "new",

@@ -17,12 +17,26 @@ const itemRequestSchema = new Schema<INewItemRequest>(
       type: String,
       required: true,
     },
-    category: {
+    categoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    categoryName: {
       type: String,
       required: true,
+      trim: true,
     },
-    subCategory: {
+    isCustomCategory: {
+      type: Boolean,
+      default: false,
+    },
+    subCategoryId: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+    },
+    subCategoryName: {
       type: String,
+      trim: true,
     },
     reason: {
       type: String,

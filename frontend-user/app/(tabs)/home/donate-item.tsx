@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Image,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useAtom } from "jotai";
@@ -36,7 +37,31 @@ export default function DonateItemScreen() {
   const [token] = useAtom(tokenAtom);
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [allCategories, setAllCategories] = useState<any[]>([]);
+const [categories, setCategories] = useState<any[]>([]);
+const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+const [showCustomCategory, setShowCustomCategory] = useState(false);
+const [customCategory, setCustomCategory] = useState("");
+
   const router = useRouter();
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+  
+  const fetchCategories = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/inventory/categories`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const allCats = response.data.data;
+      setAllCategories(allCats);
+      setCategories(allCats.filter((cat: any) => cat.categoryType === "parent"));
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+    }
+  };
+  
 
   // Form state
   const [formData, setFormData] = useState<DonationFormData>({
@@ -209,6 +234,15 @@ export default function DonateItemScreen() {
       photos: prev.photos.filter((_, i) => i !== index),
     }));
   };
+
+  const handleCategoryChange = (categoryId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      itemType: categoryId,
+    }));
+  };
+  
+  
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -386,26 +420,54 @@ export default function DonateItemScreen() {
           </View>
 
           {/* Item Type/Category */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Item Type/Category <Text style={styles.required}>*</Text>
-            </Text>
-            <TextInput
-              style={[styles.textInput, errors.itemType && styles.inputError]}
-              placeholder="Enter item category (e.g., Books, Electronics, Furniture)"
-              placeholderTextColor={COLORS.textSecondary}
-              value={formData.itemType}
-              onChangeText={(value) => handleInputChange("itemType", value)}
-              maxLength={50}
-            />
-            {errors.itemType ? (
-              <Text style={styles.errorText}>{errors.itemType}</Text>
-            ) : (
-              <Text style={styles.helperText}>
-                What type of item are you donating?
-              </Text>
-            )}
-          </View>
+<View style={styles.inputGroup}>
+  <Text style={styles.label}>
+    Item Type/Category <Text style={styles.required}>*</Text>
+  </Text>
+
+  {showCustomCategory ? (
+    <View>
+      <TextInput
+        style={[styles.textInput, errors.itemType && styles.inputError]}
+        placeholder="Enter custom category"
+        placeholderTextColor={COLORS.textSecondary}
+        value={customCategory}
+        onChangeText={(value) => setCustomCategory(value)}
+        maxLength={50}
+      />
+      <TouchableOpacity
+        style={styles.switchToDropdown}
+        onPress={() => {
+          setShowCustomCategory(false);
+          setCustomCategory("");
+          setFormData((prev) => ({ ...prev, itemType: "" }));
+        }}
+      >
+        <Text style={styles.switchText}>Choose from list instead</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <TouchableOpacity
+      style={[styles.textInput, errors.itemType && styles.inputError]}
+      onPress={() => setShowCategoryPicker(true)}
+    >
+      <Text
+        style={
+          formData.itemType ? styles.selectedText : styles.placeholderText
+        }
+      >
+        {formData.itemType
+          ? categories.find((c) => c._id === formData.itemType)?.name
+          : "Select category"}
+      </Text>
+    </TouchableOpacity>
+  )}
+
+  {errors.itemType && (
+    <Text style={styles.errorText}>{errors.itemType}</Text>
+  )}
+</View>
+
 
           {/* Item Title */}
           <View style={styles.inputGroup}>
@@ -429,7 +491,7 @@ export default function DonateItemScreen() {
             )}
           </View>
 
-          {/* Duration (Only for duration-based donations) */}
+          {/* Duration */}
           {formData.donationType === "duration" && (
             <View style={styles.inputGroup}>
               <Text style={styles.label}>
@@ -458,7 +520,7 @@ export default function DonateItemScreen() {
 
           {/* Description (Optional) */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description (Optional)</Text>
+            <Text style={styles.label}>Description</Text>
             <TextInput
               style={styles.textArea}
               placeholder="Describe the item's condition, features, specifications..."
@@ -481,9 +543,8 @@ export default function DonateItemScreen() {
           </View>
 
           {/* Photo Upload */}
-          {/* Photo Upload */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Photos (Optional)</Text>
+            <Text style={styles.label}>Photos</Text>
 
             {/* Upload Button */}
             <TouchableOpacity
@@ -665,6 +726,57 @@ export default function DonateItemScreen() {
             </Text>
           </View>
         </View>
+
+        {/* Category Picker Modal */}
+<Modal
+  visible={showCategoryPicker}
+  transparent
+  animationType="slide"
+  onRequestClose={() => setShowCategoryPicker(false)}
+>
+  <View style={styles.modalOverlay}>
+    <View style={styles.pickerContainer}>
+      <View style={styles.pickerHeader}>
+        <Text style={styles.pickerTitle}>Select Category</Text>
+        <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
+          <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+        </TouchableOpacity>
+      </View>
+      <ScrollView>
+        {categories.map((cat) => (
+          <TouchableOpacity
+            key={cat._id}
+            style={styles.pickerItem}
+            onPress={() => {
+              handleCategoryChange(cat._id);
+              setShowCategoryPicker(false);
+              setShowCustomCategory(false);
+            }}
+          >
+            <Text style={styles.pickerItemText}>{cat.name}</Text>
+          </TouchableOpacity>
+        ))}
+        {/* Add Other Option */}
+        <TouchableOpacity
+          style={[styles.pickerItem, styles.otherOption]}
+          onPress={() => {
+            setShowCategoryPicker(false);
+            setShowCustomCategory(true);
+            setFormData((prev) => ({ ...prev, itemType: "other" }));
+          }}
+        >
+          <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+          <Text
+            style={[styles.pickerItemText, styles.otherOptionText]}
+          >
+            Other (Custom Category)
+          </Text>
+        </TouchableOpacity>
+      </ScrollView>
+    </View>
+  </View>
+</Modal>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -913,4 +1025,67 @@ const styles = StyleSheet.create({
     color: COLORS.primary,
     fontWeight: "500",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  pickerContainer: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: "70%",
+  },
+  pickerHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pickerTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: COLORS.textPrimary,
+  },
+  pickerItem: {
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+  },
+  otherOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: `${COLORS.primary}10`,
+  },
+  otherOptionText: {
+    color: COLORS.primary,
+    fontWeight: "600",
+  },
+  switchToDropdown: {
+    marginTop: 8,
+    alignSelf: "flex-start",
+  },
+  switchText: {
+    color: COLORS.primary,
+    fontSize: 14,
+    textDecorationLine: "underline",
+  },
+  selectedText: {
+    fontSize: 16,
+    color: COLORS.textPrimary,
+  },
+  placeholderText: {
+    fontSize: 16,
+    color: COLORS.textSecondary,
+  },  
+
 });

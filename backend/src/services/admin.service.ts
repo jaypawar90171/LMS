@@ -738,7 +738,6 @@ export const fetchSpecificItemServive = async (itemId: any) => {
     throw err;
   }
 
-  // Manually populate the category
   if (item.categoryId) {
     const category = await Category.findById(item.categoryId)
       .select("name description")
@@ -746,8 +745,6 @@ export const fetchSpecificItemServive = async (itemId: any) => {
 
     if (category) {
       (item as any).category = category;
-      // Optionally remove the categoryId if you don't need it
-      // delete item.categoryId;
     }
   }
 
@@ -2401,7 +2398,7 @@ export const approveRequestedItemService = async (
                         <h3>Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity
@@ -2518,7 +2515,7 @@ export const rejectRequestedItemService = async (
                         <h3>Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity
@@ -2626,7 +2623,7 @@ export const deleteRequestedItemService = async (requestId: string) => {
                         <h3>Cancelled Request Details:</h3>
                         <p><strong>Item Name:</strong> ${itemRequest.name}</p>
                         <p><strong>Category:</strong> ${
-                          itemRequest.category
+                          itemRequest.categoryName
                         }</p>
                         <p><strong>Quantity:</strong> ${
                           itemRequest.quantity

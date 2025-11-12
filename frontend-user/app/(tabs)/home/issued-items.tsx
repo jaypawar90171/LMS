@@ -14,7 +14,7 @@ export default function IssuedItemsScreen() {
 
   const handleItemPress = (item: any) => {
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: {
         itemId: item.itemId?._id,
         itemType: "issued",

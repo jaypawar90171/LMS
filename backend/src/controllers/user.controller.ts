@@ -685,6 +685,16 @@ export const requestNewItemController = async (req: Request, res: Response) => {
       });
     }
 
+    const { name, category, reason, quantity } = req.body;
+    
+    if (!name || !category || !reason || !quantity) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields",
+        required: ["name", "category", "reason", "quantity"]
+      });
+    }
+
     const validatedData = req.body;
     const userId = (req as any).user.id;
 

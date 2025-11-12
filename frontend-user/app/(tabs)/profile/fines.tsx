@@ -22,7 +22,7 @@ interface Fine {
   reason: string;
   amount: number;
   outstanding: number;
-  status: "paid" | "pending" | "overdue" | "waived";
+  status: "Paid" | "Pending" | "Overdue" | "Waived" | "Outstanding";
   dateIncurred: string;
 }
 
@@ -57,6 +57,7 @@ export default function FinesScreen() {
         }
       );
 
+      console.log("Fines response:", response.data.data);
       if (response.data.success) {
         setFines(response.data.data.fines);
       }
@@ -68,6 +69,7 @@ export default function FinesScreen() {
       setRefreshing(false);
     }
   };
+  console.log("oustanding amount", fines);
 
   const onRefresh = () => {
     setRefreshing(true);
@@ -76,13 +78,15 @@ export default function FinesScreen() {
 
   const getStatusColor = (status: Fine["status"]) => {
     switch (status) {
-      case "paid":
+      case "Paid":
         return "#34C759";
-      case "pending":
+      case "Pending":
         return "#FF9500";
-      case "overdue":
+      case "Overdue":
         return "#FF3B30";
-      case "waived":
+      case "Outstanding":
+        return "#FF3B30";
+      case "Waived":
         return "#8E8E93";
       default:
         return COLORS.textSecondary;
@@ -91,13 +95,15 @@ export default function FinesScreen() {
 
   const getStatusIcon = (status: Fine["status"]) => {
     switch (status) {
-      case "paid":
+      case "Paid":
         return "checkmark-circle";
-      case "pending":
+      case "Pending":
         return "time";
-      case "overdue":
+      case "Overdue":
         return "warning";
-      case "waived":
+      case "Outstanding":
+        return "warning";
+      case "Waived":
         return "heart";
       default:
         return "help-circle";
@@ -106,13 +112,15 @@ export default function FinesScreen() {
 
   const getStatusText = (status: Fine["status"]) => {
     switch (status) {
-      case "paid":
+      case "Paid":
         return "Paid";
-      case "pending":
+      case "Pending":
         return "Pending";
-      case "overdue":
+      case "Overdue":
         return "Overdue";
-      case "waived":
+      case "Outstanding":
+        return "Outstanding";
+      case "Waived":
         return "Waived";
       default:
         return status;
@@ -120,47 +128,31 @@ export default function FinesScreen() {
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const getTotalOutstanding = () => {
     return fines
-      .filter(fine => fine.status === 'pending' || fine.status === 'overdue')
+      .filter(
+        (fine) =>
+          fine.status === "Pending" ||
+          fine.status === "Overdue" ||
+          fine.status === "Outstanding"
+      )
       .reduce((total, fine) => total + fine.outstanding, 0);
   };
 
-  const handlePayFine = (fine: Fine) => {
-    Alert.alert(
-      "Pay Fine",
-      `Do you want to pay ${formatCurrency(fine.outstanding)} for: "${fine.reason}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Pay Now",
-          style: "default",
-          onPress: () => {
-            // Implement payment logic here
-            Alert.alert(
-              "Payment Processing",
-              "Payment feature will be implemented soon. Please contact administration for payment options.",
-              [{ text: "OK" }]
-            );
-          },
-        },
-      ]
-    );
-  };
 
   const handleContactSupport = () => {
     Alert.alert(
@@ -185,7 +177,11 @@ export default function FinesScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color={COLORS.textSecondary} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={64}
+          color={COLORS.textSecondary}
+        />
         <Text style={styles.errorTitle}>Unable to Load Fines</Text>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchFines}>
@@ -222,20 +218,24 @@ export default function FinesScreen() {
       {/* Summary Card */}
       <View style={styles.summaryCard}>
         <View style={styles.summaryHeader}>
-          <Ionicons 
-            name={hasOutstandingFines ? "warning-outline" : "checkmark-circle-outline"} 
-            size={24} 
-            color={hasOutstandingFines ? "#FF9500" : "#34C759"} 
+          <Ionicons
+            name={
+              hasOutstandingFines
+                ? "warning-outline"
+                : "checkmark-circle-outline"
+            }
+            size={24}
+            color={hasOutstandingFines ? "#FF9500" : "#34C759"}
           />
           <Text style={styles.summaryTitle}>
             {hasOutstandingFines ? "Outstanding Balance" : "All Clear!"}
           </Text>
         </View>
-        
+
         <Text style={styles.totalAmount}>
           {formatCurrency(totalOutstanding)}
         </Text>
-        
+
         <View style={styles.summaryDetails}>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Total Fines</Text>
@@ -243,27 +243,26 @@ export default function FinesScreen() {
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Outstanding</Text>
-            <Text style={[
-              styles.summaryValue,
-              { color: hasOutstandingFines ? "#FF3B30" : "#34C759" }
-            ]}>
-              {fines.filter(f => f.status === 'pending' || f.status === 'overdue').length}
+            <Text
+              style={[
+                styles.summaryValue,
+                { color: hasOutstandingFines ? "#FF3B30" : "#34C759" },
+              ]}
+            >
+              {
+                fines.filter(
+                  (f) => f.status === "Pending" || f.status === "Overdue" || f.status === "Outstanding"
+                ).length
+              }
             </Text>
           </View>
           <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>Paid</Text>
             <Text style={styles.summaryValue}>
-              {fines.filter(f => f.status === 'paid').length}
+              {fines.filter((f) => f.status === "Paid").length}
             </Text>
           </View>
         </View>
-
-        {hasOutstandingFines && (
-          <TouchableOpacity style={styles.payAllButton} onPress={handleContactSupport}>
-            <Ionicons name="card-outline" size={20} color="#FFF" />
-            <Text style={styles.payAllButtonText}>Pay Outstanding Balance</Text>
-          </TouchableOpacity>
-        )}
       </View>
 
       {/* Fines List */}
@@ -271,13 +270,17 @@ export default function FinesScreen() {
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Fine History</Text>
           <Text style={styles.sectionSubtitle}>
-            {fines.length} fine{fines.length !== 1 ? 's' : ''} total
+            {fines.length} fine{fines.length !== 1 ? "s" : ""} total
           </Text>
         </View>
 
         {fines.length === 0 ? (
           <View style={styles.emptyState}>
-            <Ionicons name="receipt-outline" size={64} color={COLORS.textSecondary} />
+            <Ionicons
+              name="receipt-outline"
+              size={64}
+              color={COLORS.textSecondary}
+            />
             <Text style={styles.emptyTitle}>No Fines Found</Text>
             <Text style={styles.emptyText}>
               You don't have any fines at the moment. Keep up the good work!
@@ -294,11 +297,11 @@ export default function FinesScreen() {
                 ]}
               >
                 {/* Status Indicator */}
-                <View 
+                <View
                   style={[
                     styles.statusIndicator,
-                    { backgroundColor: getStatusColor(fine.status) }
-                  ]} 
+                    { backgroundColor: getStatusColor(fine.status) },
+                  ]}
                 />
 
                 <View style={styles.fineContent}>
@@ -327,9 +330,12 @@ export default function FinesScreen() {
                         {formatCurrency(fine.amount)}
                       </Text>
                     </View>
-                    {(fine.status === 'pending' || fine.status === 'overdue') && (
+                    {(fine.status === "Pending" ||
+                      fine.status === "Overdue") && (
                       <View style={styles.amountRow}>
-                        <Text style={styles.outstandingLabel}>Outstanding:</Text>
+                        <Text style={styles.outstandingLabel}>
+                          Outstanding:
+                        </Text>
                         <Text style={styles.outstandingValue}>
                           {formatCurrency(fine.outstanding)}
                         </Text>
@@ -339,24 +345,15 @@ export default function FinesScreen() {
 
                   {/* Date */}
                   <View style={styles.dateContainer}>
-                    <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+                    <Ionicons
+                      name="calendar-outline"
+                      size={14}
+                      color={COLORS.textSecondary}
+                    />
                     <Text style={styles.dateText}>
                       Incurred on {formatDate(fine.dateIncurred)}
                     </Text>
                   </View>
-
-                  {/* Action Button */}
-                  {(fine.status === 'pending' || fine.status === 'overdue') && (
-                    <TouchableOpacity
-                      style={styles.payButton}
-                      onPress={() => handlePayFine(fine)}
-                    >
-                      <Ionicons name="card" size={16} color="#FFF" />
-                      <Text style={styles.payButtonText}>
-                        Pay {formatCurrency(fine.outstanding)}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               </View>
             ))}
@@ -370,12 +367,20 @@ export default function FinesScreen() {
         <View style={styles.helpContent}>
           <Text style={styles.helpTitle}>Need Help with Fines?</Text>
           <Text style={styles.helpText}>
-            • Fines are typically issued for late returns, lost items, or damages{"\n"}
-            • Payment can be made at the library desk or through online methods{"\n"}
-            • Contact support if you believe a fine was issued in error
+            • Fines are typically issued for late returns, lost items, or
+            damages{"\n"}• Payment can be made at the library desk or through
+            online methods{"\n"}• Contact support if you believe a fine was
+            issued in error
           </Text>
-          <TouchableOpacity style={styles.helpButton} onPress={handleContactSupport}>
-            <Ionicons name="chatbubble-outline" size={16} color={COLORS.primary} />
+          <TouchableOpacity
+            style={styles.helpButton}
+            onPress={handleContactSupport}
+          >
+            <Ionicons
+              name="chatbubble-outline"
+              size={16}
+              color={COLORS.primary}
+            />
             <Text style={styles.helpButtonText}>Contact Support</Text>
           </TouchableOpacity>
         </View>

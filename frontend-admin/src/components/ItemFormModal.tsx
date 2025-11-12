@@ -82,16 +82,16 @@ type ItemFormData = {
   defaultReturnPeriod?: number;
   status: "Available" | "Issued" | "Lost" | "Damaged";
   color?: string;
-  size?: "XS" | "S" | "M" | "L" | "XL" | "XXL"; // enum for clothes
-  genderType?: "Male" | "Female" | "Unisex"; // enum for clothes
+  size?: "XS" | "S" | "M" | "L" | "XL" | "XXL"; 
+  genderType?: "Male" | "Female" | "Unisex"; 
   ageGroup?: "0-3" | "4-7" | "8-12" | "13+";
 
-  dimensions?: string; // e.g., "10x5x2 cm"
-  warrantyPeriod?: number; // months or years
-  features?: string[]; // for electronics
-  usageType?: string; // e.g., "Cooking", "Storage" (for kitchen)
-  powerSource?: string; // for tools
-  usage?: string; // for sports
+  dimensions?: string; 
+  warrantyPeriod?: string; 
+  features?: string[]; 
+  usageType?: string; 
+  powerSource?: string; 
+  usage?: string; 
 };
 
 const safeParsePrice = (price: unknown): number => {
@@ -738,7 +738,7 @@ export const ItemFormModal = ({
                     </Label>
                     <Input
                       id="warrantyPeriod"
-                      type="number"
+                      type="text"
                       {...register("warrantyPeriod")}
                     />
                   </div>

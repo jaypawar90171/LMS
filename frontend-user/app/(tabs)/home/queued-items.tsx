@@ -66,7 +66,7 @@ export default function QueuedItemsScreen() {
 
   const handleItemPress = (item: any) => {
     router.push({
-      pathname: "/(tabs)/home/item-details",
+      pathname: "/(stack)/item-details",
       params: {
         itemId: item.itemId?._id || item._id,
         itemType: "queued",

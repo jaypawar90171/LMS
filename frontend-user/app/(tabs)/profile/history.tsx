@@ -101,36 +101,36 @@ export default function HistoryScreen() {
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
     }).format(amount);
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'issued':
-        return '#007AFF';
-      case 'overdue':
-        return '#FF3B30';
-      case 'returned':
-        return '#34C759';
-      case 'late return':
-        return '#FF9500';
-      case 'outstanding':
-        return '#FF3B30';
-      case 'paid':
-        return '#34C759';
-      case 'waived':
-        return '#8E8E93';
+      case "issued":
+        return "#007AFF";
+      case "overdue":
+        return "#FF3B30";
+      case "returned":
+        return "#34C759";
+      case "late return":
+        return "#FF9500";
+      case "outstanding":
+        return "#FF3B30";
+      case "paid":
+        return "#34C759";
+      case "waived":
+        return "#8E8E93";
       default:
         return COLORS.textSecondary;
     }
@@ -138,22 +138,22 @@ export default function HistoryScreen() {
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case 'issued':
-        return 'time-outline';
-      case 'overdue':
-        return 'warning-outline';
-      case 'returned':
-        return 'checkmark-circle-outline';
-      case 'late return':
-        return 'time-outline';
-      case 'outstanding':
-        return 'alert-circle-outline';
-      case 'paid':
-        return 'checkmark-done-outline';
-      case 'waived':
-        return 'heart-outline';
+      case "issued":
+        return "time-outline";
+      case "overdue":
+        return "warning-outline";
+      case "returned":
+        return "checkmark-circle-outline";
+      case "late return":
+        return "time-outline";
+      case "outstanding":
+        return "alert-circle-outline";
+      case "paid":
+        return "checkmark-done-outline";
+      case "waived":
+        return "heart-outline";
       default:
-        return 'help-circle-outline';
+        return "help-circle-outline";
     }
   };
 
@@ -169,7 +169,11 @@ export default function HistoryScreen() {
     if (!historyData?.recentlyBorrowed.length) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="book-outline" size={64} color={COLORS.textSecondary} />
+          <Ionicons
+            name="book-outline"
+            size={64}
+            color={COLORS.textSecondary}
+          />
           <Text style={styles.emptyTitle}>No Active Borrows</Text>
           <Text style={styles.emptyText}>
             You don't have any currently borrowed items.
@@ -189,21 +193,27 @@ export default function HistoryScreen() {
               key={item.id}
               style={[
                 styles.itemCard,
-                index === historyData.recentlyBorrowed.length - 1 && styles.lastItemCard,
+                index === historyData.recentlyBorrowed.length - 1 &&
+                  styles.lastItemCard,
               ]}
             >
               <View style={styles.itemHeader}>
                 <Text style={styles.itemTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(item.status) },
+                  ]}
+                >
                   <Ionicons
                     name={getStatusIcon(item.status)}
                     size={12}
                     color="#FFF"
                   />
                   <Text style={styles.statusBadgeText}>
-                    {isOverdue ? 'Overdue' : item.status}
+                    {isOverdue ? "Overdue" : item.status}
                   </Text>
                 </View>
               </View>
@@ -212,17 +222,26 @@ export default function HistoryScreen() {
 
               <View style={styles.datesContainer}>
                 <View style={styles.dateRow}>
-                  <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={14}
+                    color={COLORS.textSecondary}
+                  />
                   <Text style={styles.dateLabel}>Issued: </Text>
-                  <Text style={styles.dateValue}>{formatDate(item.issueDate)}</Text>
+                  <Text style={styles.dateValue}>
+                    {formatDate(item.issueDate)}
+                  </Text>
                 </View>
                 <View style={styles.dateRow}>
-                  <Ionicons name="flag-outline" size={14} color={COLORS.textSecondary} />
+                  <Ionicons
+                    name="flag-outline"
+                    size={14}
+                    color={COLORS.textSecondary}
+                  />
                   <Text style={styles.dateLabel}>Due: </Text>
-                  <Text style={[
-                    styles.dateValue,
-                    isOverdue && styles.overdueText
-                  ]}>
+                  <Text
+                    style={[styles.dateValue, isOverdue && styles.overdueText]}
+                  >
                     {formatDate(item.dueDate)}
                   </Text>
                 </View>
@@ -230,11 +249,15 @@ export default function HistoryScreen() {
 
               <View style={styles.footer}>
                 <View style={styles.daysContainer}>
-                  <Text style={[
-                    styles.daysText,
-                    isOverdue ? styles.overdueText : styles.daysRemainingText
-                  ]}>
-                    {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days remaining`}
+                  <Text
+                    style={[
+                      styles.daysText,
+                      isOverdue ? styles.overdueText : styles.daysRemainingText,
+                    ]}
+                  >
+                    {isOverdue
+                      ? `${Math.abs(daysRemaining)} days overdue`
+                      : `${daysRemaining} days remaining`}
                   </Text>
                 </View>
                 {item.fine && item.fine > 0 && (
@@ -256,7 +279,11 @@ export default function HistoryScreen() {
     if (!historyData?.returnedItems.length) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="archive-outline" size={64} color={COLORS.textSecondary} />
+          <Ionicons
+            name="archive-outline"
+            size={64}
+            color={COLORS.textSecondary}
+          />
           <Text style={styles.emptyTitle}>No Return History</Text>
           <Text style={styles.emptyText}>
             You haven't returned any items yet.
@@ -272,14 +299,20 @@ export default function HistoryScreen() {
             key={item.id}
             style={[
               styles.itemCard,
-              index === historyData.returnedItems.length - 1 && styles.lastItemCard,
+              index === historyData.returnedItems.length - 1 &&
+                styles.lastItemCard,
             ]}
           >
             <View style={styles.itemHeader}>
               <Text style={styles.itemTitle} numberOfLines={2}>
                 {item.title}
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(item.status) },
+                ]}
+              >
                 <Ionicons
                   name={getStatusIcon(item.status)}
                   size={12}
@@ -293,14 +326,26 @@ export default function HistoryScreen() {
 
             <View style={styles.datesContainer}>
               <View style={styles.dateRow}>
-                <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+                <Ionicons
+                  name="calendar-outline"
+                  size={14}
+                  color={COLORS.textSecondary}
+                />
                 <Text style={styles.dateLabel}>Issued: </Text>
-                <Text style={styles.dateValue}>{formatDate(item.issueDate)}</Text>
+                <Text style={styles.dateValue}>
+                  {formatDate(item.issueDate)}
+                </Text>
               </View>
               <View style={styles.dateRow}>
-                <Ionicons name="checkmark-circle-outline" size={14} color={COLORS.textSecondary} />
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={14}
+                  color={COLORS.textSecondary}
+                />
                 <Text style={styles.dateLabel}>Returned: </Text>
-                <Text style={styles.dateValue}>{formatDate(item.returnDate)}</Text>
+                <Text style={styles.dateValue}>
+                  {formatDate(item.returnDate)}
+                </Text>
               </View>
             </View>
 
@@ -322,7 +367,11 @@ export default function HistoryScreen() {
     if (!historyData?.fines.length) {
       return (
         <View style={styles.emptyState}>
-          <Ionicons name="receipt-outline" size={64} color={COLORS.textSecondary} />
+          <Ionicons
+            name="receipt-outline"
+            size={64}
+            color={COLORS.textSecondary}
+          />
           <Text style={styles.emptyTitle}>No Fine History</Text>
           <Text style={styles.emptyText}>
             You don't have any fines at the moment.
@@ -345,7 +394,12 @@ export default function HistoryScreen() {
               <Text style={styles.fineReason} numberOfLines={2}>
                 {fine.reason}
               </Text>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(fine.status) }]}>
+              <View
+                style={[
+                  styles.statusBadge,
+                  { backgroundColor: getStatusColor(fine.status) },
+                ]}
+              >
                 <Ionicons
                   name={getStatusIcon(fine.status)}
                   size={12}
@@ -358,7 +412,9 @@ export default function HistoryScreen() {
             <View style={styles.fineAmounts}>
               <View style={styles.amountRow}>
                 <Text style={styles.amountLabel}>Total Amount:</Text>
-                <Text style={styles.amountValue}>{formatCurrency(fine.amount)}</Text>
+                <Text style={styles.amountValue}>
+                  {formatCurrency(fine.amount)}
+                </Text>
               </View>
               {fine.outstanding > 0 && (
                 <View style={styles.amountRow}>
@@ -371,20 +427,15 @@ export default function HistoryScreen() {
             </View>
 
             <View style={styles.fineDate}>
-              <Ionicons name="calendar-outline" size={14} color={COLORS.textSecondary} />
+              <Ionicons
+                name="calendar-outline"
+                size={14}
+                color={COLORS.textSecondary}
+              />
               <Text style={styles.fineDateText}>
                 Incurred on {formatDate(fine.dateIncurred)}
               </Text>
             </View>
-
-            {fine.outstanding > 0 && (
-              <TouchableOpacity style={styles.payButton}>
-                <Ionicons name="card-outline" size={16} color="#FFF" />
-                <Text style={styles.payButtonText}>
-                  Pay {formatCurrency(fine.outstanding)}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         ))}
       </Animated.View>
@@ -406,7 +457,7 @@ export default function HistoryScreen() {
 
   const getTabCount = (tab: TabType) => {
     if (!historyData) return 0;
-    
+
     switch (tab) {
       case "borrowed":
         return historyData.recentlyBorrowed.length;
@@ -431,7 +482,11 @@ export default function HistoryScreen() {
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <Ionicons name="alert-circle-outline" size={64} color={COLORS.textSecondary} />
+        <Ionicons
+          name="alert-circle-outline"
+          size={64}
+          color={COLORS.textSecondary}
+        />
         <Text style={styles.errorTitle}>Unable to Load History</Text>
         <Text style={styles.errorText}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={fetchHistory}>
@@ -462,15 +517,19 @@ export default function HistoryScreen() {
           style={[styles.tab, activeTab === "borrowed" && styles.activeTab]}
           onPress={() => setActiveTab("borrowed")}
         >
-          <Ionicons 
-            name="book-outline" 
-            size={20} 
-            color={activeTab === "borrowed" ? COLORS.primary : COLORS.textSecondary} 
+          <Ionicons
+            name="book-outline"
+            size={20}
+            color={
+              activeTab === "borrowed" ? COLORS.primary : COLORS.textSecondary
+            }
           />
-          <Text style={[
-            styles.tabText,
-            activeTab === "borrowed" && styles.activeTabText
-          ]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "borrowed" && styles.activeTabText,
+            ]}
+          >
             Borrowed ({getTabCount("borrowed")})
           </Text>
         </TouchableOpacity>
@@ -479,15 +538,19 @@ export default function HistoryScreen() {
           style={[styles.tab, activeTab === "returned" && styles.activeTab]}
           onPress={() => setActiveTab("returned")}
         >
-          <Ionicons 
-            name="checkmark-done-outline" 
-            size={20} 
-            color={activeTab === "returned" ? COLORS.primary : COLORS.textSecondary} 
+          <Ionicons
+            name="checkmark-done-outline"
+            size={20}
+            color={
+              activeTab === "returned" ? COLORS.primary : COLORS.textSecondary
+            }
           />
-          <Text style={[
-            styles.tabText,
-            activeTab === "returned" && styles.activeTabText
-          ]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "returned" && styles.activeTabText,
+            ]}
+          >
             Returned ({getTabCount("returned")})
           </Text>
         </TouchableOpacity>
@@ -496,15 +559,19 @@ export default function HistoryScreen() {
           style={[styles.tab, activeTab === "fines" && styles.activeTab]}
           onPress={() => setActiveTab("fines")}
         >
-          <Ionicons 
-            name="receipt-outline" 
-            size={20} 
-            color={activeTab === "fines" ? COLORS.primary : COLORS.textSecondary} 
+          <Ionicons
+            name="receipt-outline"
+            size={20}
+            color={
+              activeTab === "fines" ? COLORS.primary : COLORS.textSecondary
+            }
           />
-          <Text style={[
-            styles.tabText,
-            activeTab === "fines" && styles.activeTabText
-          ]}>
+          <Text
+            style={[
+              styles.tabText,
+              activeTab === "fines" && styles.activeTabText,
+            ]}
+          >
             Fines ({getTabCount("fines")})
           </Text>
         </TouchableOpacity>
@@ -518,10 +585,8 @@ export default function HistoryScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.contentContainer}>
-          {getTabContent()}
-        </View>
-        
+        <View style={styles.contentContainer}>{getTabContent()}</View>
+
         {/* Bottom Spacer */}
         <View style={styles.bottomSpacer} />
       </ScrollView>
