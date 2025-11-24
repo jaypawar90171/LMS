@@ -21,6 +21,8 @@ import axios from "axios";
 import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface ProfileForm {
   fullName: string;
@@ -68,6 +70,9 @@ export default function UpdateProfileScreen() {
   const [fetching, setFetching] = useState(true);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const [formData, setFormData] = useState<ProfileForm>({
     fullName: "",
@@ -328,56 +333,56 @@ export default function UpdateProfileScreen() {
 
   if (fetching) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your profile...</Text>
+        <Text style={dynamicStyles.loadingText}>Loading your profile...</Text>
       </View>
     );
   }
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={dynamicStyles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        style={styles.scrollView}
+        style={dynamicStyles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={dynamicStyles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={dynamicStyles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={dynamicStyles.backButton}
             onPress={() => router.navigate("/(tabs)/profile")}
           >
             <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Update Profile</Text>
-          <View style={styles.placeholder} />
+          <Text style={dynamicStyles.headerTitle}>Update Profile</Text>
+          <View style={dynamicStyles.placeholder} />
         </View>
 
         {/* Changes Indicator */}
         {hasChanges() && (
-          <View style={styles.changesIndicator}>
+          <View style={dynamicStyles.changesIndicator}>
             <Ionicons name="information-circle" size={20} color="#FFA000" />
-            <Text style={styles.changesText}>You have unsaved changes</Text>
+            <Text style={dynamicStyles.changesText}>You have unsaved changes</Text>
           </View>
         )}
 
         {/* Form */}
-        <View style={styles.formContainer}>
+        <View style={dynamicStyles.formContainer}>
           {/* Personal Information Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Personal Information</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Personal Information</Text>
             
             {/* Full Name */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Full Name <Text style={styles.required}>*</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>
+                Full Name <Text style={dynamicStyles.required}>*</Text>
               </Text>
               <TextInput
-                style={[styles.textInput, errors.fullName && styles.inputError]}
+                style={[dynamicStyles.textInput, errors.fullName && dynamicStyles.inputError]}
                 placeholder="Enter your full name"
                 placeholderTextColor={COLORS.textSecondary}
                 value={formData.fullName}
@@ -385,17 +390,17 @@ export default function UpdateProfileScreen() {
                 maxLength={50}
               />
               {errors.fullName && (
-                <Text style={styles.errorText}>{errors.fullName}</Text>
+                <Text style={dynamicStyles.errorText}>{errors.fullName}</Text>
               )}
             </View>
 
             {/* Username */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Username <Text style={styles.required}>*</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>
+                Username <Text style={dynamicStyles.required}>*</Text>
               </Text>
               <TextInput
-                style={[styles.textInput, errors.username && styles.inputError]}
+                style={[dynamicStyles.textInput, errors.username && dynamicStyles.inputError]}
                 placeholder="Choose a username"
                 placeholderTextColor={COLORS.textSecondary}
                 value={formData.username}
@@ -405,19 +410,19 @@ export default function UpdateProfileScreen() {
                 maxLength={30}
               />
               {errors.username ? (
-                <Text style={styles.errorText}>{errors.username}</Text>
+                <Text style={dynamicStyles.errorText}>{errors.username}</Text>
               ) : (
-                <Text style={styles.helperText}>
+                <Text style={dynamicStyles.helperText}>
                   Letters, numbers, and underscores only
                 </Text>
               )}
             </View>
 
             {/* Phone Number */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Phone Number</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Phone Number</Text>
               <TextInput
-                style={[styles.textInput, errors.phoneNumber && styles.inputError]}
+                style={[dynamicStyles.textInput, errors.phoneNumber && dynamicStyles.inputError]}
                 placeholder="Enter your phone number"
                 placeholderTextColor={COLORS.textSecondary}
                 value={formData.phoneNumber}
@@ -426,37 +431,37 @@ export default function UpdateProfileScreen() {
                 maxLength={20}
               />
               {errors.phoneNumber && (
-                <Text style={styles.errorText}>{errors.phoneNumber}</Text>
+                <Text style={dynamicStyles.errorText}>{errors.phoneNumber}</Text>
               )}
             </View>
 
             {/* Date of Birth */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Date of Birth</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Date of Birth</Text>
               <TouchableOpacity
-                style={[styles.dateInput, errors.dateOfBirth && styles.inputError]}
+                style={[dynamicStyles.dateInput, errors.dateOfBirth && dynamicStyles.inputError]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Text style={formData.dateOfBirth ? styles.dateText : styles.datePlaceholder}>
+                <Text style={formData.dateOfBirth ? dynamicStyles.dateText : dynamicStyles.datePlaceholder}>
                   {formatDateForDisplay(formData.dateOfBirth)}
                 </Text>
                 <Ionicons name="calendar-outline" size={20} color={COLORS.textSecondary} />
               </TouchableOpacity>
               {errors.dateOfBirth && (
-                <Text style={styles.errorText}>{errors.dateOfBirth}</Text>
+                <Text style={dynamicStyles.errorText}>{errors.dateOfBirth}</Text>
               )}
             </View>
           </View>
 
           {/* Address Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Address (Optional)</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Address (Optional)</Text>
             
             {/* Street */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Street</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Street</Text>
               <TextInput
-                style={styles.textInput}
+                style={dynamicStyles.textInput}
                 placeholder="Street address"
                 placeholderTextColor={COLORS.textSecondary}
                 value={formData.address.street}
@@ -466,11 +471,11 @@ export default function UpdateProfileScreen() {
             </View>
 
             {/* City & State */}
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.flex]}>
-                <Text style={styles.label}>City</Text>
+            <View style={dynamicStyles.row}>
+              <View style={[dynamicStyles.inputGroup, dynamicStyles.flex]}>
+                <Text style={dynamicStyles.label}>City</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={dynamicStyles.textInput}
                   placeholder="City"
                   placeholderTextColor={COLORS.textSecondary}
                   value={formData.address.city}
@@ -478,10 +483,10 @@ export default function UpdateProfileScreen() {
                   maxLength={50}
                 />
               </View>
-              <View style={[styles.inputGroup, styles.flex, styles.leftSpacing]}>
-                <Text style={styles.label}>State</Text>
+              <View style={[dynamicStyles.inputGroup, dynamicStyles.flex, dynamicStyles.leftSpacing]}>
+                <Text style={dynamicStyles.label}>State</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={dynamicStyles.textInput}
                   placeholder="State"
                   placeholderTextColor={COLORS.textSecondary}
                   value={formData.address.state}
@@ -492,11 +497,11 @@ export default function UpdateProfileScreen() {
             </View>
 
             {/* Postal Code & Country */}
-            <View style={styles.row}>
-              <View style={[styles.inputGroup, styles.flex]}>
-                <Text style={styles.label}>Postal Code</Text>
+            <View style={dynamicStyles.row}>
+              <View style={[dynamicStyles.inputGroup, dynamicStyles.flex]}>
+                <Text style={dynamicStyles.label}>Postal Code</Text>
                 <TextInput
-                  style={[styles.textInput, errors.postalCode && styles.inputError]}
+                  style={[dynamicStyles.textInput, errors.postalCode && dynamicStyles.inputError]}
                   placeholder="Postal code"
                   placeholderTextColor={COLORS.textSecondary}
                   value={formData.address.postalCode}
@@ -504,13 +509,13 @@ export default function UpdateProfileScreen() {
                   maxLength={20}
                 />
                 {errors.postalCode && (
-                  <Text style={styles.errorText}>{errors.postalCode}</Text>
+                  <Text style={dynamicStyles.errorText}>{errors.postalCode}</Text>
                 )}
               </View>
-              <View style={[styles.inputGroup, styles.flex, styles.leftSpacing]}>
-                <Text style={styles.label}>Country</Text>
+              <View style={[dynamicStyles.inputGroup, dynamicStyles.flex, dynamicStyles.leftSpacing]}>
+                <Text style={dynamicStyles.label}>Country</Text>
                 <TextInput
-                  style={styles.textInput}
+                  style={dynamicStyles.textInput}
                   placeholder="Country"
                   placeholderTextColor={COLORS.textSecondary}
                   value={formData.address.country}
@@ -522,23 +527,23 @@ export default function UpdateProfileScreen() {
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
+          <View style={dynamicStyles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
+              style={[dynamicStyles.button, dynamicStyles.secondaryButton]}
               onPress={handleReset}
               disabled={loading || !hasChanges()}
             >
-              <Ionicons name="refresh-outline" size={20} color={COLORS.primary} />
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+              <Text style={[dynamicStyles.buttonText, dynamicStyles.secondaryButtonText]}>
                 Reset
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               style={[
-                styles.button, 
-                styles.primaryButton,
-                (!hasChanges() || loading) && styles.buttonDisabled
+                dynamicStyles.button, 
+                dynamicStyles.primaryButton,
+                (!hasChanges() || loading) && dynamicStyles.buttonDisabled
               ]}
               onPress={handleSubmit}
               disabled={loading || !hasChanges()}
@@ -548,17 +553,17 @@ export default function UpdateProfileScreen() {
               ) : (
                 <>
                   <Ionicons name="save-outline" size={20} color="#FFF" />
-                  <Text style={styles.buttonText}>Save Changes</Text>
+                  <Text style={dynamicStyles.buttonText}>Save Changes</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Help Text */}
-          <View style={styles.helpContainer}>
+          <View style={dynamicStyles.helpContainer}>
             <Ionicons name="information-circle-outline" size={16} color={COLORS.textSecondary} />
-            <Text style={styles.helpText}>
-              Fields marked with <Text style={styles.required}>*</Text> are required. 
+            <Text style={dynamicStyles.helpText}>
+              Fields marked with <Text style={dynamicStyles.required}>*</Text> are required. 
               Your username must be unique across the platform.
             </Text>
           </View>
@@ -574,9 +579,9 @@ export default function UpdateProfileScreen() {
           onRequestClose={() => setShowDatePicker(false)}
         >
           <TouchableWithoutFeedback onPress={() => setShowDatePicker(false)}>
-            <View style={styles.modalOverlay}>
+            <View style={dynamicStyles.modalOverlay}>
               <TouchableWithoutFeedback>
-                <View style={styles.datePickerContainer}>
+                <View style={dynamicStyles.datePickerContainer}>
                   <DateTimePicker
                     value={formData.dateOfBirth ? new Date(formData.dateOfBirth) : new Date()}
                     mode="date"
@@ -586,10 +591,10 @@ export default function UpdateProfileScreen() {
                   />
                   {Platform.OS === 'ios' && (
                     <TouchableOpacity
-                      style={styles.datePickerDone}
+                      style={dynamicStyles.datePickerDone}
                       onPress={() => setShowDatePicker(false)}
                     >
-                      <Text style={styles.datePickerDoneText}>Done</Text>
+                      <Text style={dynamicStyles.datePickerDoneText}>Done</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -602,21 +607,22 @@ export default function UpdateProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   scrollView: {
     flex: 1,
@@ -629,9 +635,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.backgroundColor,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -639,7 +645,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   placeholder: {
@@ -664,7 +670,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   section: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     marginBottom: 24,
     padding: 20,
     borderRadius: 16,
@@ -677,7 +683,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   inputGroup: {
@@ -686,38 +692,38 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   required: {
     color: "#FF3B30",
   },
   textInput: {
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   dateInput: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
   },
   dateText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   datePlaceholder: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   inputError: {
     borderColor: "#FF3B30",
@@ -728,7 +734,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   helperText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     marginTop: 4,
   },
@@ -757,12 +763,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -773,22 +779,22 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   helpContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
     padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
   },
   helpText: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   modalOverlay: {
@@ -797,7 +803,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   datePickerContainer: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     padding: 16,
@@ -806,11 +812,13 @@ const styles = StyleSheet.create({
     padding: 16,
     alignItems: 'center',
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   datePickerDoneText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: '600',
   },
 });
+}
+ 

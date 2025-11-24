@@ -18,9 +18,10 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
+import { useTheme } from "@/context/ThemeContext";
+import { useMemo } from "react";
 
 interface DonationFormData {
   itemType: string;
@@ -38,17 +39,20 @@ export default function DonateItemScreen() {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [allCategories, setAllCategories] = useState<any[]>([]);
-const [categories, setCategories] = useState<any[]>([]);
-const [showCategoryPicker, setShowCategoryPicker] = useState(false);
-const [showCustomCategory, setShowCustomCategory] = useState(false);
-const [customCategory, setCustomCategory] = useState("");
+  const [categories, setCategories] = useState<any[]>([]);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [customCategory, setCustomCategory] = useState("");
 
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchCategories();
   }, []);
-  
+
   const fetchCategories = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/inventory/categories`, {
@@ -56,12 +60,13 @@ const [customCategory, setCustomCategory] = useState("");
       });
       const allCats = response.data.data;
       setAllCategories(allCats);
-      setCategories(allCats.filter((cat: any) => cat.categoryType === "parent"));
+      setCategories(
+        allCats.filter((cat: any) => cat.categoryType === "parent")
+      );
     } catch (error) {
       console.error("Failed to fetch categories:", error);
     }
   };
-  
 
   // Form state
   const [formData, setFormData] = useState<DonationFormData>({
@@ -241,8 +246,6 @@ const [customCategory, setCustomCategory] = useState("");
       itemType: categoryId,
     }));
   };
-  
-  
 
   const handleSubmit = async () => {
     if (!validateForm()) return;
@@ -320,39 +323,39 @@ const [customCategory, setCustomCategory] = useState("");
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={dynamicStyles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        style={styles.scrollView}
+        style={dynamicStyles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={dynamicStyles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={dynamicStyles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={dynamicStyles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Donate Item</Text>
-          <View style={styles.placeholder} />
+          <Text style={dynamicStyles.headerTitle}>Donate Item</Text>
+          <View style={dynamicStyles.placeholder} />
         </View>
 
         {/* Form */}
-        <View style={styles.formContainer}>
+        <View style={dynamicStyles.formContainer}>
           {/* Donation Type Selection */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Donation Type <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Donation Type <Text style={dynamicStyles.required}>*</Text>
             </Text>
-            <View style={styles.donationTypeContainer}>
+            <View style={dynamicStyles.donationTypeContainer}>
               <TouchableOpacity
                 style={[
-                  styles.donationTypeButton,
+                  dynamicStyles.donationTypeButton,
                   formData.donationType === "giveaway" &&
-                    styles.donationTypeButtonActive,
+                    dynamicStyles.donationTypeButtonActive,
                 ]}
                 onPress={() => handleDonationTypeChange("giveaway")}
               >
@@ -366,14 +369,14 @@ const [customCategory, setCustomCategory] = useState("");
                   color={
                     formData.donationType === "giveaway"
                       ? "#FFF"
-                      : COLORS.primary
+                      : colors.primary
                   }
                 />
                 <Text
                   style={[
-                    styles.donationTypeText,
+                    dynamicStyles.donationTypeText,
                     formData.donationType === "giveaway" &&
-                      styles.donationTypeTextActive,
+                      dynamicStyles.donationTypeTextActive,
                   ]}
                 >
                   Giveaway
@@ -382,9 +385,9 @@ const [customCategory, setCustomCategory] = useState("");
 
               <TouchableOpacity
                 style={[
-                  styles.donationTypeButton,
+                  dynamicStyles.donationTypeButton,
                   formData.donationType === "duration" &&
-                    styles.donationTypeButtonActive,
+                    dynamicStyles.donationTypeButtonActive,
                 ]}
                 onPress={() => handleDonationTypeChange("duration")}
               >
@@ -398,21 +401,21 @@ const [customCategory, setCustomCategory] = useState("");
                   color={
                     formData.donationType === "duration"
                       ? "#FFF"
-                      : COLORS.primary
+                      : colors.primary
                   }
                 />
                 <Text
                   style={[
-                    styles.donationTypeText,
+                    dynamicStyles.donationTypeText,
                     formData.donationType === "duration" &&
-                      styles.donationTypeTextActive,
+                      dynamicStyles.donationTypeTextActive,
                   ]}
                 >
                   Duration Based
                 </Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.helperText}>
+            <Text style={dynamicStyles.helperText}>
               {formData.donationType === "giveaway"
                 ? "Permanently donate this item to the library"
                 : "Lend this item to the library for a specific period"}
@@ -420,72 +423,78 @@ const [customCategory, setCustomCategory] = useState("");
           </View>
 
           {/* Item Type/Category */}
-<View style={styles.inputGroup}>
-  <Text style={styles.label}>
-    Item Type/Category <Text style={styles.required}>*</Text>
-  </Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Item Type/Category <Text style={dynamicStyles.required}>*</Text>
+            </Text>
 
-  {showCustomCategory ? (
-    <View>
-      <TextInput
-        style={[styles.textInput, errors.itemType && styles.inputError]}
-        placeholder="Enter custom category"
-        placeholderTextColor={COLORS.textSecondary}
-        value={customCategory}
-        onChangeText={(value) => setCustomCategory(value)}
-        maxLength={50}
-      />
-      <TouchableOpacity
-        style={styles.switchToDropdown}
-        onPress={() => {
-          setShowCustomCategory(false);
-          setCustomCategory("");
-          setFormData((prev) => ({ ...prev, itemType: "" }));
-        }}
-      >
-        <Text style={styles.switchText}>Choose from list instead</Text>
-      </TouchableOpacity>
-    </View>
-  ) : (
-    <TouchableOpacity
-      style={[styles.textInput, errors.itemType && styles.inputError]}
-      onPress={() => setShowCategoryPicker(true)}
-    >
-      <Text
-        style={
-          formData.itemType ? styles.selectedText : styles.placeholderText
-        }
-      >
-        {formData.itemType
-          ? categories.find((c) => c._id === formData.itemType)?.name
-          : "Select category"}
-      </Text>
-    </TouchableOpacity>
-  )}
+            {showCustomCategory ? (
+              <View>
+                <TextInput
+                  style={[
+                    dynamicStyles.textInput,
+                    errors.itemType && dynamicStyles.inputError,
+                  ]}
+                  placeholder="Enter custom category"
+                  placeholderTextColor={colors.textSecondary}
+                  value={customCategory}
+                  onChangeText={(value) => setCustomCategory(value)}
+                  maxLength={50}
+                />
+                <TouchableOpacity
+                  style={dynamicStyles.switchToDropdown}
+                  onPress={() => {
+                    setShowCustomCategory(false);
+                    setCustomCategory("");
+                    setFormData((prev) => ({ ...prev, itemType: "" }));
+                  }}
+                >
+                  <Text style={dynamicStyles.switchText}>
+                    Choose from list instead
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[dynamicStyles.textInput, errors.itemType && dynamicStyles.inputError]}
+                onPress={() => setShowCategoryPicker(true)}
+              >
+                <Text
+                  style={
+                    formData.itemType
+                      ? dynamicStyles.selectedText
+                      : dynamicStyles.placeholderText
+                  }
+                >
+                  {formData.itemType
+                    ? categories.find((c) => c._id === formData.itemType)?.name
+                    : "Select category"}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-  {errors.itemType && (
-    <Text style={styles.errorText}>{errors.itemType}</Text>
-  )}
-</View>
-
+            {errors.itemType && (
+              <Text style={dynamicStyles.errorText}>{errors.itemType}</Text>
+            )}
+          </View>
 
           {/* Item Title */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Item Title <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Item Title <Text style={dynamicStyles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.textInput, errors.title && styles.inputError]}
+              style={[dynamicStyles.textInput, errors.title && dynamicStyles.inputError]}
               placeholder="Enter item title (e.g., Wireless Headphones, Office Chair)"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.title}
               onChangeText={(value) => handleInputChange("title", value)}
               maxLength={100}
             />
             {errors.title ? (
-              <Text style={styles.errorText}>{errors.title}</Text>
+              <Text style={dynamicStyles.errorText}>{errors.title}</Text>
             ) : (
-              <Text style={styles.helperText}>
+              <Text style={dynamicStyles.helperText}>
                 Clear and descriptive title for your item
               </Text>
             )}
@@ -493,14 +502,14 @@ const [customCategory, setCustomCategory] = useState("");
 
           {/* Duration */}
           {formData.donationType === "duration" && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>
-                Duration (Days) <Text style={styles.required}>*</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>
+                Duration (Days) <Text style={dynamicStyles.required}>*</Text>
               </Text>
               <TextInput
-                style={[styles.textInput, errors.duration && styles.inputError]}
+                style={[dynamicStyles.textInput, errors.duration && dynamicStyles.inputError]}
                 placeholder="Enter duration in days"
-                placeholderTextColor={COLORS.textSecondary}
+                placeholderTextColor={colors.textSecondary}
                 value={formData.duration}
                 onChangeText={(value) =>
                   handleInputChange("duration", value.replace(/[^0-9]/g, ""))
@@ -509,9 +518,9 @@ const [customCategory, setCustomCategory] = useState("");
                 maxLength={3}
               />
               {errors.duration ? (
-                <Text style={styles.errorText}>{errors.duration}</Text>
+                <Text style={dynamicStyles.errorText}>{errors.duration}</Text>
               ) : (
-                <Text style={styles.helperText}>
+                <Text style={dynamicStyles.helperText}>
                   How many days would you like to lend this item?
                 </Text>
               )}
@@ -519,12 +528,12 @@ const [customCategory, setCustomCategory] = useState("");
           )}
 
           {/* Description (Optional) */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Description</Text>
             <TextInput
-              style={styles.textArea}
+              style={dynamicStyles.textArea}
               placeholder="Describe the item's condition, features, specifications..."
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.description}
               onChangeText={(value) => handleInputChange("description", value)}
               multiline
@@ -532,58 +541,58 @@ const [customCategory, setCustomCategory] = useState("");
               textAlignVertical="top"
               maxLength={500}
             />
-            <View style={styles.helperRow}>
-              <Text style={styles.helperText}>
+            <View style={dynamicStyles.helperRow}>
+              <Text style={dynamicStyles.helperText}>
                 Additional details about your item
               </Text>
-              <Text style={styles.charCount}>
+              <Text style={dynamicStyles.charCount}>
                 {formData.description.length}/500
               </Text>
             </View>
           </View>
 
           {/* Photo Upload */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Photos</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Photos</Text>
 
             {/* Upload Button */}
             <TouchableOpacity
-              style={styles.uploadButton}
+              style={dynamicStyles.uploadButton}
               onPress={pickImage}
               disabled={uploadingImage || formData.photos.length >= 5}
             >
               {uploadingImage ? (
-                <ActivityIndicator size="small" color={COLORS.primary} />
+                <ActivityIndicator size="small" color={colors.primary} />
               ) : (
                 <>
                   <Ionicons
                     name="camera-outline"
                     size={24}
-                    color={COLORS.primary}
+                    color={colors.primary}
                   />
-                  <Text style={styles.uploadButtonText}>
+                  <Text style={dynamicStyles.uploadButtonText}>
                     {formData.photos.length >= 5 ? "Max 5 Photos" : "Add Photo"}
                   </Text>
                 </>
               )}
             </TouchableOpacity>
 
-            <Text style={styles.helperText}>
+            <Text style={dynamicStyles.helperText}>
               Upload photos to help us identify your item (max 5 photos, 500KB
               each)
             </Text>
 
             {/* Display uploaded images */}
             {formData.photos.length > 0 && (
-              <View style={styles.imagesContainer}>
+              <View style={dynamicStyles.imagesContainer}>
                 {formData.photos.map((photo, index) => (
-                  <View key={index} style={styles.imageWrapper}>
+                  <View key={index} style={dynamicStyles.imageWrapper}>
                     <Image
                       source={{ uri: photo }}
-                      style={styles.uploadedImage}
+                      style={dynamicStyles.uploadedImage}
                     />
                     <TouchableOpacity
-                      style={styles.removeImageButton}
+                      style={dynamicStyles.removeImageButton}
                       onPress={() => removeImage(index)}
                     >
                       <Ionicons name="close-circle" size={20} color="#FF3B30" />
@@ -595,8 +604,8 @@ const [customCategory, setCustomCategory] = useState("");
 
             {/* Upload Progress */}
             {uploadingImage && (
-              <View style={styles.uploadProgress}>
-                <Text style={styles.uploadProgressText}>
+              <View style={dynamicStyles.uploadProgress}>
+                <Text style={dynamicStyles.uploadProgressText}>
                   Uploading image...
                 </Text>
               </View>
@@ -604,14 +613,14 @@ const [customCategory, setCustomCategory] = useState("");
           </View>
 
           {/* Preferred Contact Method */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Preferred Contact Method</Text>
-            <View style={styles.contactMethodContainer}>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Preferred Contact Method</Text>
+            <View style={dynamicStyles.contactMethodContainer}>
               <TouchableOpacity
                 style={[
-                  styles.contactMethodButton,
+                  dynamicStyles.contactMethodButton,
                   formData.preferredContactMethod === "whatsApp" &&
-                    styles.contactMethodButtonActive,
+                    dynamicStyles.contactMethodButtonActive,
                 ]}
                 onPress={() =>
                   handleInputChange("preferredContactMethod", "whatsApp")
@@ -632,9 +641,9 @@ const [customCategory, setCustomCategory] = useState("");
                 />
                 <Text
                   style={[
-                    styles.contactMethodText,
+                    dynamicStyles.contactMethodText,
                     formData.preferredContactMethod === "whatsApp" &&
-                      styles.contactMethodTextActive,
+                      dynamicStyles.contactMethodTextActive,
                   ]}
                 >
                   WhatsApp
@@ -643,9 +652,9 @@ const [customCategory, setCustomCategory] = useState("");
 
               <TouchableOpacity
                 style={[
-                  styles.contactMethodButton,
+                  dynamicStyles.contactMethodButton,
                   formData.preferredContactMethod === "Email" &&
-                    styles.contactMethodButtonActive,
+                    dynamicStyles.contactMethodButtonActive,
                 ]}
                 onPress={() =>
                   handleInputChange("preferredContactMethod", "Email")
@@ -661,44 +670,44 @@ const [customCategory, setCustomCategory] = useState("");
                   color={
                     formData.preferredContactMethod === "Email"
                       ? "#FFF"
-                      : COLORS.primary
+                      : colors.primary
                   }
                 />
                 <Text
                   style={[
-                    styles.contactMethodText,
+                    dynamicStyles.contactMethodText,
                     formData.preferredContactMethod === "Email" &&
-                      styles.contactMethodTextActive,
+                      dynamicStyles.contactMethodTextActive,
                   ]}
                 >
                   Email
                 </Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.helperText}>
+            <Text style={dynamicStyles.helperText}>
               How would you prefer us to contact you about your donation?
             </Text>
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
+          <View style={dynamicStyles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
+              style={[dynamicStyles.button, dynamicStyles.secondaryButton]}
               onPress={clearForm}
               disabled={loading}
             >
               <Ionicons
                 name="refresh-outline"
                 size={20}
-                color={COLORS.primary}
+                color={colors.primary}
               />
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              <Text style={[dynamicStyles.buttonText, dynamicStyles.secondaryButtonText]}>
                 Clear Form
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
+              style={[dynamicStyles.button, dynamicStyles.primaryButton]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -707,20 +716,20 @@ const [customCategory, setCustomCategory] = useState("");
               ) : (
                 <>
                   <Ionicons name="heart-outline" size={20} color="#FFF" />
-                  <Text style={styles.buttonText}>Submit Donation</Text>
+                  <Text style={dynamicStyles.buttonText}>Submit Donation</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Help Text */}
-          <View style={styles.helpContainer}>
+          <View style={dynamicStyles.helpContainer}>
             <Ionicons
               name="information-circle-outline"
               size={16}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={styles.helpText}>
+            <Text style={dynamicStyles.helpText}>
               Your donation will be reviewed by our team. We'll contact you via
               your preferred method to coordinate the donation process.
             </Text>
@@ -728,364 +737,366 @@ const [customCategory, setCustomCategory] = useState("");
         </View>
 
         {/* Category Picker Modal */}
-<Modal
-  visible={showCategoryPicker}
-  transparent
-  animationType="slide"
-  onRequestClose={() => setShowCategoryPicker(false)}
->
-  <View style={styles.modalOverlay}>
-    <View style={styles.pickerContainer}>
-      <View style={styles.pickerHeader}>
-        <Text style={styles.pickerTitle}>Select Category</Text>
-        <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
-          <Ionicons name="close" size={24} color={COLORS.textPrimary} />
-        </TouchableOpacity>
-      </View>
-      <ScrollView>
-        {categories.map((cat) => (
-          <TouchableOpacity
-            key={cat._id}
-            style={styles.pickerItem}
-            onPress={() => {
-              handleCategoryChange(cat._id);
-              setShowCategoryPicker(false);
-              setShowCustomCategory(false);
-            }}
-          >
-            <Text style={styles.pickerItemText}>{cat.name}</Text>
-          </TouchableOpacity>
-        ))}
-        {/* Add Other Option */}
-        <TouchableOpacity
-          style={[styles.pickerItem, styles.otherOption]}
-          onPress={() => {
-            setShowCategoryPicker(false);
-            setShowCustomCategory(true);
-            setFormData((prev) => ({ ...prev, itemType: "other" }));
-          }}
+        <Modal
+          visible={showCategoryPicker}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowCategoryPicker(false)}
         >
-          <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
-          <Text
-            style={[styles.pickerItemText, styles.otherOptionText]}
-          >
-            Other (Custom Category)
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </View>
-  </View>
-</Modal>
-
+          <View style={dynamicStyles.modalOverlay}>
+            <View style={dynamicStyles.pickerContainer}>
+              <View style={dynamicStyles.pickerHeader}>
+                <Text style={dynamicStyles.pickerTitle}>Select Category</Text>
+                <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
+                  <Ionicons name="close" size={24} color={colors.textPrimary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView>
+                {categories.map((cat) => (
+                  <TouchableOpacity
+                    key={cat._id}
+                    style={dynamicStyles.pickerItem}
+                    onPress={() => {
+                      handleCategoryChange(cat._id);
+                      setShowCategoryPicker(false);
+                      setShowCustomCategory(false);
+                    }}
+                  >
+                    <Text style={dynamicStyles.pickerItemText}>{cat.name}</Text>
+                  </TouchableOpacity>
+                ))}
+                {/* Add Other Option */}
+                <TouchableOpacity
+                  style={[dynamicStyles.pickerItem, dynamicStyles.otherOption]}
+                  onPress={() => {
+                    setShowCategoryPicker(false);
+                    setShowCustomCategory(true);
+                    setFormData((prev) => ({ ...prev, itemType: "other" }));
+                  }}
+                >
+                  <Ionicons
+                    name="add-circle-outline"
+                    size={20}
+                    color={colors.primary}
+                  />
+                  <Text style={[dynamicStyles.pickerItemText, dynamicStyles.otherOptionText]}>
+                    Other (Custom Category)
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  placeholder: {
-    width: 32,
-  },
-  formContainer: {
-    padding: 16,
-  },
-  inputGroup: {
-    marginBottom: 24,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    marginBottom: 8,
-  },
-  required: {
-    color: "#FF3B30",
-  },
-  textInput: {
-    backgroundColor: COLORS.cardBackground,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-  },
-  textArea: {
-    backgroundColor: COLORS.cardBackground,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    minHeight: 100,
-  },
-  inputError: {
-    borderColor: "#FF3B30",
-  },
-  errorText: {
-    color: "#FF3B30",
-    fontSize: 14,
-    marginTop: 4,
-  },
-  helperText: {
-    color: COLORS.textSecondary,
-    fontSize: 14,
-    marginTop: 4,
-  },
-  helperRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  charCount: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-  },
-  // Donation Type Styles
-  donationTypeContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  donationTypeButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    backgroundColor: "transparent",
-    gap: 8,
-  },
-  donationTypeButtonActive: {
-    backgroundColor: COLORS.primary,
-  },
-  donationTypeText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  donationTypeTextActive: {
-    color: "#FFF",
-  },
-  // Contact Method Styles
-  contactMethodContainer: {
-    flexDirection: "row",
-    gap: 12,
-  },
-  contactMethodButton: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: "transparent",
-    gap: 6,
-  },
-  contactMethodButtonActive: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  contactMethodText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
-  contactMethodTextActive: {
-    color: "#FFF",
-  },
-  // Image Upload Styles
-  uploadButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-    borderStyle: "dashed",
-    borderRadius: 12,
-    backgroundColor: `${COLORS.primary}10`,
-    gap: 8,
-  },
-  uploadButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  imagesContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  imageWrapper: {
-    position: "relative",
-  },
-  uploadedImage: {
-    width: 80,
-    height: 80,
-    borderRadius: 8,
-  },
-  removeImageButton: {
-    position: "absolute",
-    top: -8,
-    right: -8,
-    backgroundColor: "#FFF",
-    borderRadius: 10,
-  },
-  // Action Buttons
-  actionsContainer: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 24,
-  },
-  button: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-  },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFF",
-  },
-  secondaryButtonText: {
-    color: COLORS.primary,
-  },
-  helpContainer: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
-    borderRadius: 12,
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  helpText: {
-    flex: 1,
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-  },
-  uploadProgress: {
-    marginTop: 8,
-    padding: 8,
-    backgroundColor: `${COLORS.primary}10`,
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  uploadProgressText: {
-    fontSize: 12,
-    color: COLORS.primary,
-    fontWeight: "500",
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  pickerContainer: {
-    backgroundColor: COLORS.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "70%",
-  },
-  pickerHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  pickerTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-  },
-  pickerItem: {
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  pickerItemText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-  },
-  otherOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: `${COLORS.primary}10`,
-  },
-  otherOptionText: {
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  switchToDropdown: {
-    marginTop: 8,
-    alignSelf: "flex-start",
-  },
-  switchText: {
-    color: COLORS.primary,
-    fontSize: 14,
-    textDecorationLine: "underline",
-  },
-  selectedText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-  },
-  placeholderText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },  
-
-});
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    scrollView: {
+      flex: 1,
+    },
+    scrollContent: {
+      flexGrow: 1,
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: 4,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    placeholder: {
+      width: 32,
+    },
+    formContainer: {
+      padding: 16,
+    },
+    inputGroup: {
+      marginBottom: 24,
+    },
+    label: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 8,
+    },
+    required: {
+      color: "#FF3B30",
+    },
+    textInput: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    textArea: {
+      backgroundColor: colors.cardBackground,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      padding: 16,
+      fontSize: 16,
+      color: colors.textPrimary,
+      minHeight: 100,
+    },
+    inputError: {
+      borderColor: "#FF3B30",
+    },
+    errorText: {
+      color: "#FF3B30",
+      fontSize: 14,
+      marginTop: 4,
+    },
+    helperText: {
+      color: colors.textSecondary,
+      fontSize: 14,
+      marginTop: 4,
+    },
+    helperRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    charCount: {
+      color: colors.textSecondary,
+      fontSize: 12,
+    },
+    // Donation Type Styles
+    donationTypeContainer: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    donationTypeButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      borderRadius: 12,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      backgroundColor: "transparent",
+      gap: 8,
+    },
+    donationTypeButtonActive: {
+      backgroundColor: colors.primary,
+    },
+    donationTypeText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    donationTypeTextActive: {
+      color: "#FFF",
+    },
+    // Contact Method Styles
+    contactMethodContainer: {
+      flexDirection: "row",
+      gap: 12,
+    },
+    contactMethodButton: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 12,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: "transparent",
+      gap: 6,
+    },
+    contactMethodButtonActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    contactMethodText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textSecondary,
+    },
+    contactMethodTextActive: {
+      color: "#FFF",
+    },
+    // Image Upload Styles
+    uploadButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      borderWidth: 2,
+      borderColor: colors.primary,
+      borderStyle: "dashed",
+      borderRadius: 12,
+      backgroundColor: `${colors.primary}10`,
+      gap: 8,
+    },
+    uploadButtonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    imagesContainer: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 12,
+    },
+    imageWrapper: {
+      position: "relative",
+    },
+    uploadedImage: {
+      width: 80,
+      height: 80,
+      borderRadius: 8,
+    },
+    removeImageButton: {
+      position: "absolute",
+      top: -8,
+      right: -8,
+      backgroundColor: "#FFF",
+      borderRadius: 10,
+    },
+    // Action Buttons
+    actionsContainer: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 24,
+    },
+    button: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: 16,
+      borderRadius: 12,
+      gap: 8,
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+    },
+    secondaryButton: {
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    buttonText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#FFF",
+    },
+    secondaryButtonText: {
+      color: colors.primary,
+    },
+    helpContainer: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 8,
+      padding: 16,
+      backgroundColor: `${colors.primary}10`,
+      borderRadius: 12,
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    helpText: {
+      flex: 1,
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    uploadProgress: {
+      marginTop: 8,
+      padding: 8,
+      backgroundColor: `${colors.primary}10`,
+      borderRadius: 8,
+      alignItems: "center",
+    },
+    uploadProgressText: {
+      fontSize: 12,
+      color: colors.primary,
+      fontWeight: "500",
+    },
+    modalOverlay: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      justifyContent: "flex-end",
+    },
+    pickerContainer: {
+      backgroundColor: colors.background,
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
+      maxHeight: "70%",
+    },
+    pickerHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    pickerTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    pickerItem: {
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    pickerItemText: {
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    otherOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+      backgroundColor: `${colors.primary}10`,
+    },
+    otherOptionText: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    switchToDropdown: {
+      marginTop: 8,
+      alignSelf: "flex-start",
+    },
+    switchText: {
+      color: colors.primary,
+      fontSize: 14,
+      textDecorationLine: "underline",
+    },
+    selectedText: {
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    placeholderText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+  });
+}

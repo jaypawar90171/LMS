@@ -12,8 +12,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface RequestedItemDetails {
   _id: string;
@@ -41,6 +42,9 @@ export default function RequestedItemDetailsScreen() {
   const [itemDetails, setItemDetails] = useState<RequestedItemDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchItemDetails();
@@ -80,7 +84,7 @@ export default function RequestedItemDetailsScreen() {
       case "rejected":
         return "#FF3B30";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
@@ -135,7 +139,7 @@ export default function RequestedItemDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading item details...</Text>
       </View>
     );
@@ -143,22 +147,22 @@ export default function RequestedItemDetailsScreen() {
 
   if (!itemDetails) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={dynamicStyles.errorContainer}>
         <Text>Failed to load item details</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       {/* Header Card */}
-      <View style={styles.headerCard}>
-        <View style={styles.titleSection}>
-          <Text style={styles.title}>{itemDetails.name}</Text>
-          <View style={styles.statusRow}>
+      <View style={dynamicStyles.headerCard}>
+        <View style={dynamicStyles.titleSection}>
+          <Text style={dynamicStyles.title}>{itemDetails.name}</Text>
+          <View style={dynamicStyles.statusRow}>
             <View
               style={[
-                styles.statusBadge,
+                dynamicStyles.statusBadge,
                 {
                   backgroundColor: `${getStatusColor(itemDetails.status)}15`,
                 },
@@ -171,7 +175,7 @@ export default function RequestedItemDetailsScreen() {
               />
               <Text
                 style={[
-                  styles.statusText,
+                  dynamicStyles.statusText,
                   { color: getStatusColor(itemDetails.status) },
                 ]}
               >
@@ -181,54 +185,54 @@ export default function RequestedItemDetailsScreen() {
           </View>
         </View>
 
-        <Text style={styles.subtitle}>
+        <Text style={dynamicStyles.subtitle}>
           Requested on {new Date(itemDetails.requestedAt).toLocaleDateString()}
         </Text>
       </View>
 
       {/* Details Card */}
-      <View style={styles.detailsCard}>
+      <View style={dynamicStyles.detailsCard}>
         {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Category</Text>
-          <Text style={styles.sectionContent}>{itemDetails.category}</Text>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Category</Text>
+          <Text style={dynamicStyles.sectionContent}>{itemDetails.category}</Text>
         </View>
 
         {/* Quantity */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Quantity Requested</Text>
-          <Text style={styles.sectionContent}>{itemDetails.quantity}</Text>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Quantity Requested</Text>
+          <Text style={dynamicStyles.sectionContent}>{itemDetails.quantity}</Text>
         </View>
 
         {/* Description */}
         {itemDetails.description && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.sectionContent}>{itemDetails.description}</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Description</Text>
+            <Text style={dynamicStyles.sectionContent}>{itemDetails.description}</Text>
           </View>
         )}
 
         {/* Reason */}
         {itemDetails.reason && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Reason for Request</Text>
-            <Text style={styles.sectionContent}>{itemDetails.reason}</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Reason for Request</Text>
+            <Text style={dynamicStyles.sectionContent}>{itemDetails.reason}</Text>
           </View>
         )}
 
         {/* Request Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Request Information</Text>
-          <View style={styles.infoGrid}>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Requested Date</Text>
-              <Text style={styles.infoValue}>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Request Information</Text>
+          <View style={dynamicStyles.infoGrid}>
+            <View style={dynamicStyles.infoItem}>
+              <Text style={dynamicStyles.infoLabel}>Requested Date</Text>
+              <Text style={dynamicStyles.infoValue}>
                 {new Date(itemDetails.requestedAt).toLocaleDateString()}
               </Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={styles.infoLabel}>Last Updated</Text>
-              <Text style={styles.infoValue}>
+            <View style={dynamicStyles.infoItem}>
+              <Text style={dynamicStyles.infoLabel}>Last Updated</Text>
+              <Text style={dynamicStyles.infoValue}>
                 {new Date(itemDetails.updatedAt).toLocaleDateString()}
               </Text>
             </View>
@@ -238,13 +242,13 @@ export default function RequestedItemDetailsScreen() {
 
       {/* Action Buttons */}
       {itemDetails.status === "pending" && (
-        <View style={styles.actionsContainer}>
+        <View style={dynamicStyles.actionsContainer}>
           <TouchableOpacity
-            style={[styles.actionButton, styles.dangerButton]}
+            style={[dynamicStyles.actionButton, dynamicStyles.dangerButton]}
             onPress={handleCancelRequest}
           >
             <Ionicons name="close-circle-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Cancel Request</Text>
+            <Text style={dynamicStyles.actionButtonText}>Cancel Request</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -252,30 +256,31 @@ export default function RequestedItemDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   headerCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   titleSection: {
     flexDirection: "row",
@@ -286,7 +291,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
     marginRight: 12,
   },
@@ -307,16 +312,16 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   detailsCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     marginTop: 0,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   section: {
     marginBottom: 20,
@@ -324,12 +329,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionContent: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   infoGrid: {
@@ -341,12 +346,12 @@ const styles = StyleSheet.create({
   },
   infoLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontWeight: "500",
   },
   actionsContainer: {
@@ -369,3 +374,4 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+}

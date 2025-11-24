@@ -1,7 +1,8 @@
 import type React from "react";
 import { View, Text, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface ItemCardProps {
   title: string;
@@ -30,9 +31,12 @@ const ItemCard: React.FC<ItemCardProps> = ({
   onPress,
   showOverdue = false,
 }) => {
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={dynamicStyles.container}
       onPress={onPress}
       activeOpacity={0.85}
       accessibilityRole="button"
@@ -40,19 +44,19 @@ const ItemCard: React.FC<ItemCardProps> = ({
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
     >
       {/* Image Container */}
-      <View style={styles.imageContainer}>
+      <View style={dynamicStyles.imageContainer}>
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
-            style={styles.image}
+            style={dynamicStyles.image}
             resizeMode="cover"
           />
         ) : (
-          <View style={styles.placeholderImage}>
+          <View style={dynamicStyles.placeholderImage}>
             <Ionicons
               name="book-outline"
               size={48}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
           </View>
         )}
@@ -61,11 +65,11 @@ const ItemCard: React.FC<ItemCardProps> = ({
         {status && (
           <View
             style={[
-              styles.statusBadgeOverlay,
+              dynamicStyles.statusBadgeOverlay,
               statusColor && { backgroundColor: statusColor },
             ]}
           >
-            <Text style={styles.statusBadgeText} numberOfLines={1}>
+            <Text style={dynamicStyles.statusBadgeText} numberOfLines={1}>
               {status}
             </Text>
           </View>
@@ -73,41 +77,41 @@ const ItemCard: React.FC<ItemCardProps> = ({
 
         {/* Overdue Indicator */}
         {showOverdue && (
-          <View style={styles.overdueIndicator}>
+          <View style={dynamicStyles.overdueIndicator}>
             <Ionicons name="alert-circle" size={16} color="#FFFFFF" />
           </View>
         )}
       </View>
 
       {/* Content Container */}
-      <View style={styles.contentContainer}>
+      <View style={dynamicStyles.contentContainer}>
         {/* Title */}
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={dynamicStyles.title} numberOfLines={2}>
           {title}
         </Text>
 
         {/* Subtitle/Author */}
         {subtitle && (
-          <Text style={styles.subtitle} numberOfLines={1}>
+          <Text style={dynamicStyles.subtitle} numberOfLines={1}>
             {subtitle}
           </Text>
         )}
 
         {/* Info Row */}
-        <View style={styles.infoRow}>
+        <View style={dynamicStyles.infoRow}>
           {dueInfo && (
             <View
-              style={[styles.infoBadge, showOverdue && styles.infoBadgeOverdue]}
+              style={[dynamicStyles.infoBadge, showOverdue && dynamicStyles.infoBadgeOverdue]}
             >
               <Ionicons
                 name={showOverdue ? "alert-circle" : "calendar"}
                 size={14}
-                color={showOverdue ? "#FF3B30" : COLORS.primary}
+                color={showOverdue ? "#FF3B30" : colors.primary}
               />
               <Text
                 style={[
-                  styles.infoBadgeText,
-                  showOverdue && styles.infoBadgeTextOverdue,
+                  dynamicStyles.infoBadgeText,
+                  showOverdue && dynamicStyles.infoBadgeTextOverdue,
                 ]}
                 numberOfLines={1}
               >
@@ -117,9 +121,9 @@ const ItemCard: React.FC<ItemCardProps> = ({
           )}
 
           {positionInfo && (
-            <View style={styles.infoBadge}>
-              <Ionicons name="time" size={14} color={COLORS.primary} />
-              <Text style={styles.infoBadgeText} numberOfLines={1}>
+            <View style={dynamicStyles.infoBadge}>
+              <Ionicons name="time" size={14} color={colors.primary} />
+              <Text style={dynamicStyles.infoBadgeText} numberOfLines={1}>
                 {positionInfo}
               </Text>
             </View>
@@ -127,12 +131,12 @@ const ItemCard: React.FC<ItemCardProps> = ({
         </View>
 
         {/* Action Indicator */}
-        <View style={styles.actionIndicator}>
-          <Text style={styles.actionText}>Tap to view details</Text>
+        <View style={dynamicStyles.actionIndicator}>
+          <Text style={dynamicStyles.actionText}>Tap to view details</Text>
           <Ionicons
             name="chevron-forward"
             size={16}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
         </View>
       </View>
@@ -140,25 +144,26 @@ const ItemCard: React.FC<ItemCardProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+    return StyleSheet.create({
   container: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     marginBottom: 16,
     overflow: "hidden",
-    shadowColor: COLORS.black,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 8,
     elevation: 4,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   imageContainer: {
     position: "relative",
     width: "100%",
     height: 200,
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
   },
   image: {
     width: "100%",
@@ -167,7 +172,7 @@ const styles = StyleSheet.create({
   placeholderImage: {
     width: "100%",
     height: "100%",
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -175,11 +180,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 12,
     right: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
-    shadowColor: COLORS.black,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -200,7 +205,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: COLORS.black,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
@@ -213,12 +218,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     lineHeight: 24,
   },
   subtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
   infoRow: {
@@ -230,12 +235,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    backgroundColor: `${COLORS.primary}12`,
+    backgroundColor: `${colors.primary}12`,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: `${COLORS.primary}30`,
+    borderColor: `${colors.primary}30`,
   },
   infoBadgeOverdue: {
     backgroundColor: "#FFE6E6",
@@ -244,7 +249,7 @@ const styles = StyleSheet.create({
   infoBadgeText: {
     fontSize: 13,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: colors.primary,
   },
   infoBadgeTextOverdue: {
     color: "#FF3B30",
@@ -256,13 +261,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   actionText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "500",
   },
 });
 
+}
 export default ItemCard;

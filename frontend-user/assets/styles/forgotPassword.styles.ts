@@ -3,7 +3,8 @@ import COLORS from "@/constants/color";
 
 const { width } = Dimensions.get("window");
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flexGrow: 1,
     backgroundColor: COLORS.background,
@@ -116,5 +117,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
 });
+}
 
-export default styles;
+export default createDynamicStyles;

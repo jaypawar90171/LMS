@@ -20,7 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { RefreshControl } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import BottomSheet from "@gorhom/bottom-sheet";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function Explore() {
   const [categories, setCategories] = useState<ICategory[]>([]);
@@ -32,6 +32,9 @@ export default function Explore() {
   const bottomSheetRef = useRef<BottomSheet>(null);
   const [sortBy, setSortBy] = useState<"name" | "subcount">("name");
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const getCategories = useCallback(async (isRefresh = false) => {
     if (!isRefresh) {
@@ -131,37 +134,37 @@ export default function Explore() {
 
   // Simple custom skeleton component
   const SkeletonCard = () => (
-    <View style={styles.skeletonCard}>
-      <View style={styles.skeletonIconContainer} />
-      <View style={styles.skeletonText} />
+    <View style={dynamicStyles.skeletonCard}>
+      <View style={dynamicStyles.skeletonIconContainer} />
+      <View style={dynamicStyles.skeletonText} />
     </View>
   );
 
   const SkeletonSearch = () => (
-    <View style={styles.searchBar}>
-      <View style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: COLORS.textSecondary }} />
-      <View style={{ flex: 1, height: 16, borderRadius: 8, backgroundColor: COLORS.textSecondary }} />
+    <View style={dynamicStyles.searchBar}>
+      <View style={{ width: 20, height: 20, borderRadius: 10, marginRight: 8, backgroundColor: colors.textSecondary }} />
+      <View style={{ flex: 1, height: 16, borderRadius: 8, backgroundColor: colors.textSecondary }} />
     </View>
   );
 
   if (loading) {
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
-          <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 20 }} />
-          <Text style={styles.loadingText}>Loading categories...</Text>
+        <View style={dynamicStyles.container}>
+          <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 20 }} />
+          <Text style={dynamicStyles.loadingText}>Loading categories...</Text>
           {/* Optional: Add skeleton UI for better UX */}
-          <View style={styles.searchContainer}>
+          <View style={dynamicStyles.searchContainer}>
             <SkeletonSearch />
-            <View style={styles.filterButton} />
+            <View style={dynamicStyles.filterButton} />
           </View>
           <FlatList
             data={Array(4).fill({})}  
             numColumns={2}
             keyExtractor={(_, i) => i.toString()}
             renderItem={() => <SkeletonCard />}
-            contentContainerStyle={styles.listContent}
-            columnWrapperStyle={styles.columnWrapper}
+            contentContainerStyle={dynamicStyles.listContent}
+            columnWrapperStyle={dynamicStyles.columnWrapper}
           />
         </View>
       </GestureHandlerRootView>
@@ -173,28 +176,28 @@ export default function Explore() {
     return (
       <TouchableOpacity
         activeOpacity={0.8}
-        style={styles.categoryCard}
+        style={dynamicStyles.categoryCard}
         onPress={() => handleCategoryPress(item)}
         accessibilityLabel={`Explore ${item.name} category`}
         accessibilityRole="button"
         accessibilityHint={`${count} subcategories available`}
       >
-        <View style={styles.iconContainer}>
+        <View style={dynamicStyles.iconContainer}>
           <Ionicons
             name={getCategoryIcon(item.name)}
             size={40}  
-            color={COLORS.primary}
+            color={colors.primary}
           />
         </View>
   
-        <Text style={styles.categoryName} numberOfLines={1}>
+        <Text style={dynamicStyles.categoryName} numberOfLines={1}>
           {item.name}
         </Text>
   
         {count > 0 && (
-          <View style={styles.metaRow}>
-            <View style={styles.countPill}>
-              <Text style={styles.countText}>{count} subcategories</Text>
+          <View style={dynamicStyles.metaRow}>
+            <View style={dynamicStyles.countPill}>
+              <Text style={dynamicStyles.countText}>{count} subcategories</Text>
             </View>
           </View>
         )}
@@ -204,22 +207,22 @@ export default function Explore() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       <Text 
-        style={styles.header} 
+        style={dynamicStyles.header} 
         accessibilityRole="header"
         accessibilityLabel="Explore Library"
       >
         Explore Library
       </Text>
 
-      <View style={styles.searchContainer}>
-        <View style={styles.searchBar}>
-          <Ionicons name="search" size={20} color={COLORS.textSecondary} style={styles.searchIcon} />
+      <View style={dynamicStyles.searchContainer}>
+        <View style={dynamicStyles.searchBar}>
+          <Ionicons name="search" size={20} color={colors.textSecondary} style={dynamicStyles.searchIcon} />
           <TextInput
-            style={styles.searchInput}
+            style={dynamicStyles.searchInput}
             placeholder="Search categories..."
-            placeholderTextColor={COLORS.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
             accessibilityLabel="Search categories"
@@ -227,13 +230,13 @@ export default function Explore() {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery("")} accessibilityLabel="Clear search">
-              <Ionicons name="close-circle" size={20} color={COLORS.textSecondary} />
+              <Ionicons name="close-circle" size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
 
         <TouchableOpacity 
-          style={styles.filterButton} 
+          style={dynamicStyles.filterButton} 
           onPress={() => bottomSheetRef.current?.expand()}
           accessibilityLabel="Filter categories"
         >
@@ -246,33 +249,33 @@ export default function Explore() {
         keyExtractor={(item) => item._id}
         numColumns={2}
         renderItem={renderItem}
-        contentContainerStyle={styles.listContent}
-        columnWrapperStyle={styles.columnWrapper}
+        contentContainerStyle={dynamicStyles.listContent}
+        columnWrapperStyle={dynamicStyles.columnWrapper}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
             onRefresh={() => getCategories(true)}
-            colors={[COLORS.primary]}
-            tintColor={COLORS.primary}
+            colors={[colors.primary]}
+            tintColor={colors.primary}
           />
         }
         ListEmptyComponent={
           searchQuery.length > 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="search" size={48} color={COLORS.textSecondary} />
-              <Text style={styles.emptyStateTitle}>No Matching Categories</Text>
-              <Text style={styles.emptyStateText}>Try adjusting your search terms.</Text>
+            <View style={dynamicStyles.emptyState}>
+              <Ionicons name="search" size={48} color={colors.textSecondary} />
+              <Text style={dynamicStyles.emptyStateTitle}>No Matching Categories</Text>
+              <Text style={dynamicStyles.emptyStateText}>Try adjusting your search terms.</Text>
             </View>
           ) : (
-            <View style={styles.emptyState}>
+            <View style={dynamicStyles.emptyState}>
               <Ionicons
                 name="grid-outline"
                 size={48}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.emptyStateTitle}>No Categories Available</Text>
-              <Text style={styles.emptyStateText}>
+              <Text style={dynamicStyles.emptyStateTitle}>No Categories Available</Text>
+              <Text style={dynamicStyles.emptyStateText}>
                 Categories will appear here once they are added to the system.
               </Text>
             </View>
@@ -283,22 +286,22 @@ export default function Explore() {
         ref={bottomSheetRef}
         index={-1}
         snapPoints={["25%", "50%"]}
-        backgroundStyle={{ backgroundColor: COLORS.cardBackground }}
-        handleIndicatorStyle={{ backgroundColor: COLORS.border }}
+        backgroundStyle={{ backgroundColor: colors.cardBackground }}
+        handleIndicatorStyle={{ backgroundColor: colors.border }}
       >
         <View style={{ padding: 16 }}>
-          <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16, color: COLORS.textPrimary }}>Sort By</Text>
+          <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16, color: colors.textPrimary }}>Sort By</Text>
           <TouchableOpacity 
-            style={[styles.filterOption, sortBy === "name" && styles.activeFilter]}
+            style={[dynamicStyles.filterOption, sortBy === "name" && dynamicStyles.activeFilter]}
             onPress={() => { setSortBy("name"); bottomSheetRef.current?.close(); }}
           >
-            <Text style={{ color: COLORS.textPrimary }}>Name (A-Z)</Text>
+            <Text style={{ color: colors.textPrimary }}>Name (A-Z)</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.filterOption, sortBy === "subcount" && styles.activeFilter]}
+            style={[dynamicStyles.filterOption, sortBy === "subcount" && dynamicStyles.activeFilter]}
             onPress={() => { setSortBy("subcount"); bottomSheetRef.current?.close(); }}
           >
-            <Text style={{ color: COLORS.textPrimary }}>Subcategories (Most First)</Text>
+            <Text style={{ color: colors.textPrimary }}>Subcategories (Most First)</Text>
           </TouchableOpacity>
         </View>
       </BottomSheet>
@@ -309,10 +312,11 @@ export default function Explore() {
 
 const CARD_HEIGHT = 160;
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     paddingHorizontal: 16,
     paddingTop: 12,
   },
@@ -320,10 +324,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   activeFilter: {
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
   },
   searchContainer: {
     flexDirection: "row",
@@ -336,12 +340,12 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     paddingHorizontal: 12,
     height: 48,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,
@@ -355,16 +359,16 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 48,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   filterButton: {
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     justifyContent: "center",
     alignItems: "center",
-    shadowColor: COLORS.primary,
+    shadowColor: colors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
@@ -373,12 +377,12 @@ const styles = StyleSheet.create({
   header: {
     fontSize: 28,
     fontWeight: "bold",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 16,
     textAlign: "center",
   },
   loadingText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     marginBottom: 20,
   },
@@ -393,11 +397,11 @@ const styles = StyleSheet.create({
   categoryCard: {
     width: "48%",
     height: CARD_HEIGHT,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     flexDirection: "column",  
     justifyContent: "center",  
     alignItems: "center",     
@@ -411,7 +415,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${colors.primary}15`,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 12
@@ -419,7 +423,7 @@ const styles = StyleSheet.create({
   categoryName: {
     fontSize: 16,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center", 
     marginBottom: 8,
   },
@@ -434,48 +438,48 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: `${COLORS.primary}12`,
+    backgroundColor: `${colors.primary}12`,
     borderWidth: 1,
-    borderColor: `${COLORS.primary}26`,
+    borderColor: `${colors.primary}26`,
   },
   countText: {
     fontSize: 12,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: colors.primary,
   },
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
     padding: 40,
     marginTop: 24,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
-  // Skeleton styles
+  // Skeleton dynamicStyles
   skeletonCard: {
     width: "48%",
     height: CARD_HEIGHT,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     flexDirection: "column",  
     justifyContent: "center",  
     alignItems: "center",     
@@ -489,13 +493,14 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: COLORS.textSecondary,
+    backgroundColor: colors.textSecondary,
     marginBottom: 12
   },
   skeletonText: {
     height: 16,
     width: "60%",
     borderRadius: 4,
-    backgroundColor: COLORS.textSecondary,
+    backgroundColor: colors.textSecondary,
   },
 });
+}

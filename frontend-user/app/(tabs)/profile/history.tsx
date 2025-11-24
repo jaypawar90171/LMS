@@ -14,8 +14,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface BorrowedItem {
   id: string;
@@ -63,6 +64,9 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   // Animation values
   const [fadeAnim] = useState(new Animated.Value(0));
@@ -132,7 +136,7 @@ export default function HistoryScreen() {
       case "waived":
         return "#8E8E93";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
@@ -168,14 +172,14 @@ export default function HistoryScreen() {
   const renderBorrowedItems = () => {
     if (!historyData?.recentlyBorrowed.length) {
       return (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="book-outline"
             size={64}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>No Active Borrows</Text>
-          <Text style={styles.emptyText}>
+          <Text style={dynamicStyles.emptyTitle}>No Active Borrows</Text>
+          <Text style={dynamicStyles.emptyText}>
             You don't have any currently borrowed items.
           </Text>
         </View>
@@ -192,18 +196,18 @@ export default function HistoryScreen() {
             <View
               key={item.id}
               style={[
-                styles.itemCard,
+                dynamicStyles.itemCard,
                 index === historyData.recentlyBorrowed.length - 1 &&
-                  styles.lastItemCard,
+                  dynamicStyles.lastItemCard,
               ]}
             >
-              <View style={styles.itemHeader}>
-                <Text style={styles.itemTitle} numberOfLines={2}>
+              <View style={dynamicStyles.itemHeader}>
+                <Text style={dynamicStyles.itemTitle} numberOfLines={2}>
                   {item.title}
                 </Text>
                 <View
                   style={[
-                    styles.statusBadge,
+                    dynamicStyles.statusBadge,
                     { backgroundColor: getStatusColor(item.status) },
                   ]}
                 >
@@ -212,47 +216,47 @@ export default function HistoryScreen() {
                     size={12}
                     color="#FFF"
                   />
-                  <Text style={styles.statusBadgeText}>
+                  <Text style={dynamicStyles.statusBadgeText}>
                     {isOverdue ? "Overdue" : item.status}
                   </Text>
                 </View>
               </View>
 
-              <Text style={styles.itemAuthor}>by {item.author}</Text>
+              <Text style={dynamicStyles.itemAuthor}>by {item.author}</Text>
 
-              <View style={styles.datesContainer}>
-                <View style={styles.dateRow}>
+              <View style={dynamicStyles.datesContainer}>
+                <View style={dynamicStyles.dateRow}>
                   <Ionicons
                     name="calendar-outline"
                     size={14}
-                    color={COLORS.textSecondary}
+                    color={colors.textSecondary}
                   />
-                  <Text style={styles.dateLabel}>Issued: </Text>
-                  <Text style={styles.dateValue}>
+                  <Text style={dynamicStyles.dateLabel}>Issued: </Text>
+                  <Text style={dynamicStyles.dateValue}>
                     {formatDate(item.issueDate)}
                   </Text>
                 </View>
-                <View style={styles.dateRow}>
+                <View style={dynamicStyles.dateRow}>
                   <Ionicons
                     name="flag-outline"
                     size={14}
-                    color={COLORS.textSecondary}
+                    color={colors.textSecondary}
                   />
-                  <Text style={styles.dateLabel}>Due: </Text>
+                  <Text style={dynamicStyles.dateLabel}>Due: </Text>
                   <Text
-                    style={[styles.dateValue, isOverdue && styles.overdueText]}
+                    style={[dynamicStyles.dateValue, isOverdue && dynamicStyles.overdueText]}
                   >
                     {formatDate(item.dueDate)}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.footer}>
-                <View style={styles.daysContainer}>
+              <View style={dynamicStyles.footer}>
+                <View style={dynamicStyles.daysContainer}>
                   <Text
                     style={[
-                      styles.daysText,
-                      isOverdue ? styles.overdueText : styles.daysRemainingText,
+                      dynamicStyles.daysText,
+                      isOverdue ? dynamicStyles.overdueText : dynamicStyles.daysRemainingText,
                     ]}
                   >
                     {isOverdue
@@ -261,8 +265,8 @@ export default function HistoryScreen() {
                   </Text>
                 </View>
                 {item.fine && item.fine > 0 && (
-                  <View style={styles.fineBadge}>
-                    <Text style={styles.fineBadgeText}>
+                  <View style={dynamicStyles.fineBadge}>
+                    <Text style={dynamicStyles.fineBadgeText}>
                       {formatCurrency(item.fine)}
                     </Text>
                   </View>
@@ -278,14 +282,14 @@ export default function HistoryScreen() {
   const renderReturnedItems = () => {
     if (!historyData?.returnedItems.length) {
       return (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="archive-outline"
             size={64}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>No Return History</Text>
-          <Text style={styles.emptyText}>
+          <Text style={dynamicStyles.emptyTitle}>No Return History</Text>
+          <Text style={dynamicStyles.emptyText}>
             You haven't returned any items yet.
           </Text>
         </View>
@@ -298,18 +302,18 @@ export default function HistoryScreen() {
           <View
             key={item.id}
             style={[
-              styles.itemCard,
+              dynamicStyles.itemCard,
               index === historyData.returnedItems.length - 1 &&
-                styles.lastItemCard,
+                dynamicStyles.lastItemCard,
             ]}
           >
-            <View style={styles.itemHeader}>
-              <Text style={styles.itemTitle} numberOfLines={2}>
+            <View style={dynamicStyles.itemHeader}>
+              <Text style={dynamicStyles.itemTitle} numberOfLines={2}>
                 {item.title}
               </Text>
               <View
                 style={[
-                  styles.statusBadge,
+                  dynamicStyles.statusBadge,
                   { backgroundColor: getStatusColor(item.status) },
                 ]}
               >
@@ -318,41 +322,41 @@ export default function HistoryScreen() {
                   size={12}
                   color="#FFF"
                 />
-                <Text style={styles.statusBadgeText}>{item.status}</Text>
+                <Text style={dynamicStyles.statusBadgeText}>{item.status}</Text>
               </View>
             </View>
 
-            <Text style={styles.itemAuthor}>by {item.author}</Text>
+            <Text style={dynamicStyles.itemAuthor}>by {item.author}</Text>
 
-            <View style={styles.datesContainer}>
-              <View style={styles.dateRow}>
+            <View style={dynamicStyles.datesContainer}>
+              <View style={dynamicStyles.dateRow}>
                 <Ionicons
                   name="calendar-outline"
                   size={14}
-                  color={COLORS.textSecondary}
+                  color={colors.textSecondary}
                 />
-                <Text style={styles.dateLabel}>Issued: </Text>
-                <Text style={styles.dateValue}>
+                <Text style={dynamicStyles.dateLabel}>Issued: </Text>
+                <Text style={dynamicStyles.dateValue}>
                   {formatDate(item.issueDate)}
                 </Text>
               </View>
-              <View style={styles.dateRow}>
+              <View style={dynamicStyles.dateRow}>
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={14}
-                  color={COLORS.textSecondary}
+                  color={colors.textSecondary}
                 />
-                <Text style={styles.dateLabel}>Returned: </Text>
-                <Text style={styles.dateValue}>
+                <Text style={dynamicStyles.dateLabel}>Returned: </Text>
+                <Text style={dynamicStyles.dateValue}>
                   {formatDate(item.returnDate)}
                 </Text>
               </View>
             </View>
 
             {item.fine && item.fine > 0 && (
-              <View style={styles.fineNotice}>
+              <View style={dynamicStyles.fineNotice}>
                 <Ionicons name="warning-outline" size={16} color="#FF9500" />
-                <Text style={styles.fineNoticeText}>
+                <Text style={dynamicStyles.fineNoticeText}>
                   Fine incurred: {formatCurrency(item.fine)}
                 </Text>
               </View>
@@ -366,14 +370,14 @@ export default function HistoryScreen() {
   const renderFines = () => {
     if (!historyData?.fines.length) {
       return (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="receipt-outline"
             size={64}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyTitle}>No Fine History</Text>
-          <Text style={styles.emptyText}>
+          <Text style={dynamicStyles.emptyTitle}>No Fine History</Text>
+          <Text style={dynamicStyles.emptyText}>
             You don't have any fines at the moment.
           </Text>
         </View>
@@ -386,17 +390,17 @@ export default function HistoryScreen() {
           <View
             key={fine.id}
             style={[
-              styles.itemCard,
-              index === historyData.fines.length - 1 && styles.lastItemCard,
+              dynamicStyles.itemCard,
+              index === historyData.fines.length - 1 && dynamicStyles.lastItemCard,
             ]}
           >
-            <View style={styles.itemHeader}>
-              <Text style={styles.fineReason} numberOfLines={2}>
+            <View style={dynamicStyles.itemHeader}>
+              <Text style={dynamicStyles.fineReason} numberOfLines={2}>
                 {fine.reason}
               </Text>
               <View
                 style={[
-                  styles.statusBadge,
+                  dynamicStyles.statusBadge,
                   { backgroundColor: getStatusColor(fine.status) },
                 ]}
               >
@@ -405,34 +409,34 @@ export default function HistoryScreen() {
                   size={12}
                   color="#FFF"
                 />
-                <Text style={styles.statusBadgeText}>{fine.status}</Text>
+                <Text style={dynamicStyles.statusBadgeText}>{fine.status}</Text>
               </View>
             </View>
 
-            <View style={styles.fineAmounts}>
-              <View style={styles.amountRow}>
-                <Text style={styles.amountLabel}>Total Amount:</Text>
-                <Text style={styles.amountValue}>
+            <View style={dynamicStyles.fineAmounts}>
+              <View style={dynamicStyles.amountRow}>
+                <Text style={dynamicStyles.amountLabel}>Total Amount:</Text>
+                <Text style={dynamicStyles.amountValue}>
                   {formatCurrency(fine.amount)}
                 </Text>
               </View>
               {fine.outstanding > 0 && (
-                <View style={styles.amountRow}>
-                  <Text style={styles.outstandingLabel}>Outstanding:</Text>
-                  <Text style={styles.outstandingValue}>
+                <View style={dynamicStyles.amountRow}>
+                  <Text style={dynamicStyles.outstandingLabel}>Outstanding:</Text>
+                  <Text style={dynamicStyles.outstandingValue}>
                     {formatCurrency(fine.outstanding)}
                   </Text>
                 </View>
               )}
             </View>
 
-            <View style={styles.fineDate}>
+            <View style={dynamicStyles.fineDate}>
               <Ionicons
                 name="calendar-outline"
                 size={14}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.fineDateText}>
+              <Text style={dynamicStyles.fineDateText}>
                 Incurred on {formatDate(fine.dateIncurred)}
               </Text>
             </View>
@@ -472,62 +476,62 @@ export default function HistoryScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your history...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Loading your history...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={dynamicStyles.errorContainer}>
         <Ionicons
           name="alert-circle-outline"
           size={64}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
         />
-        <Text style={styles.errorTitle}>Unable to Load History</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchHistory}>
+        <Text style={dynamicStyles.errorTitle}>Unable to Load History</Text>
+        <Text style={dynamicStyles.errorText}>{error}</Text>
+        <TouchableOpacity style={dynamicStyles.retryButton} onPress={fetchHistory}>
           <Ionicons name="refresh" size={20} color="#FFF" />
-          <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={dynamicStyles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={dynamicStyles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>History</Text>
-        <View style={styles.placeholder} />
+        <Text style={dynamicStyles.headerTitle}>History</Text>
+        <View style={dynamicStyles.placeholder} />
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabsContainer}>
+      <View style={dynamicStyles.tabsContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "borrowed" && styles.activeTab]}
+          style={[dynamicStyles.tab, activeTab === "borrowed" && dynamicStyles.activeTab]}
           onPress={() => setActiveTab("borrowed")}
         >
           <Ionicons
             name="book-outline"
             size={20}
             color={
-              activeTab === "borrowed" ? COLORS.primary : COLORS.textSecondary
+              activeTab === "borrowed" ? colors.primary : colors.textSecondary
             }
           />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "borrowed" && styles.activeTabText,
+              dynamicStyles.tabText,
+              activeTab === "borrowed" && dynamicStyles.activeTabText,
             ]}
           >
             Borrowed ({getTabCount("borrowed")})
@@ -535,20 +539,20 @@ export default function HistoryScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === "returned" && styles.activeTab]}
+          style={[dynamicStyles.tab, activeTab === "returned" && dynamicStyles.activeTab]}
           onPress={() => setActiveTab("returned")}
         >
           <Ionicons
             name="checkmark-done-outline"
             size={20}
             color={
-              activeTab === "returned" ? COLORS.primary : COLORS.textSecondary
+              activeTab === "returned" ? colors.primary : colors.textSecondary
             }
           />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "returned" && styles.activeTabText,
+              dynamicStyles.tabText,
+              activeTab === "returned" && dynamicStyles.activeTabText,
             ]}
           >
             Returned ({getTabCount("returned")})
@@ -556,20 +560,20 @@ export default function HistoryScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === "fines" && styles.activeTab]}
+          style={[dynamicStyles.tab, activeTab === "fines" && dynamicStyles.activeTab]}
           onPress={() => setActiveTab("fines")}
         >
           <Ionicons
             name="receipt-outline"
             size={20}
             color={
-              activeTab === "fines" ? COLORS.primary : COLORS.textSecondary
+              activeTab === "fines" ? colors.primary : colors.textSecondary
             }
           />
           <Text
             style={[
-              styles.tabText,
-              activeTab === "fines" && styles.activeTabText,
+              dynamicStyles.tabText,
+              activeTab === "fines" && dynamicStyles.activeTabText,
             ]}
           >
             Fines ({getTabCount("fines")})
@@ -579,54 +583,55 @@ export default function HistoryScreen() {
 
       {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={dynamicStyles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
-        <View style={styles.contentContainer}>{getTabContent()}</View>
+        <View style={dynamicStyles.contentContainer}>{getTabContent()}</View>
 
         {/* Bottom Spacer */}
-        <View style={styles.bottomSpacer} />
+        <View style={dynamicStyles.bottomSpacer} />
       </ScrollView>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 32,
     gap: 16,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   errorText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },
@@ -634,7 +639,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -650,9 +655,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -660,7 +665,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   placeholder: {
@@ -668,9 +673,9 @@ const styles = StyleSheet.create({
   },
   tabsContainer: {
     flexDirection: "row",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -683,15 +688,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   activeTabText: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   content: {
     flex: 1,
@@ -702,24 +707,24 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: "center",
     padding: 40,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
   itemCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -742,14 +747,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginRight: 12,
   },
   fineReason: {
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginRight: 12,
   },
   statusBadge: {
@@ -768,7 +773,7 @@ const styles = StyleSheet.create({
   },
   itemAuthor: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 12,
   },
   datesContainer: {
@@ -782,12 +787,12 @@ const styles = StyleSheet.create({
   },
   dateLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   dateValue: {
     fontSize: 12,
     fontWeight: "500",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   footer: {
     flexDirection: "row",
@@ -843,12 +848,12 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   amountValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   outstandingLabel: {
     fontSize: 14,
@@ -867,14 +872,14 @@ const styles = StyleSheet.create({
   },
   fineDateText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   payButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -889,3 +894,4 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
+}

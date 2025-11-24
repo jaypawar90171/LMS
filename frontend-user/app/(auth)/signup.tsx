@@ -10,9 +10,8 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import React, { useState } from "react";
-import styles from "@/assets/styles/signup.styles";
+import createDynamicStyles from "@/assets/styles/signup.styles"
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
 import { Link, router } from "expo-router";
 import axios from "axios";
 import { API_BASE_URL } from "@/constants/api";
@@ -21,6 +20,8 @@ import CustomToast from "@/components/CustomToast";
 import { Picker } from "@react-native-picker/picker";
 import { useSetAtom, useAtomValue } from "jotai";
 import { isLoadingAtom, registerAtom } from "@/store/authStore";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function Signup() {
   const [formData, setFormData] = useState({
@@ -39,6 +40,9 @@ export default function Signup() {
 
   const isLoading = useAtomValue(isLoadingAtom);
   const register = useSetAtom(registerAtom);
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
@@ -127,43 +131,43 @@ export default function Signup() {
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        style={styles.scrollViewStyle}
-        contentContainerStyle={styles.scrollViewContent}
+        style={dynamicStyles.scrollViewStyle}
+        contentContainerStyle={dynamicStyles.scrollViewContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.container}>
+        <View style={dynamicStyles.container}>
           {/* ILLUSTRATION */}
-          <View style={styles.topIllustration}>
+          <View style={dynamicStyles.topIllustration}>
             <Image
               source={require("../../assets/images/loginIcon.png")}
-              style={styles.illustrationImage}
+              style={dynamicStyles.illustrationImage}
               resizeMode="contain"
             />
           </View>
 
-          <View style={styles.card}>
-            <View style={styles.header}>
-              <Text style={styles.title}>Create Account</Text>
-              <Text style={styles.subtitle}>
+          <View style={dynamicStyles.card}>
+            <View style={dynamicStyles.header}>
+              <Text style={dynamicStyles.title}>Create Account</Text>
+              <Text style={dynamicStyles.subtitle}>
                 Join us today! Fill in your details to get started.
               </Text>
             </View>
 
-            <View style={styles.formContainer}>
+            <View style={dynamicStyles.formContainer}>
               {/* FULL NAME */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Full Name *</Text>
-                <View style={styles.inputContainer}>
+              <View style={dynamicStyles.inputGroup}>
+                <Text style={dynamicStyles.label}>Full Name *</Text>
+                <View style={dynamicStyles.inputContainer}>
                   <Ionicons
                     name="person-outline"
                     size={20}
-                    color={COLORS.primary}
-                    style={styles.inputIcon}
+                    color={colors.primary}
+                    style={dynamicStyles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={dynamicStyles.input}
                     placeholder="Enter your full name"
-                    placeholderTextColor={COLORS.placeholderText}
+                    placeholderTextColor={colors.placeholderText}
                     value={formData.fullName}
                     onChangeText={(value) =>
                       handleInputChange("fullName", value)
@@ -174,19 +178,19 @@ export default function Signup() {
               </View>
 
               {/* USERNAME */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Username *</Text>
-                <View style={styles.inputContainer}>
+              <View style={dynamicStyles.inputGroup}>
+                <Text style={dynamicStyles.label}>Username *</Text>
+                <View style={dynamicStyles.inputContainer}>
                   <Ionicons
                     name="at-outline"
                     size={20}
-                    color={COLORS.primary}
-                    style={styles.inputIcon}
+                    color={colors.primary}
+                    style={dynamicStyles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={dynamicStyles.input}
                     placeholder="Choose a username"
-                    placeholderTextColor={COLORS.placeholderText}
+                    placeholderTextColor={colors.placeholderText}
                     value={formData.userName}
                     onChangeText={(value) =>
                       handleInputChange("userName", value)
@@ -197,19 +201,19 @@ export default function Signup() {
               </View>
 
               {/* EMAIL */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Email *</Text>
-                <View style={styles.inputContainer}>
+              <View style={dynamicStyles.inputGroup}>
+                <Text style={dynamicStyles.label}>Email *</Text>
+                <View style={dynamicStyles.inputContainer}>
                   <Ionicons
                     name="mail-outline"
                     size={20}
-                    color={COLORS.primary}
-                    style={styles.inputIcon}
+                    color={colors.primary}
+                    style={dynamicStyles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={dynamicStyles.input}
                     placeholder="Enter your email"
-                    placeholderTextColor={COLORS.placeholderText}
+                    placeholderTextColor={colors.placeholderText}
                     value={formData.email}
                     onChangeText={(value) => handleInputChange("email", value)}
                     keyboardType="email-address"
@@ -220,19 +224,19 @@ export default function Signup() {
               </View>
 
               {/* PASSWORD */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Password *</Text>
-                <View style={styles.inputContainer}>
+              <View style={dynamicStyles.inputGroup}>
+                <Text style={dynamicStyles.label}>Password *</Text>
+                <View style={dynamicStyles.inputContainer}>
                   <Ionicons
                     name="lock-closed-outline"
                     size={20}
-                    color={COLORS.primary}
-                    style={styles.inputIcon}
+                    color={colors.primary}
+                    style={dynamicStyles.inputIcon}
                   />
                   <TextInput
-                    style={styles.input}
+                    style={dynamicStyles.input}
                     placeholder="Create a password"
-                    placeholderTextColor={COLORS.placeholderText}
+                    placeholderTextColor={colors.placeholderText}
                     value={formData.password}
                     onChangeText={(value) =>
                       handleInputChange("password", value)
@@ -242,25 +246,25 @@ export default function Signup() {
                   />
                   <TouchableOpacity
                     onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
+                    style={dynamicStyles.eyeIcon}
                   >
                     <Ionicons
                       name={showPassword ? "eye-outline" : "eye-off-outline"}
                       size={20}
-                      color={COLORS.primary}
+                      color={colors.primary}
                     />
                   </TouchableOpacity>
                 </View>
               </View>
 
               {/* ROLE DROPDOWN */}
-              <View style={styles.inputGroup}>
-                <Text style={styles.label}>Role *</Text>
-                <View style={styles.pickerContainer}>
+              <View style={dynamicStyles.inputGroup}>
+                <Text style={dynamicStyles.label}>Role *</Text>
+                <View style={dynamicStyles.pickerContainer}>
                   <Picker
                     selectedValue={formData.role}
                     onValueChange={(value) => handleInputChange("role", value)}
-                    style={styles.picker}
+                    style={dynamicStyles.picker}
                   >
                     <Picker.Item label="Select your role" value="" />
                     <Picker.Item label="Employee" value="employee" />
@@ -272,19 +276,19 @@ export default function Signup() {
               {/* CONDITIONAL FIELDS */}
               {/* Employee ID - Show only when role is employee */}
               {formData.role === "employee" && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Employee ID *</Text>
-                  <View style={styles.inputContainer}>
+                <View style={dynamicStyles.inputGroup}>
+                  <Text style={dynamicStyles.label}>Employee ID *</Text>
+                  <View style={dynamicStyles.inputContainer}>
                     <Ionicons
                       name="id-card-outline"
                       size={20}
-                      color={COLORS.primary}
-                      style={styles.inputIcon}
+                      color={colors.primary}
+                      style={dynamicStyles.inputIcon}
                     />
                     <TextInput
-                      style={styles.input}
+                      style={dynamicStyles.input}
                       placeholder="Enter your employee ID"
-                      placeholderTextColor={COLORS.placeholderText}
+                      placeholderTextColor={colors.placeholderText}
                       value={formData.emp_id}
                       onChangeText={(value) =>
                         handleInputChange("emp_id", value)
@@ -296,19 +300,19 @@ export default function Signup() {
 
               {/* Associated Employee ID - Show only when role is familyMember */}
               {formData.role === "familyMember" && (
-                <View style={styles.inputGroup}>
-                  <Text style={styles.label}>Associated Employee ID *</Text>
-                  <View style={styles.inputContainer}>
+                <View style={dynamicStyles.inputGroup}>
+                  <Text style={dynamicStyles.label}>Associated Employee ID *</Text>
+                  <View style={dynamicStyles.inputContainer}>
                     <Ionicons
                       name="people-outline"
                       size={20}
-                      color={COLORS.primary}
-                      style={styles.inputIcon}
+                      color={colors.primary}
+                      style={dynamicStyles.inputIcon}
                     />
                     <TextInput
-                      style={styles.input}
+                      style={dynamicStyles.input}
                       placeholder="Enter associated employee ID"
-                      placeholderTextColor={COLORS.placeholderText}
+                      placeholderTextColor={colors.placeholderText}
                       value={formData.ass_emp_id}
                       onChangeText={(value) =>
                         handleInputChange("ass_emp_id", value)
@@ -320,22 +324,22 @@ export default function Signup() {
 
               {/* SIGNUP BUTTON */}
               <TouchableOpacity
-                style={[styles.button, isLoading && styles.buttonDisabled]}
+                style={[dynamicStyles.button, isLoading && dynamicStyles.buttonDisabled]}
                 onPress={handleSignup}
                 disabled={isLoading}
               >
                 {isLoading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text style={styles.buttonText}>Create Account</Text>
+                  <Text style={dynamicStyles.buttonText}>Create Account</Text>
                 )}
               </TouchableOpacity>
 
               {/* BACK TO LOGIN */}
-              <View style={styles.backToLoginContainer}>
-                <Text style={styles.footerText}>Already have an account?</Text>
+              <View style={dynamicStyles.backToLoginContainer}>
+                <Text style={dynamicStyles.footerText}>Already have an account?</Text>
                 <TouchableOpacity onPress={handleBackToLogin}>
-                  <Text style={styles.link}>Login</Text>
+                  <Text style={dynamicStyles.link}>Login</Text>
                 </TouchableOpacity>
               </View>
             </View>

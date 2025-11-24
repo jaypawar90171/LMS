@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,10 +13,11 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom, logoutAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
 import { Ionicons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
 import { manipulateAsync, SaveFormat } from "expo-image-manipulator";
+import ThemeToggle from "@/components/ThemeToggle";
 
 interface ProfileData {
   id: string;
@@ -48,10 +49,13 @@ export default function ProfileScreen() {
   const [user, setUser] = useAtom(userAtom);
   const [token] = useAtom(tokenAtom);
   const [, logout] = useAtom(logoutAtom);
+  const { colors } = useTheme();
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const router = useRouter();
+
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchProfileData();
@@ -90,7 +94,6 @@ export default function ProfileScreen() {
 
   const handleChangePhoto = async () => {
     try {
-      // Request permissions
       const { status } =
         await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== "granted") {
@@ -101,7 +104,6 @@ export default function ProfileScreen() {
         return;
       }
 
-      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         allowsEditing: true,
@@ -110,14 +112,12 @@ export default function ProfileScreen() {
       });
 
       if (!result.canceled && result.assets && result.assets[0]) {
-        // Compress and resize the image
         const manipulatedImage = await manipulateAsync(
           result.assets[0].uri,
           [{ resize: { width: 500, height: 500 } }],
           { compress: 0.7, format: SaveFormat.JPEG }
         );
 
-        // Upload the image using the dedicated endpoint
         await uploadProfilePhoto(manipulatedImage.uri);
       }
     } catch (error: any) {
@@ -132,14 +132,13 @@ export default function ProfileScreen() {
 
       const formData = new FormData();
 
-      // @ts-ignore - React Native FormData structure
+      // @ts-ignore
       formData.append("image", {
         uri: imageUri,
         type: "image/jpeg",
         name: "profile-photo.jpg",
       });
 
-      // Use the dedicated profile picture update endpoint
       const response = await axios.put(
         `${API_BASE_URL}/account/profile/picture`,
         formData,
@@ -153,18 +152,20 @@ export default function ProfileScreen() {
 
       if (response.data.success) {
         const { profilePicture, user: updatedUser } = response.data.data;
-        
-        // Update local profile data
-        setProfileData(prev => prev ? { ...prev, profilePicture } : null);
-        
-        // Update global user state if needed
+
+        setProfileData((prev) =>
+          prev ? { ...prev, profilePicture } : null
+        );
+
         if (updatedUser) {
           setUser(updatedUser);
         }
-        
+
         Alert.alert("Success", "Profile photo updated successfully!");
       } else {
-        throw new Error(response.data.message || "Failed to update profile photo");
+        throw new Error(
+          response.data.message || "Failed to update profile photo"
+        );
       }
     } catch (error: any) {
       console.error("Upload error:", error);
@@ -196,7 +197,7 @@ export default function ProfileScreen() {
       case "suspended":
         return "#F44336";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
@@ -274,8 +275,8 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>Loading profile...</Text>
+      <View style={[dynamicStyles.loadingContainer]}>
+        <Text style={{ color: colors.textPrimary }}>Loading profile...</Text>
       </View>
     );
   }
@@ -284,40 +285,43 @@ export default function ProfileScreen() {
 
   if (!displayData) {
     return (
-      <View style={styles.loadingContainer}>
-        <Text>No user data found</Text>
+      <View style={[dynamicStyles.loadingContainer]}>
+        <Text style={{ color: colors.textPrimary }}>No user data found</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={[dynamicStyles.container]}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Account</Text>
+      <View style={[dynamicStyles.header]}>
+        <Text style={[dynamicStyles.headerTitle]}>Account</Text>
       </View>
 
       {/* Profile Card */}
-      <View style={styles.profileCard}>
+      <View style={[dynamicStyles.profileCard]}>
         {/* Avatar Container */}
-        <View style={styles.avatarSection}>
-          <View style={styles.avatarContainer}>
+        <View style={dynamicStyles.avatarSection}>
+          <View style={dynamicStyles.avatarContainer}>
             {displayData.profile ? (
               <Image
                 source={{ uri: displayData.profile }}
-                style={styles.avatar}
+                style={dynamicStyles.avatar}
               />
             ) : (
-              <View style={styles.avatarPlaceholder}>
-                <Text style={styles.avatarText}>
+              <View style={[dynamicStyles.avatarPlaceholder]}>
+                <Text style={dynamicStyles.avatarText}>
                   {getInitials(displayData.fullName)}
                 </Text>
               </View>
             )}
-            
+
             {/* Add Photo Button Overlay */}
             <TouchableOpacity
-              style={styles.addPhotoButton}
+              style={[dynamicStyles.addPhotoButton]}
               onPress={handleChangePhoto}
               disabled={uploading}
             >
@@ -330,20 +334,31 @@ export default function ProfileScreen() {
           </View>
 
           {/* User Info */}
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{displayData.fullName}</Text>
-            <Text style={styles.userEmail}>{displayData.email}</Text>
-            
+          <View style={dynamicStyles.userInfo}>
+            <Text style={[dynamicStyles.userName]}>
+              {displayData.fullName}
+            </Text>
+            <Text style={[dynamicStyles.userEmail]}>
+              {displayData.email}
+            </Text>
+
             {/* Status Badge */}
-            <View style={[styles.statusBadge, { backgroundColor: getStatusColor(displayData.status) }]}>
-              <Text style={styles.statusText}>{displayData.status}</Text>
+            <View
+              style={[
+                dynamicStyles.statusBadge,
+                { backgroundColor: getStatusColor(displayData.status) },
+              ]}
+            >
+              <Text style={dynamicStyles.statusText}>{displayData.status}</Text>
             </View>
 
             {/* Role */}
             {displayData.roles && displayData.roles.length > 0 && (
-              <View style={styles.roleContainer}>
-                <Text style={styles.roleText}>
-                  {displayData.roles.map((role: any) => role.roleName).join(", ")}
+              <View style={[dynamicStyles.roleContainer]}>
+                <Text style={[dynamicStyles.roleText]}>
+                  {displayData.roles
+                    .map((role: any) => role.roleName)
+                    .join(", ")}
                 </Text>
               </View>
             )}
@@ -351,36 +366,46 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* Theme Toggle Section */}
+      <View style={{ marginHorizontal: 16 }}>
+        <ThemeToggle />
+      </View>
+
       {/* Profile Options */}
-      <View style={styles.optionsSection}>
-        <Text style={styles.sectionTitle}>Account Settings</Text>
+      <View style={[dynamicStyles.optionsSection]}>
+        <Text style={[dynamicStyles.sectionTitle]}>Account Settings</Text>
 
         {profileOptions.map((option, index) => (
           <TouchableOpacity
             key={option.id}
             style={[
-              styles.optionItem,
-              index === profileOptions.length - 1 && styles.lastOptionItem,
+              dynamicStyles.optionItem,
+              index === profileOptions.length - 1 &&
+                dynamicStyles.lastOptionItem,
             ]}
             onPress={() => handleOptionPress(option)}
           >
-            <View style={styles.optionLeft}>
+            <View style={dynamicStyles.optionLeft}>
               <Ionicons
                 name={option.icon as any}
                 size={22}
-                color={COLORS.primary}
+                color={colors.primary}
               />
-              <Text style={styles.optionText}>{option.title}</Text>
+              <Text style={[dynamicStyles.optionText]}>
+                {option.title}
+              </Text>
             </View>
 
-            <View style={styles.optionRight}>
+            <View style={dynamicStyles.optionRight}>
               {option.comingSoon && (
-                <Text style={styles.comingSoonText}>Soon</Text>
+                <Text style={[dynamicStyles.comingSoonText]}>
+                  Soon
+                </Text>
               )}
               <Ionicons
                 name="chevron-forward"
                 size={20}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
             </View>
           </TouchableOpacity>
@@ -388,24 +413,26 @@ export default function ProfileScreen() {
       </View>
 
       {/* Additional Info */}
-      <View style={styles.infoSection}>
-        <Text style={styles.sectionTitle}>Account Information</Text>
+      <View style={[dynamicStyles.infoSection]}>
+        <Text style={[dynamicStyles.sectionTitle]}>Account Information</Text>
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Username</Text>
-          <Text style={styles.infoValue}>{displayData.username}</Text>
+        <View style={[dynamicStyles.infoItem]}>
+          <Text style={[dynamicStyles.infoLabel]}>Username</Text>
+          <Text style={[dynamicStyles.infoValue]}>
+            {displayData.username}
+          </Text>
         </View>
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Member Since</Text>
-          <Text style={styles.infoValue}>
+        <View style={[dynamicStyles.infoItem]}>
+          <Text style={[dynamicStyles.infoLabel]}>Member Since</Text>
+          <Text style={[dynamicStyles.infoValue]}>
             {new Date(displayData.createdAt).toLocaleDateString()}
           </Text>
         </View>
 
-        <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>Last Login</Text>
-          <Text style={styles.infoValue}>
+        <View style={[dynamicStyles.infoItem]}>
+          <Text style={[dynamicStyles.infoLabel]}>Last Login</Text>
+          <Text style={[dynamicStyles.infoValue]}>
             {new Date(displayData.lastLogin).toLocaleDateString()} at{" "}
             {new Date(displayData.lastLogin).toLocaleTimeString()}
           </Text>
@@ -413,219 +440,225 @@ export default function ProfileScreen() {
       </View>
 
       {/* Logout Button */}
-      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+      <TouchableOpacity
+        style={[dynamicStyles.logoutButton]}
+        onPress={handleLogout}
+      >
         <Ionicons name="log-out-outline" size={22} color="#FF3B30" />
-        <Text style={styles.logoutText}>Log Out</Text>
+        <Text style={dynamicStyles.logoutText}>Log Out</Text>
       </TouchableOpacity>
 
       {/* Bottom Spacer */}
-      <View style={styles.bottomSpacer} />
+      <View style={dynamicStyles.bottomSpacer} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    padding: 16,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  profileCard: {
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    padding: 20,
-    borderRadius: 16,
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  avatarSection: {
-    alignItems: "center",
-  },
-  avatarContainer: {
-    position: "relative",
-    marginBottom: 16,
-  },
-  avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: COLORS.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  avatarText: {
-    color: "#FFF",
-    fontSize: 32,
-    fontWeight: "600",
-  },
-  addPhotoButton: {
-    position: "absolute",
-    bottom: 0,
-    right: 0,
-    backgroundColor: COLORS.primary,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 3,
-    borderColor: COLORS.cardBackground,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  userInfo: {
-    alignItems: "center",
-  },
-  userName: {
-    fontSize: 24,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-    marginBottom: 4,
-    textAlign: "center",
-  },
-  userEmail: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    marginBottom: 12,
-    textAlign: "center",
-  },
-  statusBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  statusText: {
-    color: "#FFF",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  roleContainer: {
-    backgroundColor: `${COLORS.primary}20`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  roleText: {
-    color: COLORS.primary,
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  optionsSection: {
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    borderRadius: 16,
-    overflow: "hidden",
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    padding: 16,
-    paddingBottom: 8,
-  },
-  optionItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  lastOptionItem: {
-    borderBottomWidth: 0,
-  },
-  optionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
-  optionText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-    fontWeight: "500",
-  },
-  optionRight: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  comingSoonText: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-    fontStyle: "italic",
-  },
-  infoSection: {
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    padding: 16,
-    borderRadius: 16,
-  },
-  infoItem: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: `${COLORS.border}50`,
-  },
-  infoLabel: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    fontWeight: "500",
-  },
-  infoValue: {
-    fontSize: 14,
-    color: COLORS.textPrimary,
-    fontWeight: "400",
-  },
-  logoutButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.cardBackground,
-    margin: 16,
-    padding: 16,
-    borderRadius: 12,
-    gap: 8,
-    borderWidth: 1,
-    borderColor: "#FF3B30",
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FF3B30",
-  },
-  bottomSpacer: {
-    height: 20,
-  },
-});
+// Function to create dynamic styles based on theme colors
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+    },
+    header: {
+      padding: 16,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    profileCard: {
+      backgroundColor: colors.cardBackground,
+      margin: 16,
+      padding: 20,
+      borderRadius: 16,
+      alignItems: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    avatarSection: {
+      alignItems: "center",
+    },
+    avatarContainer: {
+      position: "relative",
+      marginBottom: 16,
+    },
+    avatar: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+    },
+    avatarPlaceholder: {
+      width: 100,
+      height: 100,
+      borderRadius: 50,
+      backgroundColor: colors.primary,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    avatarText: {
+      color: "#FFF",
+      fontSize: 32,
+      fontWeight: "600",
+    },
+    addPhotoButton: {
+      position: "absolute",
+      bottom: 0,
+      right: 0,
+      backgroundColor: colors.primary,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      justifyContent: "center",
+      alignItems: "center",
+      borderWidth: 3,
+      borderColor: colors.cardBackground,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
+      elevation: 4,
+    },
+    userInfo: {
+      alignItems: "center",
+    },
+    userName: {
+      fontSize: 24,
+      fontWeight: "700",
+      color: colors.textPrimary,
+      marginBottom: 4,
+      textAlign: "center",
+    },
+    userEmail: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      marginBottom: 12,
+      textAlign: "center",
+    },
+    statusBadge: {
+      paddingHorizontal: 12,
+      paddingVertical: 4,
+      borderRadius: 12,
+      marginBottom: 8,
+    },
+    statusText: {
+      color: "#FFF",
+      fontSize: 12,
+      fontWeight: "600",
+    },
+    roleContainer: {
+      backgroundColor: `${colors.primary}20`,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: 8,
+    },
+    roleText: {
+      color: colors.primary,
+      fontSize: 12,
+      fontWeight: "500",
+    },
+    optionsSection: {
+      backgroundColor: colors.cardBackground,
+      margin: 16,
+      borderRadius: 16,
+      overflow: "hidden",
+    },
+    sectionTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      padding: 16,
+      paddingBottom: 8,
+    },
+    optionItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    lastOptionItem: {
+      borderBottomWidth: 0,
+    },
+    optionLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    },
+    optionText: {
+      fontSize: 16,
+      color: colors.textPrimary,
+      fontWeight: "500",
+    },
+    optionRight: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    comingSoonText: {
+      fontSize: 12,
+      color: colors.textSecondary,
+      fontStyle: "italic",
+    },
+    infoSection: {
+      backgroundColor: colors.cardBackground,
+      margin: 16,
+      padding: 16,
+      borderRadius: 16,
+    },
+    infoItem: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: `${colors.border}50`,
+    },
+    infoLabel: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      fontWeight: "500",
+    },
+    infoValue: {
+      fontSize: 14,
+      color: colors.textPrimary,
+      fontWeight: "400",
+    },
+    logoutButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.cardBackground,
+      margin: 16,
+      padding: 16,
+      borderRadius: 12,
+      gap: 8,
+      borderWidth: 1,
+      borderColor: "#FF3B30",
+    },
+    logoutText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: "#FF3B30",
+    },
+    bottomSpacer: {
+      height: 20,
+    },
+  });
+}

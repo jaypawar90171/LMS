@@ -10,7 +10,10 @@ import {
 import { ActivityIndicator, View } from "react-native";
 import { useSetAtom, useAtomValue } from "jotai";
 import { useEffect } from "react";
+import { ThemeProvider } from "@/context/ThemeContext";
 import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function RootLayout() {
   const checkAuth = useSetAtom(checkAuthAtom);
@@ -64,18 +67,20 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
-      <SafeScreen>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Auth group screens */}
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          {/* Tab group screens */}
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          {/* Other screens */}
-          <Stack.Screen name="(stack)" options={{ headerShown: false }} />
-        </Stack>
-        <StatusBar style="dark" />
-      </SafeScreen>
-    </SafeAreaProvider>
+    <ThemeProvider>
+      <SafeAreaProvider>
+        <SafeScreen>
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Auth group screens */}
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            {/* Tab group screens */}
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            {/* Other screens */}
+            <Stack.Screen name="(stack)" options={{ headerShown: false }} />
+          </Stack>
+          <StatusBar style="dark" />
+        </SafeScreen>
+      </SafeAreaProvider>
+    </ThemeProvider>
   );
 }

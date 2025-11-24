@@ -15,9 +15,10 @@ import { useRouter } from "expo-router";
 import { useAtom } from "jotai";
 import { tokenAtom } from "@/store/authStore";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
 import { debounce } from "lodash";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 const RECENT_SEARCHES_KEY = "recent_searches";
 
@@ -30,7 +31,9 @@ export default function Search() {
   const [token] = useAtom(tokenAtom);
   const router = useRouter();
 
-  // Load recent searches on component mount
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
+
   useEffect(() => {
     loadRecentSearches();
   }, []);
@@ -161,7 +164,7 @@ export default function Search() {
       case "Available":
         return "#34C759";
       case "Issued":
-        return COLORS.primary;
+        return colors.primary;
       default:
         return "#FF9500";
     }
@@ -169,59 +172,59 @@ export default function Search() {
 
   const renderSearchItem = ({ item }: { item: any }) => (
     <TouchableOpacity
-      style={styles.resultItem}
+      style={dynamicStyles.resultItem}
       onPress={() => handleItemPress(item)}
     >
       {item.mediaUrl ? (
         <Image
           source={{ uri: item.mediaUrl }}
-          style={styles.itemImage}
+          style={dynamicStyles.itemImage}
           resizeMode="cover"
         />
       ) : (
-        <View style={[styles.itemImage, styles.placeholderImage]}>
+        <View style={[dynamicStyles.itemImage, dynamicStyles.placeholderImage]}>
           <Ionicons
             name="cube-outline"
             size={24}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
         </View>
       )}
 
-      <View style={styles.itemInfo}>
-        <Text style={styles.itemTitle} numberOfLines={2}>
+      <View style={dynamicStyles.itemInfo}>
+        <Text style={dynamicStyles.itemTitle} numberOfLines={2}>
           {item.title}
         </Text>
 
         {item.authorOrCreator && (
-          <Text style={styles.itemCreator} numberOfLines={1}>
+          <Text style={dynamicStyles.itemCreator} numberOfLines={1}>
             By {item.authorOrCreator}
           </Text>
         )}
 
         {item.categoryId && (
-          <Text style={styles.itemCategory} numberOfLines={1}>
+          <Text style={dynamicStyles.itemCategory} numberOfLines={1}>
             {item.categoryId.name}
           </Text>
         )}
 
-        <View style={styles.itemMeta}>
+        <View style={dynamicStyles.itemMeta}>
           <View
             style={[
-              styles.statusBadge,
+              dynamicStyles.statusBadge,
               { backgroundColor: `${getStatusColor(item.status)}15` },
             ]}
           >
             <Text
               style={[
-                styles.statusText,
+                dynamicStyles.statusText,
                 { color: getStatusColor(item.status) },
               ]}
             >
               {item.status}
             </Text>
           </View>
-          <Text style={styles.availability}>
+          <Text style={dynamicStyles.availability}>
             {item.availableCopies || 0} available
           </Text>
         </View>
@@ -231,28 +234,28 @@ export default function Search() {
 
   const renderRecentSearchItem = ({ item }: { item: string }) => (
     <TouchableOpacity
-      style={styles.recentSearchItem}
+      style={dynamicStyles.recentSearchItem}
       onPress={() => handleRecentSearchPress(item)}
     >
-      <Ionicons name="time-outline" size={16} color={COLORS.textSecondary} />
-      <Text style={styles.recentSearchText}>{item}</Text>
+      <Ionicons name="time-outline" size={16} color={colors.textSecondary} />
+      <Text style={dynamicStyles.recentSearchText}>{item}</Text>
     </TouchableOpacity>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Search Header */}
-      <View style={styles.searchHeader}>
-        <View style={styles.searchContainer}>
+      <View style={dynamicStyles.searchHeader}>
+        <View style={dynamicStyles.searchContainer}>
           <Ionicons
             name="search-outline"
             size={20}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
           <TextInput
-            style={styles.searchInput}
+            style={dynamicStyles.searchInput}
             placeholder="Search for Books, Courses, Toys..."
-            placeholderTextColor={COLORS.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={handleSearchChange}
             returnKeyType="search"
@@ -264,7 +267,7 @@ export default function Search() {
               <Ionicons
                 name="close-circle"
                 size={20}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           )}
@@ -277,18 +280,18 @@ export default function Search() {
           data={searchResults}
           renderItem={renderSearchItem}
           keyExtractor={(item) => item._id}
-          contentContainerStyle={styles.resultsList}
+          contentContainerStyle={dynamicStyles.resultsList}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
+            <View style={dynamicStyles.emptyState}>
               <Ionicons
                 name="search-outline"
                 size={48}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.emptyStateTitle}>
+              <Text style={dynamicStyles.emptyStateTitle}>
                 {loading ? "Searching..." : "No items found"}
               </Text>
-              <Text style={styles.emptyStateText}>
+              <Text style={dynamicStyles.emptyStateText}>
                 {loading
                   ? "Please wait while we search..."
                   : "Try different keywords or browse categories"}
@@ -298,13 +301,13 @@ export default function Search() {
         />
       ) : (
         /* Recent Searches */
-        <ScrollView style={styles.recentSearchesContainer}>
+        <ScrollView style={dynamicStyles.recentSearchesContainer}>
           {recentSearches.length > 0 && (
-            <View style={styles.recentSearchesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>Recent Searches</Text>
+            <View style={dynamicStyles.recentSearchesSection}>
+              <View style={dynamicStyles.sectionHeader}>
+                <Text style={dynamicStyles.sectionTitle}>Recent Searches</Text>
                 <TouchableOpacity onPress={clearRecentSearches}>
-                  <Text style={styles.clearButton}>Clear all</Text>
+                  <Text style={dynamicStyles.clearButton}>Clear all</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -317,9 +320,9 @@ export default function Search() {
           )}
 
           {/* Popular Searches */}
-          <View style={styles.popularSearchesSection}>
-            <Text style={styles.sectionTitle}>Popular Searches</Text>
-            <View style={styles.popularSearchesGrid}>
+          <View style={dynamicStyles.popularSearchesSection}>
+            <Text style={dynamicStyles.sectionTitle}>Popular Searches</Text>
+            <View style={dynamicStyles.popularSearchesGrid}>
               {[
                 "Fiction",
                 "Electronics",
@@ -330,10 +333,10 @@ export default function Search() {
               ].map((term) => (
                 <TouchableOpacity
                   key={term}
-                  style={styles.popularSearchChip}
+                  style={dynamicStyles.popularSearchChip}
                   onPress={() => handleRecentSearchPress(term)}
                 >
-                  <Text style={styles.popularSearchText}>{term}</Text>
+                  <Text style={dynamicStyles.popularSearchText}>{term}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -344,21 +347,22 @@ export default function Search() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   searchHeader: {
     padding: 16,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   searchContainer: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
@@ -367,7 +371,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     padding: 0,
   },
   resultsList: {
@@ -375,12 +379,12 @@ const styles = StyleSheet.create({
   },
   resultItem: {
     flexDirection: "row",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   itemImage: {
     width: 60,
@@ -388,7 +392,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   placeholderImage: {
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -400,17 +404,17 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   itemCreator: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   itemCategory: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 6,
   },
   itemMeta: {
@@ -429,7 +433,7 @@ const styles = StyleSheet.create({
   },
   availability: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   recentSearchesContainer: {
     flex: 1,
@@ -447,11 +451,11 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   clearButton: {
     fontSize: 14,
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: "500",
   },
   recentSearchItem: {
@@ -460,12 +464,12 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     gap: 12,
   },
   recentSearchText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     flex: 1,
   },
   popularSearchesSection: {
@@ -477,16 +481,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   popularSearchChip: {
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   popularSearchText: {
     fontSize: 14,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     fontWeight: "500",
   },
   emptyState: {
@@ -498,14 +502,16 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
 });
+
+}

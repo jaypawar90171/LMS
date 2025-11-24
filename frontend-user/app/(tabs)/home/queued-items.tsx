@@ -7,14 +7,18 @@ import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
 import ItemCard from "@/components/ItemCard";
 import SectionHeader from "@/components/SectionHeader";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function QueuedItemsScreen() {
   const { items } = useLocalSearchParams();
   const [user] = useAtom(userAtom);
   const [token] = useAtom(tokenAtom);
   const router = useRouter();
+
+const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const [queuedItems, setQueuedItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +145,7 @@ export default function QueuedItemsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading queued items...</Text>
       </View>
     );
@@ -150,7 +154,7 @@ export default function QueuedItemsScreen() {
   console.log(queuedItems);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       <SectionHeader
         title="Queued Items"
         count={queuedItems.length}
@@ -158,14 +162,14 @@ export default function QueuedItemsScreen() {
       />
 
       {queuedItems.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="time-outline"
             size={48}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateTitle}>No Items in Queue</Text>
-          <Text style={styles.emptyStateText}>
+          <Text style={dynamicStyles.emptyStateTitle}>No Items in Queue</Text>
+          <Text style={dynamicStyles.emptyStateText}>
             You are not waiting for any items
           </Text>
         </View>
@@ -206,39 +210,42 @@ export default function QueuedItemsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   emptyState: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 40,
     borderRadius: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
     marginTop: 20,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
 });
+
+}

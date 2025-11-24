@@ -9,13 +9,14 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import React, { useState } from "react";
-import styles from "@/assets/styles/forgotPassword.styles";
+import createDynamicStyles from "@/assets/styles/forgotPassword.styles";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
 import { Link, router } from "expo-router";
 import axios from "axios";
 import { API_BASE_URL } from "@/constants/api";
 import CustomToast from "@/components/CustomToast";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -23,6 +24,10 @@ export default function ForgotPassword() {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
   const [toastType, setToastType] = useState<"success" | "error">("success");
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
+  
 
   const showToastMessage = (message: string, type: "success" | "error") => {
     setToastMessage(message);
@@ -86,39 +91,39 @@ export default function ForgotPassword() {
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.container}>
-        <View style={styles.topIllustration}>
+      <View style={dynamicStyles.container}>
+        <View style={dynamicStyles.topIllustration}>
           <Image
             source={require("../../assets/images/loginIcon.png")}
-            style={styles.illustrationImage}
+            style={dynamicStyles.illustrationImage}
             resizeMode="contain"
           />
         </View>
 
-        <View style={styles.card}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Reset Password</Text>
-            <Text style={styles.subtitle}>
+        <View style={dynamicStyles.card}>
+          <View style={dynamicStyles.header}>
+            <Text style={dynamicStyles.title}>Reset Password</Text>
+            <Text style={dynamicStyles.subtitle}>
               Enter your email address and we'll send you a link to reset your
               password
             </Text>
           </View>
 
-          <View style={styles.formContainer}>
+          <View style={dynamicStyles.formContainer}>
             {/* EMAIL INPUT */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email Address</Text>
-              <View style={styles.inputContainer}>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Email Address</Text>
+              <View style={dynamicStyles.inputContainer}>
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color={COLORS.primary}
-                  style={styles.inputIcon}
+                  color={colors.primary}
+                  style={dynamicStyles.inputIcon}
                 />
                 <TextInput
-                  style={styles.input}
+                  style={dynamicStyles.input}
                   placeholder="Enter your email address"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={colors.placeholderText}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -130,25 +135,25 @@ export default function ForgotPassword() {
 
             {/* SEND EMAIL BUTTON */}
             <TouchableOpacity
-              style={[styles.button, isLoading && styles.buttonDisabled]}
+              style={[dynamicStyles.button, isLoading && dynamicStyles.buttonDisabled]}
               onPress={handleSendEmail}
               disabled={isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator color="#fff" />
               ) : (
-                <Text style={styles.buttonText}>Send Reset Link</Text>
+                <Text style={dynamicStyles.buttonText}>Send Reset Link</Text>
               )}
             </TouchableOpacity>
 
             {/* BACK TO LOGIN */}
-            <View style={styles.backToLoginContainer}>
+            <View style={dynamicStyles.backToLoginContainer}>
               <TouchableOpacity
                 onPress={handleBackToLogin}
-                style={styles.backButton}
+                style={dynamicStyles.backButton}
               >
-                <Ionicons name="arrow-back" size={16} color={COLORS.primary} />
-                <Text style={styles.backToLoginText}>Back to Login</Text>
+                <Ionicons name="arrow-back" size={16} color={colors.primary} />
+                <Text style={dynamicStyles.backToLoginText}>Back to Login</Text>
               </TouchableOpacity>
             </View>
           </View>

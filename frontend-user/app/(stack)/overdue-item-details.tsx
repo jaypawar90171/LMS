@@ -13,8 +13,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface OverdueItemDetails {
   _id: string;
@@ -51,6 +52,9 @@ export default function OverdueItemDetailsScreen() {
   const [itemDetails, setItemDetails] = useState<OverdueItemDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchItemDetails();
@@ -123,7 +127,7 @@ export default function OverdueItemDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading item details...</Text>
       </View>
     );
@@ -131,7 +135,7 @@ export default function OverdueItemDetailsScreen() {
 
   if (!itemDetails) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={dynamicStyles.errorContainer}>
         <Text>Failed to load item details</Text>
       </View>
     );
@@ -143,40 +147,40 @@ export default function OverdueItemDetailsScreen() {
   const fineAmount = overdueData.fineAmount || calculateFineAmount(daysOverdue);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       {/* Item Image */}
       {itemDetails.mediaUrl && (
         <Image
           source={{ uri: itemDetails.mediaUrl }}
-          style={styles.image}
+          style={dynamicStyles.image}
           resizeMode="cover"
         />
       )}
 
       {/* Overdue Warning Banner */}
-      <View style={styles.overdueBanner}>
+      <View style={dynamicStyles.overdueBanner}>
         <Ionicons name="warning" size={24} color="#FFF" />
-        <View style={styles.bannerText}>
-          <Text style={styles.bannerTitle}>Item Overdue</Text>
-          <Text style={styles.bannerSubtitle}>
+        <View style={dynamicStyles.bannerText}>
+          <Text style={dynamicStyles.bannerTitle}>Item Overdue</Text>
+          <Text style={dynamicStyles.bannerSubtitle}>
             {daysOverdue} days overdue - Fine: ${fineAmount}
           </Text>
         </View>
       </View>
 
       {/* Item Details Card */}
-      <View style={styles.detailsCard}>
-        <Text style={styles.title}>{itemDetails.title}</Text>
+      <View style={dynamicStyles.detailsCard}>
+        <Text style={dynamicStyles.title}>{itemDetails.title}</Text>
 
         {itemDetails.authorOrCreator && (
-          <Text style={styles.subtitle}>By {itemDetails.authorOrCreator}</Text>
+          <Text style={dynamicStyles.subtitle}>By {itemDetails.authorOrCreator}</Text>
         )}
 
         {/* Status Badge */}
-        <View style={styles.statusRow}>
-          <View style={[styles.statusBadge, { backgroundColor: "#FF3B3015" }]}>
+        <View style={dynamicStyles.statusRow}>
+          <View style={[dynamicStyles.statusBadge, { backgroundColor: "#FF3B3015" }]}>
             <Ionicons name="alert-circle" size={16} color="#FF3B30" />
-            <Text style={[styles.statusText, { color: "#FF3B30" }]}>
+            <Text style={[dynamicStyles.statusText, { color: "#FF3B30" }]}>
               Overdue
             </Text>
           </View>
@@ -184,100 +188,80 @@ export default function OverdueItemDetailsScreen() {
 
         {/* Description */}
         {itemDetails.description && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.sectionContent}>{itemDetails.description}</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Description</Text>
+            <Text style={dynamicStyles.sectionContent}>{itemDetails.description}</Text>
           </View>
         )}
 
         {/* Category */}
         {itemDetails.categoryId && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
-            <Text style={styles.sectionContent}>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Category</Text>
+            <Text style={dynamicStyles.sectionContent}>
               {itemDetails.categoryId.name}
             </Text>
           </View>
         )}
 
         {/* Overdue Details */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Overdue Information</Text>
-          <View style={styles.overdueGrid}>
-            <View style={styles.overdueItem}>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Overdue Information</Text>
+          <View style={dynamicStyles.overdueGrid}>
+            <View style={dynamicStyles.overdueItem}>
               <Ionicons name="calendar-outline" size={16} color="#FF3B30" />
-              <Text style={styles.overdueLabel}>Days Overdue</Text>
-              <Text style={styles.overdueValue}>{daysOverdue} days</Text>
+              <Text style={dynamicStyles.overdueLabel}>Days Overdue</Text>
+              <Text style={dynamicStyles.overdueValue}>{daysOverdue} days</Text>
             </View>
-            <View style={styles.overdueItem}>
+            <View style={dynamicStyles.overdueItem}>
               <Ionicons name="cash-outline" size={16} color="#FF3B30" />
-              <Text style={styles.overdueLabel}>Current Fine</Text>
-              <Text style={styles.overdueValue}>${fineAmount}</Text>
+              <Text style={dynamicStyles.overdueLabel}>Current Fine</Text>
+              <Text style={dynamicStyles.overdueValue}>${fineAmount}</Text>
             </View>
           </View>
         </View>
 
         {/* Item Information */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Item Information</Text>
+        <View style={dynamicStyles.section}>
+          <Text style={dynamicStyles.sectionTitle}>Item Information</Text>
           {itemDetails.isbnOrIdentifier && (
-            <Text style={styles.sectionContent}>
+            <Text style={dynamicStyles.sectionContent}>
               ISBN: {itemDetails.isbnOrIdentifier}
             </Text>
           )}
           {itemDetails.publisherOrManufacturer && (
-            <Text style={styles.sectionContent}>
+            <Text style={dynamicStyles.sectionContent}>
               Publisher: {itemDetails.publisherOrManufacturer}
             </Text>
           )}
           {itemDetails.availableCopies !== undefined && (
-            <Text style={styles.sectionContent}>
+            <Text style={dynamicStyles.sectionContent}>
               Available: {itemDetails.availableCopies} of {itemDetails.quantity} copies
             </Text>
           )}
         </View>
       </View>
-
-      {/* Action Buttons */}
-      {/* <View style={styles.actionsContainer}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.primaryButton]}
-          onPress={handleReturnItem}
-        >
-          <Ionicons name="return-up-back-outline" size={20} color="#FFF" />
-          <Text style={styles.actionButtonText}>Return Item</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, styles.secondaryButton]}
-          onPress={() => Alert.alert("Pay Fine", "Fine payment functionality")}
-        >
-          <Ionicons name="card-outline" size={20} color={COLORS.primary} />
-          <Text style={[styles.actionButtonText, { color: COLORS.primary }]}>
-            Pay Fine
-          </Text>
-        </TouchableOpacity>
-      </View> */}
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   image: {
     width: "100%",
@@ -305,22 +289,22 @@ const styles = StyleSheet.create({
     opacity: 0.9,
   },
   detailsCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   statusRow: {
@@ -345,12 +329,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionContent: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   overdueGrid: {
@@ -388,15 +372,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   actionButtonText: {
     fontSize: 16,
     fontWeight: "600",
   },
 });
+}

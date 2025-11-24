@@ -14,8 +14,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface Fine {
   id: string;
@@ -42,6 +43,9 @@ export default function FinesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchFines();
@@ -89,7 +93,7 @@ export default function FinesScreen() {
       case "Waived":
         return "#8E8E93";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
@@ -167,26 +171,26 @@ export default function FinesScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your fines...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Loading your fines...</Text>
       </View>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={dynamicStyles.errorContainer}>
         <Ionicons
           name="alert-circle-outline"
           size={64}
-          color={COLORS.textSecondary}
+          color={colors.textSecondary}
         />
-        <Text style={styles.errorTitle}>Unable to Load Fines</Text>
-        <Text style={styles.errorText}>{error}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={fetchFines}>
+        <Text style={dynamicStyles.errorTitle}>Unable to Load Fines</Text>
+        <Text style={dynamicStyles.errorText}>{error}</Text>
+        <TouchableOpacity style={dynamicStyles.retryButton} onPress={fetchFines}>
           <Ionicons name="refresh" size={20} color="#FFF" />
-          <Text style={styles.retryButtonText}>Try Again</Text>
+          <Text style={dynamicStyles.retryButtonText}>Try Again</Text>
         </TouchableOpacity>
       </View>
     );
@@ -197,27 +201,27 @@ export default function FinesScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={dynamicStyles.container}
       showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
     >
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={dynamicStyles.backButton}
           onPress={() => router.navigate("/(tabs)/profile")}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Fines and Services</Text>
-        <View style={styles.placeholder} />
+        <Text style={dynamicStyles.headerTitle}>Fines and Services</Text>
+        <View style={dynamicStyles.placeholder} />
       </View>
 
       {/* Summary Card */}
-      <View style={styles.summaryCard}>
-        <View style={styles.summaryHeader}>
+      <View style={dynamicStyles.summaryCard}>
+        <View style={dynamicStyles.summaryHeader}>
           <Ionicons
             name={
               hasOutstandingFines
@@ -227,25 +231,25 @@ export default function FinesScreen() {
             size={24}
             color={hasOutstandingFines ? "#FF9500" : "#34C759"}
           />
-          <Text style={styles.summaryTitle}>
+          <Text style={dynamicStyles.summaryTitle}>
             {hasOutstandingFines ? "Outstanding Balance" : "All Clear!"}
           </Text>
         </View>
 
-        <Text style={styles.totalAmount}>
+        <Text style={dynamicStyles.totalAmount}>
           {formatCurrency(totalOutstanding)}
         </Text>
 
-        <View style={styles.summaryDetails}>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Total Fines</Text>
-            <Text style={styles.summaryValue}>{fines.length}</Text>
+        <View style={dynamicStyles.summaryDetails}>
+          <View style={dynamicStyles.summaryItem}>
+            <Text style={dynamicStyles.summaryLabel}>Total Fines</Text>
+            <Text style={dynamicStyles.summaryValue}>{fines.length}</Text>
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Outstanding</Text>
+          <View style={dynamicStyles.summaryItem}>
+            <Text style={dynamicStyles.summaryLabel}>Outstanding</Text>
             <Text
               style={[
-                styles.summaryValue,
+                dynamicStyles.summaryValue,
                 { color: hasOutstandingFines ? "#FF3B30" : "#34C759" },
               ]}
             >
@@ -256,9 +260,9 @@ export default function FinesScreen() {
               }
             </Text>
           </View>
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Paid</Text>
-            <Text style={styles.summaryValue}>
+          <View style={dynamicStyles.summaryItem}>
+            <Text style={dynamicStyles.summaryLabel}>Paid</Text>
+            <Text style={dynamicStyles.summaryValue}>
               {fines.filter((f) => f.status === "Paid").length}
             </Text>
           </View>
@@ -266,77 +270,77 @@ export default function FinesScreen() {
       </View>
 
       {/* Fines List */}
-      <View style={styles.finesSection}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Fine History</Text>
-          <Text style={styles.sectionSubtitle}>
+      <View style={dynamicStyles.finesSection}>
+        <View style={dynamicStyles.sectionHeader}>
+          <Text style={dynamicStyles.sectionTitle}>Fine History</Text>
+          <Text style={dynamicStyles.sectionSubtitle}>
             {fines.length} fine{fines.length !== 1 ? "s" : ""} total
           </Text>
         </View>
 
         {fines.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={dynamicStyles.emptyState}>
             <Ionicons
               name="receipt-outline"
               size={64}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={styles.emptyTitle}>No Fines Found</Text>
-            <Text style={styles.emptyText}>
+            <Text style={dynamicStyles.emptyTitle}>No Fines Found</Text>
+            <Text style={dynamicStyles.emptyText}>
               You don't have any fines at the moment. Keep up the good work!
             </Text>
           </View>
         ) : (
-          <View style={styles.finesList}>
+          <View style={dynamicStyles.finesList}>
             {fines.map((fine, index) => (
               <View
                 key={fine.id}
                 style={[
-                  styles.fineCard,
-                  index === fines.length - 1 && styles.lastFineCard,
+                  dynamicStyles.fineCard,
+                  index === fines.length - 1 && dynamicStyles.lastFineCard,
                 ]}
               >
                 {/* Status Indicator */}
                 <View
                   style={[
-                    styles.statusIndicator,
+                    dynamicStyles.statusIndicator,
                     { backgroundColor: getStatusColor(fine.status) },
                   ]}
                 />
 
-                <View style={styles.fineContent}>
+                <View style={dynamicStyles.fineContent}>
                   {/* Header */}
-                  <View style={styles.fineHeader}>
-                    <Text style={styles.fineReason} numberOfLines={2}>
+                  <View style={dynamicStyles.fineHeader}>
+                    <Text style={dynamicStyles.fineReason} numberOfLines={2}>
                       {fine.reason}
                     </Text>
-                    <View style={styles.statusBadge}>
+                    <View style={dynamicStyles.statusBadge}>
                       <Ionicons
                         name={getStatusIcon(fine.status)}
                         size={12}
                         color="#FFF"
                       />
-                      <Text style={styles.statusBadgeText}>
+                      <Text style={dynamicStyles.statusBadgeText}>
                         {getStatusText(fine.status)}
                       </Text>
                     </View>
                   </View>
 
                   {/* Amount Information */}
-                  <View style={styles.amountContainer}>
-                    <View style={styles.amountRow}>
-                      <Text style={styles.amountLabel}>Amount:</Text>
-                      <Text style={styles.amountValue}>
+                  <View style={dynamicStyles.amountContainer}>
+                    <View style={dynamicStyles.amountRow}>
+                      <Text style={dynamicStyles.amountLabel}>Amount:</Text>
+                      <Text style={dynamicStyles.amountValue}>
                         {formatCurrency(fine.amount)}
                       </Text>
                     </View>
                     {(fine.status === "Pending" ||
                       fine.status === "Overdue") && (
-                      <View style={styles.amountRow}>
-                        <Text style={styles.outstandingLabel}>
+                      <View style={dynamicStyles.amountRow}>
+                        <Text style={dynamicStyles.outstandingLabel}>
                           Outstanding:
                         </Text>
-                        <Text style={styles.outstandingValue}>
+                        <Text style={dynamicStyles.outstandingValue}>
                           {formatCurrency(fine.outstanding)}
                         </Text>
                       </View>
@@ -344,13 +348,13 @@ export default function FinesScreen() {
                   </View>
 
                   {/* Date */}
-                  <View style={styles.dateContainer}>
+                  <View style={dynamicStyles.dateContainer}>
                     <Ionicons
                       name="calendar-outline"
                       size={14}
-                      color={COLORS.textSecondary}
+                      color={colors.textSecondary}
                     />
-                    <Text style={styles.dateText}>
+                    <Text style={dynamicStyles.dateText}>
                       Incurred on {formatDate(fine.dateIncurred)}
                     </Text>
                   </View>
@@ -362,69 +366,70 @@ export default function FinesScreen() {
       </View>
 
       {/* Help Section */}
-      <View style={styles.helpSection}>
-        <Ionicons name="help-circle-outline" size={20} color={COLORS.primary} />
-        <View style={styles.helpContent}>
-          <Text style={styles.helpTitle}>Need Help with Fines?</Text>
-          <Text style={styles.helpText}>
+      <View style={dynamicStyles.helpSection}>
+        <Ionicons name="help-circle-outline" size={20} color={colors.primary} />
+        <View style={dynamicStyles.helpContent}>
+          <Text style={dynamicStyles.helpTitle}>Need Help with Fines?</Text>
+          <Text style={dynamicStyles.helpText}>
             • Fines are typically issued for late returns, lost items, or
             damages{"\n"}• Payment can be made at the library desk or through
             online methods{"\n"}• Contact support if you believe a fine was
             issued in error
           </Text>
           <TouchableOpacity
-            style={styles.helpButton}
+            style={dynamicStyles.helpButton}
             onPress={handleContactSupport}
           >
             <Ionicons
               name="chatbubble-outline"
               size={16}
-              color={COLORS.primary}
+              color={colors.primary}
             />
-            <Text style={styles.helpButtonText}>Contact Support</Text>
+            <Text style={dynamicStyles.helpButtonText}>Contact Support</Text>
           </TouchableOpacity>
         </View>
       </View>
 
       {/* Bottom Spacer */}
-      <View style={styles.bottomSpacer} />
+      <View style={dynamicStyles.bottomSpacer} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   errorContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 32,
     gap: 16,
   },
   errorTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   errorText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },
@@ -432,7 +437,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -448,9 +453,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -458,14 +463,14 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   placeholder: {
     width: 32,
   },
   summaryCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     padding: 20,
     borderRadius: 16,
@@ -484,12 +489,12 @@ const styles = StyleSheet.create({
   summaryTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   totalAmount: {
     fontSize: 32,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 16,
   },
   summaryDetails: {
@@ -502,20 +507,20 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   payAllButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
   },
@@ -536,40 +541,40 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   sectionSubtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   emptyState: {
     alignItems: "center",
     padding: 40,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
   },
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
   finesList: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     overflow: "hidden",
   },
   fineCard: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   lastFineCard: {
     borderBottomWidth: 0,
@@ -591,14 +596,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginRight: 12,
   },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: COLORS.border,
+    backgroundColor: colors.border,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
@@ -620,12 +625,12 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   amountValue: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   outstandingLabel: {
     fontSize: 14,
@@ -644,14 +649,14 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   payButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -668,10 +673,10 @@ const styles = StyleSheet.create({
     gap: 12,
     margin: 16,
     padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
   },
   helpContent: {
     flex: 1,
@@ -679,12 +684,12 @@ const styles = StyleSheet.create({
   helpTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   helpText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -695,7 +700,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   helpButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "600",
   },
@@ -703,3 +708,4 @@ const styles = StyleSheet.create({
     height: 20,
   },
 });
+}

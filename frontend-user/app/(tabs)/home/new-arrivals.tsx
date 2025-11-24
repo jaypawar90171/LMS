@@ -7,8 +7,9 @@ import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
 import ItemCard from "@/components/ItemCard";
 import SectionHeader from "@/components/SectionHeader";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function NewArrivalsScreen() {
   const { items } = useLocalSearchParams();
@@ -18,6 +19,9 @@ export default function NewArrivalsScreen() {
 
   const [newArrivals, setNewArrivals] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     if (items) {
@@ -121,14 +125,14 @@ export default function NewArrivalsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading new arrivals...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       <SectionHeader
         title="New Arrivals"
         count={newArrivals.length}
@@ -136,14 +140,14 @@ export default function NewArrivalsScreen() {
       />
 
       {newArrivals.length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="sparkles-outline"
             size={48}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateTitle}>No New Arrivals</Text>
-          <Text style={styles.emptyStateText}>
+          <Text style={dynamicStyles.emptyStateTitle}>No New Arrivals</Text>
+          <Text style={dynamicStyles.emptyStateText}>
             Check back later for new items
           </Text>
         </View>
@@ -158,7 +162,7 @@ export default function NewArrivalsScreen() {
             statusColor={item.status === "Available" ? "#34C759" : "#FF9500"}
             showAction={true}
             actionText={item.status === "Available" ? "Request" : "Join Queue"}
-            actionColor={COLORS.primary}
+            actionColor={colors.primary}
             onPress={() => handleItemPress(item)}
             onActionPress={() => handleRequestItem(item)}
           />
@@ -168,39 +172,42 @@ export default function NewArrivalsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   emptyState: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 40,
     borderRadius: 16,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
     marginTop: 20,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
 });
+
+}

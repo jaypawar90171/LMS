@@ -17,17 +17,28 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import { useMemo } from "react";
 
 interface Notification {
   _id: string;
   title: string;
-  message: {
-    content: string;
-  } | string; 
+  message:
+    | {
+        content: string;
+      }
+    | string;
   type: string;
-  level: "info" | "success" | "warning" | "error" | "Info" | "Success" | "Warning" | "Error";
+  level:
+    | "info"
+    | "success"
+    | "warning"
+    | "error"
+    | "Info"
+    | "Success"
+    | "Warning"
+    | "Error";
   read: boolean;
   createdAt: string;
   metadata?: any;
@@ -63,6 +74,9 @@ export default function NotificationsScreen() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const [fadeAnim] = useState(new Animated.Value(0));
 
@@ -178,7 +192,7 @@ export default function NotificationsScreen() {
         return "#FF3B30";
       case "info":
       default:
-        return COLORS.primary;
+        return colors.primary;
     }
   };
 
@@ -382,77 +396,80 @@ export default function NotificationsScreen() {
       <Animated.View
         key={notification._id}
         style={[
-          styles.notificationCard,
-          !read && styles.unreadNotification,
-          isSelected && styles.selectedNotification,
+          dynamicStyles.notificationCard,
+          !read && dynamicStyles.unreadNotification,
+          isSelected && dynamicStyles.selectedNotification,
           { opacity: fadeAnim },
         ]}
       >
         {selectionMode && (
           <TouchableOpacity
-            style={[styles.checkbox, isSelected && styles.checkboxSelected]}
+            style={[
+              dynamicStyles.checkbox,
+              isSelected && dynamicStyles.checkboxSelected,
+            ]}
             onPress={() => toggleNotificationSelection(notification._id)}
           >
             {isSelected && <Ionicons name="checkmark" size={16} color="#FFF" />}
           </TouchableOpacity>
         )}
 
-        <View style={styles.notificationContent}>
-          <View style={styles.notificationHeader}>
-            <View style={styles.titleContainer}>
+        <View style={dynamicStyles.notificationContent}>
+          <View style={dynamicStyles.notificationHeader}>
+            <View style={dynamicStyles.titleContainer}>
               <Ionicons
                 name={getLevelIcon(level)}
                 size={16}
                 color={getLevelColor(level)}
               />
-              <Text style={styles.notificationTitle} numberOfLines={1}>
+              <Text style={dynamicStyles.notificationTitle} numberOfLines={1}>
                 {title}
               </Text>
             </View>
-            <View style={styles.notificationActions}>
+            <View style={dynamicStyles.notificationActions}>
               {!read && !selectionMode && (
                 <TouchableOpacity
-                  style={styles.actionButton}
+                  style={dynamicStyles.actionButton}
                   onPress={() => handleMarkAsRead(notification._id)}
                 >
                   <Ionicons
                     name="checkmark"
                     size={16}
-                    color={COLORS.textSecondary}
+                    color={colors.textSecondary}
                   />
                 </TouchableOpacity>
               )}
               {!selectionMode && (
                 <TouchableOpacity
-                  style={styles.actionButton}
+                  style={dynamicStyles.actionButton}
                   onPress={() => handleDeleteNotification(notification._id)}
                 >
                   <Ionicons
                     name="close"
                     size={16}
-                    color={COLORS.textSecondary}
+                    color={colors.textSecondary}
                   />
                 </TouchableOpacity>
               )}
             </View>
           </View>
 
-          <Text style={styles.notificationMessage} numberOfLines={3}>
+          <Text style={dynamicStyles.notificationMessage} numberOfLines={3}>
             {message}
           </Text>
 
-          <View style={styles.notificationFooter}>
-            <View style={styles.typeBadge}>
+          <View style={dynamicStyles.notificationFooter}>
+            <View style={dynamicStyles.typeBadge}>
               <Ionicons
                 name={getTypeIcon(type)}
                 size={12}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.typeText}>
+              <Text style={dynamicStyles.typeText}>
                 {getNotificationCategory(notification)}
               </Text>
             </View>
-            <Text style={styles.timestamp}>{formatDate(createdAt)}</Text>
+            <Text style={dynamicStyles.timestamp}>{formatDate(createdAt)}</Text>
           </View>
         </View>
       </Animated.View>
@@ -461,9 +478,9 @@ export default function NotificationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading notifications...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Loading notifications...</Text>
       </View>
     );
   }
@@ -471,38 +488,38 @@ export default function NotificationsScreen() {
   const unreadCount = getUnreadCount();
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={dynamicStyles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
-        <View style={styles.headerActions}>
+        <Text style={dynamicStyles.headerTitle}>Notifications</Text>
+        <View style={dynamicStyles.headerActions}>
           {unreadCount > 0 && !selectionMode && (
             <TouchableOpacity
-              style={styles.headerAction}
+              style={dynamicStyles.headerAction}
               onPress={confirmMarkAllAsRead}
             >
               <Ionicons
                 name="checkmark-done"
                 size={20}
-                color={COLORS.primary}
+                color={colors.primary}
               />
             </TouchableOpacity>
           )}
           {notifications.length > 0 && (
             <TouchableOpacity
-              style={styles.headerAction}
+              style={dynamicStyles.headerAction}
               onPress={() => setSelectionMode(!selectionMode)}
             >
               <Ionicons
                 name={selectionMode ? "close" : "checkbox-outline"}
                 size={20}
-                color={COLORS.primary}
+                color={colors.primary}
               />
             </TouchableOpacity>
           )}
@@ -511,26 +528,31 @@ export default function NotificationsScreen() {
 
       {/* Selection Mode Bar */}
       {selectionMode && (
-        <View style={styles.selectionBar}>
-          <Text style={styles.selectionText}>
+        <View style={dynamicStyles.selectionBar}>
+          <Text style={dynamicStyles.selectionText}>
             {selectedNotifications.length} selected
           </Text>
-          <View style={styles.selectionActions}>
+          <View style={dynamicStyles.selectionActions}>
             <TouchableOpacity
-              style={styles.selectionAction}
+              style={dynamicStyles.selectionAction}
               onPress={() => handleSelectionAction("read")}
               disabled={selectedNotifications.length === 0}
             >
-              <Ionicons name="checkmark" size={18} color={COLORS.primary} />
-              <Text style={styles.selectionActionText}>Mark Read</Text>
+              <Ionicons name="checkmark" size={18} color={colors.primary} />
+              <Text style={dynamicStyles.selectionActionText}>Mark Read</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={styles.selectionAction}
+              style={dynamicStyles.selectionAction}
               onPress={() => handleSelectionAction("delete")}
               disabled={selectedNotifications.length === 0}
             >
               <Ionicons name="trash" size={18} color="#FF3B30" />
-              <Text style={[styles.selectionActionText, { color: "#FF3B30" }]}>
+              <Text
+                style={[
+                  dynamicStyles.selectionActionText,
+                  { color: "#FF3B30" },
+                ]}
+              >
                 Delete
               </Text>
             </TouchableOpacity>
@@ -539,13 +561,13 @@ export default function NotificationsScreen() {
       )}
 
       {/* Search and Filter Bar */}
-      <View style={styles.filterBar}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={COLORS.textSecondary} />
+      <View style={dynamicStyles.filterBar}>
+        <View style={dynamicStyles.searchContainer}>
+          <Ionicons name="search" size={18} color={colors.textSecondary} />
           <TextInput
-            style={styles.searchInput}
+            style={dynamicStyles.searchInput}
             placeholder="Search notifications..."
-            placeholderTextColor={COLORS.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -554,18 +576,18 @@ export default function NotificationsScreen() {
               <Ionicons
                 name="close-circle"
                 size={18}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={dynamicStyles.filterButton}
           onPress={() => setShowFilterModal(true)}
         >
-          <Ionicons name="filter" size={18} color={COLORS.primary} />
+          <Ionicons name="filter" size={18} color={colors.primary} />
           {filter !== "all" || typeFilter !== "all" ? (
-            <View style={styles.filterIndicator} />
+            <View style={dynamicStyles.filterIndicator} />
           ) : null}
         </TouchableOpacity>
       </View>
@@ -574,21 +596,21 @@ export default function NotificationsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.quickFilters}
+        style={dynamicStyles.quickFilters}
       >
         {(["all", "unread", "read"] as FilterType[]).map((filterType) => (
           <TouchableOpacity
             key={filterType}
             style={[
-              styles.quickFilter,
-              filter === filterType && styles.quickFilterActive,
+              dynamicStyles.quickFilter,
+              filter === filterType && dynamicStyles.quickFilterActive,
             ]}
             onPress={() => setFilter(filterType)}
           >
             <Text
               style={[
-                styles.quickFilterText,
-                filter === filterType && styles.quickFilterTextActive,
+                dynamicStyles.quickFilterText,
+                filter === filterType && dynamicStyles.quickFilterTextActive,
               ]}
             >
               {filterType === "all"
@@ -603,67 +625,71 @@ export default function NotificationsScreen() {
 
       {/* Notifications List */}
       <ScrollView
-        style={styles.content}
+        style={dynamicStyles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {error ? (
-          <View style={styles.errorContainer}>
+          <View style={dynamicStyles.errorContainer}>
             <Ionicons
               name="alert-circle-outline"
               size={64}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={styles.errorTitle}>Unable to Load Notifications</Text>
-            <Text style={styles.errorText}>{error}</Text>
+            <Text style={dynamicStyles.errorTitle}>
+              Unable to Load Notifications
+            </Text>
+            <Text style={dynamicStyles.errorText}>{error}</Text>
             <TouchableOpacity
-              style={styles.retryButton}
+              style={dynamicStyles.retryButton}
               onPress={fetchNotifications}
             >
               <Ionicons name="refresh" size={20} color="#FFF" />
-              <Text style={styles.retryButtonText}>Try Again</Text>
+              <Text style={dynamicStyles.retryButtonText}>Try Again</Text>
             </TouchableOpacity>
           </View>
         ) : filteredNotifications.length === 0 ? (
-          <View style={styles.emptyState}>
+          <View style={dynamicStyles.emptyState}>
             <Ionicons
               name="notifications-off-outline"
               size={64}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={styles.emptyTitle}>
+            <Text style={dynamicStyles.emptyTitle}>
               {searchQuery || filter !== "all" || typeFilter !== "all"
                 ? "No matching notifications"
                 : "No notifications"}
             </Text>
-            <Text style={styles.emptyText}>
+            <Text style={dynamicStyles.emptyText}>
               {searchQuery || filter !== "all" || typeFilter !== "all"
                 ? "Try adjusting your filters or search terms"
                 : "You're all caught up! New notifications will appear here."}
             </Text>
             {(searchQuery || filter !== "all" || typeFilter !== "all") && (
               <TouchableOpacity
-                style={styles.clearFiltersButton}
+                style={dynamicStyles.clearFiltersButton}
                 onPress={() => {
                   setSearchQuery("");
                   setFilter("all");
                   setTypeFilter("all");
                 }}
               >
-                <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                <Text style={dynamicStyles.clearFiltersText}>
+                  Clear Filters
+                </Text>
               </TouchableOpacity>
             )}
           </View>
         ) : (
-          <View style={styles.notificationsList}>
+          <View style={dynamicStyles.notificationsList}>
             {filteredNotifications.map(renderNotificationItem)}
           </View>
         )}
 
         {/* Bottom Spacer */}
-        <View style={styles.bottomSpacer} />
+        <View style={dynamicStyles.bottomSpacer} />
       </ScrollView>
 
       {/* Filter Modal */}
@@ -673,21 +699,21 @@ export default function NotificationsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter Notifications</Text>
+        <View style={dynamicStyles.modalContainer}>
+          <View style={dynamicStyles.modalHeader}>
+            <Text style={dynamicStyles.modalTitle}>Filter Notifications</Text>
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Status</Text>
+          <ScrollView style={dynamicStyles.modalContent}>
+            <View style={dynamicStyles.filterSection}>
+              <Text style={dynamicStyles.filterSectionTitle}>Status</Text>
               {(["all", "unread", "read"] as FilterType[]).map((filterType) => (
                 <TouchableOpacity
                   key={filterType}
-                  style={styles.filterOption}
+                  style={dynamicStyles.filterOption}
                   onPress={() => setFilter(filterType)}
                 >
                   <Ionicons
@@ -699,11 +725,11 @@ export default function NotificationsScreen() {
                     size={20}
                     color={
                       filter === filterType
-                        ? COLORS.primary
-                        : COLORS.textSecondary
+                        ? colors.primary
+                        : colors.textSecondary
                     }
                   />
-                  <Text style={styles.filterOptionText}>
+                  <Text style={dynamicStyles.filterOptionText}>
                     {filterType === "all"
                       ? "All Notifications"
                       : filterType === "unread"
@@ -714,8 +740,8 @@ export default function NotificationsScreen() {
               ))}
             </View>
 
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Type</Text>
+            <View style={dynamicStyles.filterSection}>
+              <Text style={dynamicStyles.filterSectionTitle}>Type</Text>
               {(
                 [
                   "all",
@@ -727,7 +753,7 @@ export default function NotificationsScreen() {
               ).map((type) => (
                 <TouchableOpacity
                   key={type}
-                  style={styles.filterOption}
+                  style={dynamicStyles.filterOption}
                   onPress={() => setTypeFilter(type)}
                 >
                   <Ionicons
@@ -739,11 +765,11 @@ export default function NotificationsScreen() {
                     size={20}
                     color={
                       typeFilter === type
-                        ? COLORS.primary
-                        : COLORS.textSecondary
+                        ? colors.primary
+                        : colors.textSecondary
                     }
                   />
-                  <Text style={styles.filterOptionText}>
+                  <Text style={dynamicStyles.filterOptionText}>
                     {type === "all"
                       ? "All Types"
                       : type === "borrowing"
@@ -759,21 +785,23 @@ export default function NotificationsScreen() {
             </View>
           </ScrollView>
 
-          <View style={styles.modalFooter}>
+          <View style={dynamicStyles.modalFooter}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.secondaryButton]}
+              style={[dynamicStyles.modalButton, dynamicStyles.secondaryButton]}
               onPress={() => {
                 setFilter("all");
                 setTypeFilter("all");
               }}
             >
-              <Text style={styles.secondaryButtonText}>Reset Filters</Text>
+              <Text style={dynamicStyles.secondaryButtonText}>
+                Reset Filters
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.primaryButton]}
+              style={[dynamicStyles.modalButton, dynamicStyles.primaryButton]}
               onPress={() => setShowFilterModal(false)}
             >
-              <Text style={styles.primaryButtonText}>Apply Filters</Text>
+              <Text style={dynamicStyles.primaryButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -782,367 +810,369 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: COLORS.background,
-    gap: 16,
-  },
-  loadingText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-  },
-  errorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 32,
-    gap: 16,
-  },
-  errorTitle: {
-    fontSize: 20,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  errorText: {
-    fontSize: 16,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 22,
-  },
-  retryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    marginTop: 16,
-  },
-  retryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    backgroundColor: COLORS.background,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  headerAction: {
-    padding: 4,
-  },
-  selectionBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  selectionText: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-  },
-  selectionActions: {
-    flexDirection: "row",
-    gap: 16,
-  },
-  selectionAction: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  selectionActionText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: COLORS.primary,
-  },
-  filterBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    padding: 16,
-    backgroundColor: COLORS.cardBackground,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    backgroundColor: COLORS.background,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 16,
-    color: COLORS.textPrimary,
-  },
-  filterButton: {
-    padding: 8,
-    position: "relative",
-  },
-  filterIndicator: {
-    position: "absolute",
-    top: 4,
-    right: 4,
-    width: 8,
-    height: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 4,
-  },
-  quickFilters: {
-    backgroundColor: COLORS.cardBackground,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-    paddingHorizontal: 16,
-  },
-  quickFilter: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginRight: 8,
-  },
-  quickFilterActive: {
-    borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
-  },
-  quickFilterText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: COLORS.textSecondary,
-  },
-  quickFilterTextActive: {
-    color: COLORS.primary,
-    fontWeight: "600",
-  },
-  content: {
-    flex: 1,
-  },
-  emptyState: {
-    alignItems: "center",
-    padding: 40,
-    gap: 16,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    textAlign: "center",
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    textAlign: "center",
-    lineHeight: 20,
-  },
-  clearFiltersButton: {
-    marginTop: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: COLORS.primary,
-    borderRadius: 8,
-  },
-  clearFiltersText: {
-    color: "#FFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  notificationsList: {
-    padding: 16,
-    gap: 12,
-  },
-  notificationCard: {
-    flexDirection: "row",
-    backgroundColor: COLORS.cardBackground,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  unreadNotification: {
-    borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
-  },
-  selectedNotification: {
-    backgroundColor: `${COLORS.primary}10`,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: COLORS.border,
-    marginRight: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  checkboxSelected: {
-    backgroundColor: COLORS.primary,
-    borderColor: COLORS.primary,
-  },
-  notificationContent: {
-    flex: 1,
-  },
-  notificationHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 8,
-  },
-  titleContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    flex: 1,
-  },
-  notificationTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    flex: 1,
-  },
-  notificationActions: {
-    flexDirection: "row",
-    gap: 4,
-  },
-  actionButton: {
-    padding: 4,
-  },
-  notificationMessage: {
-    fontSize: 14,
-    color: COLORS.textSecondary,
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  notificationFooter: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  typeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: `${COLORS.primary}10`,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  typeText: {
-    fontSize: 10,
-    fontWeight: "500",
-    color: COLORS.primary,
-    textTransform: "capitalize",
-  },
-  timestamp: {
-    fontSize: 12,
-    color: COLORS.textSecondary,
-  },
-  bottomSpacer: {
-    height: 20,
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: COLORS.textPrimary,
-  },
-  modalContent: {
-    flex: 1,
-    padding: 16,
-  },
-  filterSection: {
-    marginBottom: 24,
-  },
-  filterSectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: COLORS.textPrimary,
-    marginBottom: 12,
-  },
-  filterOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 12,
-  },
-  filterOptionText: {
-    fontSize: 16,
-    color: COLORS.textPrimary,
-  },
-  modalFooter: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  modalButton: {
-    flex: 1,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: COLORS.primary,
-  },
-  primaryButtonText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  secondaryButtonText: {
-    color: COLORS.primary,
-    fontSize: 16,
-    fontWeight: "600",
-  },
-});
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      backgroundColor: colors.background,
+      gap: 16,
+    },
+    loadingText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: "center",
+      alignItems: "center",
+      padding: 32,
+      gap: 16,
+    },
+    errorTitle: {
+      fontSize: 20,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    errorText: {
+      fontSize: 16,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    retryButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.primary,
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+      marginTop: 16,
+    },
+    retryButtonText: {
+      color: "#FFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      backgroundColor: colors.background,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    backButton: {
+      padding: 4,
+    },
+    headerTitle: {
+      fontSize: 20,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    headerActions: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    headerAction: {
+      padding: 4,
+    },
+    selectionBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      backgroundColor: `${colors.primary}10`,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    selectionText: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+    },
+    selectionActions: {
+      flexDirection: "row",
+      gap: 16,
+    },
+    selectionAction: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    selectionActionText: {
+      fontSize: 14,
+      fontWeight: "600",
+      color: colors.primary,
+    },
+    filterBar: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      padding: 16,
+      backgroundColor: colors.cardBackground,
+    },
+    searchContainer: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      backgroundColor: colors.background,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    searchInput: {
+      flex: 1,
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    filterButton: {
+      padding: 8,
+      position: "relative",
+    },
+    filterIndicator: {
+      position: "absolute",
+      top: 4,
+      right: 4,
+      width: 8,
+      height: 8,
+      backgroundColor: colors.primary,
+      borderRadius: 4,
+    },
+    quickFilters: {
+      backgroundColor: colors.cardBackground,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      paddingHorizontal: 16,
+    },
+    quickFilter: {
+      paddingHorizontal: 16,
+      paddingVertical: 12,
+      marginRight: 8,
+    },
+    quickFilterActive: {
+      borderBottomWidth: 2,
+      borderBottomColor: colors.primary,
+    },
+    quickFilterText: {
+      fontSize: 14,
+      fontWeight: "500",
+      color: colors.textSecondary,
+    },
+    quickFilterTextActive: {
+      color: colors.primary,
+      fontWeight: "600",
+    },
+    content: {
+      flex: 1,
+    },
+    emptyState: {
+      alignItems: "center",
+      padding: 40,
+      gap: 16,
+    },
+    emptyTitle: {
+      fontSize: 18,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      textAlign: "center",
+    },
+    emptyText: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 20,
+    },
+    clearFiltersButton: {
+      marginTop: 8,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      backgroundColor: colors.primary,
+      borderRadius: 8,
+    },
+    clearFiltersText: {
+      color: "#FFF",
+      fontSize: 14,
+      fontWeight: "600",
+    },
+    notificationsList: {
+      padding: 16,
+      gap: 12,
+    },
+    notificationCard: {
+      flexDirection: "row",
+      backgroundColor: colors.cardBackground,
+      padding: 16,
+      borderRadius: 12,
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    unreadNotification: {
+      borderLeftWidth: 4,
+      borderLeftColor: colors.primary,
+    },
+    selectedNotification: {
+      backgroundColor: `${colors.primary}10`,
+    },
+    checkbox: {
+      width: 20,
+      height: 20,
+      borderRadius: 4,
+      borderWidth: 2,
+      borderColor: colors.border,
+      marginRight: 12,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    checkboxSelected: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    notificationContent: {
+      flex: 1,
+    },
+    notificationHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      marginBottom: 8,
+    },
+    titleContainer: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+      flex: 1,
+    },
+    notificationTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      flex: 1,
+    },
+    notificationActions: {
+      flexDirection: "row",
+      gap: 4,
+    },
+    actionButton: {
+      padding: 4,
+    },
+    notificationMessage: {
+      fontSize: 14,
+      color: colors.textSecondary,
+      lineHeight: 20,
+      marginBottom: 12,
+    },
+    notificationFooter: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    typeBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      backgroundColor: `${colors.primary}10`,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 6,
+    },
+    typeText: {
+      fontSize: 10,
+      fontWeight: "500",
+      color: colors.primary,
+      textTransform: "capitalize",
+    },
+    timestamp: {
+      fontSize: 12,
+      color: colors.textSecondary,
+    },
+    bottomSpacer: {
+      height: 20,
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    modalTitle: {
+      fontSize: 18,
+      fontWeight: "700",
+      color: colors.textPrimary,
+    },
+    modalContent: {
+      flex: 1,
+      padding: 16,
+    },
+    filterSection: {
+      marginBottom: 24,
+    },
+    filterSectionTitle: {
+      fontSize: 16,
+      fontWeight: "600",
+      color: colors.textPrimary,
+      marginBottom: 12,
+    },
+    filterOption: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      paddingVertical: 12,
+    },
+    filterOptionText: {
+      fontSize: 16,
+      color: colors.textPrimary,
+    },
+    modalFooter: {
+      flexDirection: "row",
+      gap: 12,
+      padding: 16,
+      borderTopWidth: 1,
+      borderTopColor: colors.border,
+    },
+    modalButton: {
+      flex: 1,
+      padding: 16,
+      borderRadius: 12,
+      alignItems: "center",
+    },
+    primaryButton: {
+      backgroundColor: colors.primary,
+    },
+    secondaryButton: {
+      backgroundColor: "transparent",
+      borderWidth: 2,
+      borderColor: colors.primary,
+    },
+    primaryButtonText: {
+      color: "#FFF",
+      fontSize: 16,
+      fontWeight: "600",
+    },
+    secondaryButtonText: {
+      color: colors.primary,
+      fontSize: 16,
+      fontWeight: "600",
+    },
+  });
+}

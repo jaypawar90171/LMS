@@ -18,8 +18,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface Donation {
   _id: string;
@@ -59,6 +60,9 @@ export default function MyDonationsScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchDonations();
@@ -126,7 +130,7 @@ export default function MyDonationsScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
-      case "Accepted":
+      case "accepted":
         return "#34C759";
       case "pending":
         return "#FF9500";
@@ -135,13 +139,13 @@ export default function MyDonationsScreen() {
       case "completed":
         return "#007AFF";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status.toLowerCase()) {
-      case "Accepted":
+      case "accepted":
         return "checkmark-circle";
       case "pending":
         return "time";
@@ -248,22 +252,22 @@ export default function MyDonationsScreen() {
 
   const renderDonationItem = ({ item }: { item: Donation }) => {
     return (
-      <View style={styles.donationCard}>
+      <View style={dynamicStyles.donationCard}>
         {/* Header with Image and Status */}
-        <View style={styles.cardHeader}>
+        <View style={dynamicStyles.cardHeader}>
           {item.photos ? (
-            <Image source={{ uri: item.photos }} style={styles.itemImage} />
+            <Image source={{ uri: item.photos }} style={dynamicStyles.itemImage} />
           ) : (
-            <View style={[styles.itemImage, styles.placeholderImage]}>
-              <Ionicons name="cube" size={32} color={COLORS.textSecondary} />
+            <View style={[dynamicStyles.itemImage, dynamicStyles.placeholderImage]}>
+              <Ionicons name="cube" size={32} color={colors.textSecondary} />
             </View>
           )}
 
-          <View style={styles.headerInfo}>
-            <Text style={styles.itemTitle} numberOfLines={2}>
+          <View style={dynamicStyles.headerInfo}>
+            <Text style={dynamicStyles.itemTitle} numberOfLines={2}>
               {item.title}
             </Text>
-            <View style={styles.statusBadge}>
+            <View style={dynamicStyles.statusBadge}>
               <Ionicons
                 name={getStatusIcon(item.status)}
                 size={14}
@@ -271,7 +275,7 @@ export default function MyDonationsScreen() {
               />
               <Text
                 style={[
-                  styles.statusText,
+                  dynamicStyles.statusText,
                   { color: getStatusColor(item.status) },
                 ]}
               >
@@ -283,28 +287,28 @@ export default function MyDonationsScreen() {
 
         {/* Description */}
         {item.description && (
-          <Text style={styles.itemDescription} numberOfLines={2}>
+          <Text style={dynamicStyles.itemDescription} numberOfLines={2}>
             {item.description}
           </Text>
         )}
 
         {/* Details */}
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
+        <View style={dynamicStyles.detailsContainer}>
+          <View style={dynamicStyles.detailRow}>
+            <View style={dynamicStyles.detailItem}>
               <Ionicons
                 name={getTypeIcon(item.donationType)}
                 size={16}
-                color={COLORS.primary}
+                color={colors.primary}
               />
-              <Text style={styles.detailText}>
+              <Text style={dynamicStyles.detailText}>
                 {getDurationText(item.duration, item.donationType)}
               </Text>
             </View>
 
-            <View style={styles.detailItem}>
-              <Ionicons name="calendar" size={16} color={COLORS.primary} />
-              <Text style={styles.detailText}>
+            <View style={dynamicStyles.detailItem}>
+              <Ionicons name="calendar" size={16} color={colors.primary} />
+              <Text style={dynamicStyles.detailText}>
                 {formatDate(item.createdAt)}
               </Text>
             </View>
@@ -312,27 +316,27 @@ export default function MyDonationsScreen() {
         </View>
 
         {/* Actions */}
-        <View style={styles.actionButtons}>
+        <View style={dynamicStyles.actionButtons}>
           {item.status === "Pending" && (
             <TouchableOpacity
-              style={[styles.actionButton, styles.withdrawButton]}
+              style={[dynamicStyles.actionButton, dynamicStyles.withdrawButton]}
               onPress={() => handleWithdrawDonation(item._id)}
             >
               <Ionicons name="close" size={16} color="#FF3B30" />
-              <Text style={[styles.actionButtonText, { color: "#FF3B30" }]}>
+              <Text style={[dynamicStyles.actionButtonText, { color: "#FF3B30" }]}>
                 Withdraw
               </Text>
             </TouchableOpacity>
           )}
 
           <TouchableOpacity
-            style={[styles.actionButton, styles.detailsButton]}
+            style={[dynamicStyles.actionButton, dynamicStyles.detailsButton]}
             onPress={() => {
               handleViewDetails(item._id)
             }}
           >
-            <Ionicons name="eye" size={16} color={COLORS.primary} />
-            <Text style={[styles.actionButtonText, { color: COLORS.primary }]}>
+            <Ionicons name="eye" size={16} color={colors.primary} />
+            <Text style={[dynamicStyles.actionButtonText, { color: colors.primary }]}>
               View Details
             </Text>
           </TouchableOpacity>
@@ -345,30 +349,30 @@ export default function MyDonationsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your donations...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Loading your donations...</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={dynamicStyles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Donations</Text>
-        <View style={styles.headerActions}>
+        <Text style={dynamicStyles.headerTitle}>My Donations</Text>
+        <View style={dynamicStyles.headerActions}>
           <TouchableOpacity
-            style={styles.headerAction}
+            style={dynamicStyles.headerAction}
             onPress={fetchDonations}
           >
-            <Ionicons name="refresh" size={20} color={COLORS.primary} />
+            <Ionicons name="refresh" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -377,46 +381,46 @@ export default function MyDonationsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.statsContainer}
+        style={dynamicStyles.statsContainer}
       >
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{stats.total}</Text>
-          <Text style={styles.statLabel}>Total</Text>
+        <View style={dynamicStyles.statCard}>
+          <Text style={dynamicStyles.statNumber}>{stats.total}</Text>
+          <Text style={dynamicStyles.statLabel}>Total</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#FF9500" }]}>
+        <View style={dynamicStyles.statCard}>
+          <Text style={[dynamicStyles.statNumber, { color: "#FF9500" }]}>
             {stats.pending}
           </Text>
-          <Text style={styles.statLabel}>Pending</Text>
+          <Text style={dynamicStyles.statLabel}>Pending</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#34C759" }]}>
+        <View style={dynamicStyles.statCard}>
+          <Text style={[dynamicStyles.statNumber, { color: "#34C759" }]}>
             {stats.approved}
           </Text>
-          <Text style={styles.statLabel}>Approved</Text>
+          <Text style={dynamicStyles.statLabel}>Approved</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#FF3B30" }]}>
+        <View style={dynamicStyles.statCard}>
+          <Text style={[dynamicStyles.statNumber, { color: "#FF3B30" }]}>
             {stats.rejected}
           </Text>
-          <Text style={styles.statLabel}>Rejected</Text>
+          <Text style={dynamicStyles.statLabel}>Rejected</Text>
         </View>
-        <View style={styles.statCard}>
-          <Text style={[styles.statNumber, { color: "#007AFF" }]}>
+        <View style={dynamicStyles.statCard}>
+          <Text style={[dynamicStyles.statNumber, { color: "#007AFF" }]}>
             {stats.completed}
           </Text>
-          <Text style={styles.statLabel}>Completed</Text>
+          <Text style={dynamicStyles.statLabel}>Completed</Text>
         </View>
       </ScrollView>
 
       {/* Search and Filter Bar */}
-      <View style={styles.filterBar}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={18} color={COLORS.textSecondary} />
+      <View style={dynamicStyles.filterBar}>
+        <View style={dynamicStyles.searchContainer}>
+          <Ionicons name="search" size={18} color={colors.textSecondary} />
           <TextInput
-            style={styles.searchInput}
+            style={dynamicStyles.searchInput}
             placeholder="Search donations..."
-            placeholderTextColor={COLORS.textSecondary}
+            placeholderTextColor={colors.textSecondary}
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
@@ -425,18 +429,18 @@ export default function MyDonationsScreen() {
               <Ionicons
                 name="close-circle"
                 size={18}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
             </TouchableOpacity>
           )}
         </View>
         <TouchableOpacity
-          style={styles.filterButton}
+          style={dynamicStyles.filterButton}
           onPress={() => setShowFilterModal(true)}
         >
-          <Ionicons name="filter" size={18} color={COLORS.primary} />
+          <Ionicons name="filter" size={18} color={colors.primary} />
           {(statusFilter !== "all" || typeFilter !== "all") && (
-            <View style={styles.filterIndicator} />
+            <View style={dynamicStyles.filterIndicator} />
           )}
         </TouchableOpacity>
       </View>
@@ -445,7 +449,7 @@ export default function MyDonationsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={styles.quickFilters}
+        style={dynamicStyles.quickFilters}
       >
         {(
           [
@@ -459,15 +463,15 @@ export default function MyDonationsScreen() {
           <TouchableOpacity
             key={status}
             style={[
-              styles.quickFilter,
-              statusFilter === status && styles.quickFilterActive,
+              dynamicStyles.quickFilter,
+              statusFilter === status && dynamicStyles.quickFilterActive,
             ]}
             onPress={() => setStatusFilter(status)}
           >
             <Text
               style={[
-                styles.quickFilterText,
-                statusFilter === status && styles.quickFilterTextActive,
+                dynamicStyles.quickFilterText,
+                statusFilter === status && dynamicStyles.quickFilterTextActive,
               ]}
             >
               {status === "all"
@@ -487,38 +491,38 @@ export default function MyDonationsScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={dynamicStyles.listContent}
         ListEmptyComponent={
           error ? (
-            <View style={styles.errorContainer}>
+            <View style={dynamicStyles.errorContainer}>
               <Ionicons
                 name="alert-circle-outline"
                 size={64}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.errorTitle}>Unable to Load Donations</Text>
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={dynamicStyles.errorTitle}>Unable to Load Donations</Text>
+              <Text style={dynamicStyles.errorText}>{error}</Text>
               <TouchableOpacity
-                style={styles.retryButton}
+                style={dynamicStyles.retryButton}
                 onPress={fetchDonations}
               >
                 <Ionicons name="refresh" size={20} color="#FFF" />
-                <Text style={styles.retryButtonText}>Try Again</Text>
+                <Text style={dynamicStyles.retryButtonText}>Try Again</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.emptyState}>
+            <View style={dynamicStyles.emptyState}>
               <Ionicons
                 name="gift-outline"
                 size={64}
-                color={COLORS.textSecondary}
+                color={colors.textSecondary}
               />
-              <Text style={styles.emptyTitle}>
+              <Text style={dynamicStyles.emptyTitle}>
                 {searchQuery || statusFilter !== "all" || typeFilter !== "all"
                   ? "No matching donations"
                   : "No donations yet"}
               </Text>
-              <Text style={styles.emptyText}>
+              <Text style={dynamicStyles.emptyText}>
                 {searchQuery || statusFilter !== "all" || typeFilter !== "all"
                   ? "Try adjusting your filters or search terms"
                   : "Start by donating an item to help others in need!"}
@@ -527,14 +531,14 @@ export default function MyDonationsScreen() {
                 statusFilter !== "all" ||
                 typeFilter !== "all") && (
                 <TouchableOpacity
-                  style={styles.clearFiltersButton}
+                  style={dynamicStyles.clearFiltersButton}
                   onPress={() => {
                     setSearchQuery("");
                     setStatusFilter("all");
                     setTypeFilter("all");
                   }}
                 >
-                  <Text style={styles.clearFiltersText}>Clear Filters</Text>
+                  <Text style={dynamicStyles.clearFiltersText}>Clear Filters</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -549,17 +553,17 @@ export default function MyDonationsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowFilterModal(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Filter Donations</Text>
+        <View style={dynamicStyles.modalContainer}>
+          <View style={dynamicStyles.modalHeader}>
+            <Text style={dynamicStyles.modalTitle}>Filter Donations</Text>
             <TouchableOpacity onPress={() => setShowFilterModal(false)}>
-              <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+              <Ionicons name="close" size={24} color={colors.textPrimary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={styles.modalContent}>
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Status</Text>
+          <ScrollView style={dynamicStyles.modalContent}>
+            <View style={dynamicStyles.filterSection}>
+              <Text style={dynamicStyles.filterSectionTitle}>Status</Text>
               {(
                 [
                   "all",
@@ -571,7 +575,7 @@ export default function MyDonationsScreen() {
               ).map((status) => (
                 <TouchableOpacity
                   key={status}
-                  style={styles.filterOption}
+                  style={dynamicStyles.filterOption}
                   onPress={() => setStatusFilter(status)}
                 >
                   <Ionicons
@@ -583,11 +587,11 @@ export default function MyDonationsScreen() {
                     size={20}
                     color={
                       statusFilter === status
-                        ? COLORS.primary
-                        : COLORS.textSecondary
+                        ? colors.primary
+                        : colors.textSecondary
                     }
                   />
-                  <Text style={styles.filterOptionText}>
+                  <Text style={dynamicStyles.filterOptionText}>
                     {status === "all"
                       ? "All Statuses"
                       : status.charAt(0).toUpperCase() + status.slice(1)}
@@ -596,12 +600,12 @@ export default function MyDonationsScreen() {
               ))}
             </View>
 
-            <View style={styles.filterSection}>
-              <Text style={styles.filterSectionTitle}>Donation Type</Text>
+            <View style={dynamicStyles.filterSection}>
+              <Text style={dynamicStyles.filterSectionTitle}>Donation Type</Text>
               {(["all", "giveaway", "duration"] as FilterType[]).map((type) => (
                 <TouchableOpacity
                   key={type}
-                  style={styles.filterOption}
+                  style={dynamicStyles.filterOption}
                   onPress={() => setTypeFilter(type)}
                 >
                   <Ionicons
@@ -613,11 +617,11 @@ export default function MyDonationsScreen() {
                     size={20}
                     color={
                       typeFilter === type
-                        ? COLORS.primary
-                        : COLORS.textSecondary
+                        ? colors.primary
+                        : colors.textSecondary
                     }
                   />
-                  <Text style={styles.filterOptionText}>
+                  <Text style={dynamicStyles.filterOptionText}>
                     {type === "all"
                       ? "All Types"
                       : type.charAt(0).toUpperCase() + type.slice(1)}
@@ -627,21 +631,21 @@ export default function MyDonationsScreen() {
             </View>
           </ScrollView>
 
-          <View style={styles.modalFooter}>
+          <View style={dynamicStyles.modalFooter}>
             <TouchableOpacity
-              style={[styles.modalButton, styles.secondaryButton]}
+              style={[dynamicStyles.modalButton, dynamicStyles.secondaryButton]}
               onPress={() => {
                 setStatusFilter("all");
                 setTypeFilter("all");
               }}
             >
-              <Text style={styles.secondaryButtonText}>Reset Filters</Text>
+              <Text style={dynamicStyles.secondaryButtonText}>Reset Filters</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modalButton, styles.primaryButton]}
+              style={[dynamicStyles.modalButton, dynamicStyles.primaryButton]}
               onPress={() => setShowFilterModal(false)}
             >
-              <Text style={styles.primaryButtonText}>Apply Filters</Text>
+              <Text style={dynamicStyles.primaryButtonText}>Apply Filters</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -650,30 +654,31 @@ export default function MyDonationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -681,7 +686,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   headerActions: {
     flexDirection: "row",
@@ -691,16 +696,16 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   statsContainer: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   statCard: {
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderRadius: 12,
     marginRight: 12,
     minWidth: 80,
@@ -708,11 +713,11 @@ const styles = StyleSheet.create({
   statNumber: {
     fontSize: 24,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   statLabel: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
   },
   filterBar: {
@@ -720,24 +725,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     padding: 16,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
   },
   searchContainer: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   filterButton: {
     padding: 8,
@@ -749,13 +754,13 @@ const styles = StyleSheet.create({
     right: 4,
     width: 8,
     height: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 4,
   },
   quickFilters: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
     paddingHorizontal: 16,
   },
   quickFilter: {
@@ -765,15 +770,15 @@ const styles = StyleSheet.create({
   },
   quickFilterActive: {
     borderBottomWidth: 2,
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: colors.primary,
   },
   quickFilterText: {
     fontSize: 14,
     fontWeight: "500",
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   quickFilterTextActive: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: "600",
   },
   listContent: {
@@ -781,7 +786,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   donationCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -802,7 +807,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   placeholderImage: {
-    backgroundColor: `${COLORS.primary}20`,
+    backgroundColor: `${colors.primary}20`,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -813,7 +818,7 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   statusBadge: {
@@ -821,7 +826,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     alignSelf: "flex-start",
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
@@ -833,7 +838,7 @@ const styles = StyleSheet.create({
   },
   itemDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -851,7 +856,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   actionButtons: {
     flexDirection: "row",
@@ -871,7 +876,7 @@ const styles = StyleSheet.create({
     borderColor: "#FF3B30",
   },
   detailsButton: {
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   actionButtonText: {
     fontSize: 14,
@@ -887,12 +892,12 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 20,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   errorText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 22,
   },
@@ -900,7 +905,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -919,12 +924,12 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   emptyText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -932,7 +937,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     borderRadius: 8,
   },
   clearFiltersText: {
@@ -942,7 +947,7 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   modalHeader: {
     flexDirection: "row",
@@ -950,12 +955,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   modalContent: {
     flex: 1,
@@ -967,7 +972,7 @@ const styles = StyleSheet.create({
   filterSectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 12,
   },
   filterOption: {
@@ -978,14 +983,14 @@ const styles = StyleSheet.create({
   },
   filterOptionText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   modalFooter: {
     flexDirection: "row",
     gap: 12,
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
+    borderTopColor: colors.border,
   },
   modalButton: {
     flex: 1,
@@ -994,12 +999,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   primaryButtonText: {
     color: "#FFF",
@@ -1007,8 +1012,10 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 16,
     fontWeight: "600",
   },
 });
+}
+

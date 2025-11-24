@@ -3,7 +3,8 @@ import COLORS from "@/constants/color";
 
 const { width } = Dimensions.get("window");
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   scrollViewStyle: {
     flex: 1,
     backgroundColor: COLORS.background,
@@ -135,5 +136,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+}
 
-export default styles;
+export default createDynamicStyles;

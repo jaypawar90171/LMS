@@ -11,7 +11,6 @@ import React, { useState } from "react";
 import styles from "@/assets/styles/login.styles";
 import { KeyboardAvoidingView } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
 import { Link } from "expo-router";
 import axios from "axios";
 import { API_BASE_URL } from "@/constants/api";
@@ -20,6 +19,7 @@ import CustomToast from "@/components/CustomToast";
 import { useRouter } from "expo-router";
 import { useSetAtom, useAtomValue } from "jotai";
 import { isLoadingAtom, loginAtom, userAtom } from "@/store/authStore";
+import { useTheme } from "@/context/ThemeContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -38,6 +38,8 @@ export default function Login() {
   const login = useSetAtom(loginAtom);
   const user = useAtomValue(userAtom);
   console.log(`${user} logged in succesgully`);
+
+  const {colors} = useTheme();
 
   const showToastMessage = (
     message: string,
@@ -102,13 +104,13 @@ export default function Login() {
                 <Ionicons
                   name="mail-outline"
                   size={20}
-                  color={COLORS.primary}
+                  color={colors.primary}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your email"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={colors.placeholderText}
                   value={email}
                   onChangeText={setEmail}
                   keyboardType="email-address"
@@ -125,13 +127,13 @@ export default function Login() {
                 <Ionicons
                   name="lock-closed-outline"
                   size={20}
-                  color={COLORS.primary}
+                  color={colors.primary}
                   style={styles.inputIcon}
                 />
                 <TextInput
                   style={styles.input}
                   placeholder="Enter your password"
-                  placeholderTextColor={COLORS.placeholderText}
+                  placeholderTextColor={colors.placeholderText}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
@@ -144,7 +146,7 @@ export default function Login() {
                   <Ionicons
                     name={showPassword ? "eye-outline" : "eye-off-outline"}
                     size={20}
-                    color={COLORS.primary}
+                    color={colors.primary}
                   />
                 </TouchableOpacity>
               </View>

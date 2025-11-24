@@ -1,16 +1,21 @@
 import { View, StyleSheet } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function SafeScreen({ children }: { children: React.ReactNode }) {
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
   const insets = useSafeAreaInsets();
 
-  return <View style={[styles.container, { paddingTop: insets.top }]}>{children}</View>;
+  return <View style={[dynamicStyles.container, { paddingTop: insets.top }]}>{children}</View>;
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
 });
+}

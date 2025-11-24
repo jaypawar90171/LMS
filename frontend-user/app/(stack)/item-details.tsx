@@ -13,8 +13,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface ItemDetails {
   _id: string;
@@ -46,6 +47,9 @@ export default function ItemDetailsScreen() {
   const [loading, setLoading] = useState(true);
   const [extending, setExtending] = useState(false);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   console.log("itemdetails" + itemDetails?.status);
   useEffect(() => {
@@ -235,61 +239,6 @@ export default function ItemDetailsScreen() {
     }
   };
 
-  // const handleReturnItem = async () => {
-  //   if (!token || !itemId) return;
-
-  //   try {
-  //     Alert.alert(
-  //       "Return Item",
-  //       `Are you sure you want to return "${itemDetails?.title}"?`,
-  //       [
-  //         { text: "Cancel", style: "cancel" },
-  //         {
-  //           text: "Return",
-  //           onPress: async () => {
-  //             try {
-  //               await axios.post(
-  //                 `${API_BASE_URL}/items/${itemId}/return-item`,
-  //                 {},
-  //                 {
-  //                   headers: { Authorization: `Bearer ${token}` },
-  //                 }
-  //               );
-
-  //               Alert.alert("Success", "Item returned successfully");
-  //               router.back();
-  //             } catch (error: any) {
-  //               if (error.response) {
-  //                 console.error(
-  //                   "Failed to return item. Server responded with:",
-  //                   error.response.data
-  //                 );
-  //                 const errorMessage =
-  //                   error.response.data.message || "Failed to return item";
-  //                 Alert.alert("Error", errorMessage);
-  //               } else if (error.request) {
-  //                 console.error(
-  //                   "Failed to return item. No response from server:",
-  //                   error.request
-  //                 );
-  //                 Alert.alert(
-  //                   "Network Error",
-  //                   "Could not connect to the server."
-  //                 );
-  //               } else {
-  //                 console.error("Error setting up the request:", error.message);
-  //                 Alert.alert("Error", "An unexpected error occurred.");
-  //               }
-  //             }
-  //           },
-  //         },
-  //       ]
-  //     );
-  //   } catch (error) {
-  //     console.error("Error showing confirmation:", error);
-  //   }
-  // };
-
   const handleRequestItem = async () => {
     console.log("click on the requets item");
     if (!token || !user?.id || !itemId) return;
@@ -332,7 +281,7 @@ export default function ItemDetailsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading item details...</Text>
       </View>
     );
@@ -340,7 +289,7 @@ export default function ItemDetailsScreen() {
 
   if (!itemDetails) {
     return (
-      <View style={styles.errorContainer}>
+      <View style={dynamicStyles.errorContainer}>
         <Text>Failed to load item details</Text>
       </View>
     );
@@ -351,40 +300,40 @@ export default function ItemDetailsScreen() {
       case "Available":
         return "#34C759";
       case "Issued":
-        return COLORS.primary;
+        return colors.primary;
       case "Overdue":
         return "#FF3B30";
       case "Queued":
         return "#FF9500";
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       {/* Item Image */}
       {itemDetails.mediaUrl && (
         <Image
           source={{ uri: itemDetails.mediaUrl }}
-          style={styles.image}
+          style={dynamicStyles.image}
           resizeMode="cover"
         />
       )}
 
       {/* Item Details Card */}
-      <View style={styles.detailsCard}>
-        <Text style={styles.title}>{itemDetails.title}</Text>
+      <View style={dynamicStyles.detailsCard}>
+        <Text style={dynamicStyles.title}>{itemDetails.title}</Text>
 
         {itemDetails.authorOrCreator && (
-          <Text style={styles.subtitle}>By {itemDetails.authorOrCreator}</Text>
+          <Text style={dynamicStyles.subtitle}>By {itemDetails.authorOrCreator}</Text>
         )}
 
         {/* Status Badge */}
-        <View style={styles.statusRow}>
+        <View style={dynamicStyles.statusRow}>
           <View
             style={[
-              styles.statusBadge,
+              dynamicStyles.statusBadge,
               {
                 backgroundColor: `${getStatusColor(
                   itemDetails.status || "No-status"
@@ -394,7 +343,7 @@ export default function ItemDetailsScreen() {
           >
             <Text
               style={[
-                styles.statusText,
+                dynamicStyles.statusText,
                 { color: getStatusColor(itemDetails.status) },
               ]}
             >
@@ -405,17 +354,17 @@ export default function ItemDetailsScreen() {
 
         {/* Description */}
         {itemDetails.description && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Description</Text>
-            <Text style={styles.sectionContent}>{itemDetails.description}</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Description</Text>
+            <Text style={dynamicStyles.sectionContent}>{itemDetails.description}</Text>
           </View>
         )}
 
         {/* Category */}
         {itemDetails.categoryId && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Category</Text>
-            <Text style={styles.sectionContent}>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Category</Text>
+            <Text style={dynamicStyles.sectionContent}>
               {itemDetails.categoryId.name}
             </Text>
           </View>
@@ -424,9 +373,9 @@ export default function ItemDetailsScreen() {
         {/* Availability */}
         {itemDetails.availableCopies !== undefined &&
           itemDetails.quantity !== undefined && (
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Availability</Text>
-              <Text style={styles.sectionContent}>
+            <View style={dynamicStyles.section}>
+              <Text style={dynamicStyles.sectionTitle}>Availability</Text>
+              <Text style={dynamicStyles.sectionContent}>
                 {itemDetails.availableCopies} of {itemDetails.quantity} copies
                 available
               </Text>
@@ -435,9 +384,9 @@ export default function ItemDetailsScreen() {
 
         {/* Issued Item Specific Info */}
         {(itemType === "issued" || itemType === "overdue") && itemDetails && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Due Date</Text>
-            <Text style={styles.sectionContent}>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Due Date</Text>
+            <Text style={dynamicStyles.sectionContent}>
               {itemDetails.dueDate
                 ? new Date(itemDetails.dueDate).toLocaleDateString()
                 : "N/A"}
@@ -445,13 +394,13 @@ export default function ItemDetailsScreen() {
             {itemDetails.daysRemaining !== undefined &&
               !itemDetails.isOverdue && (
                 <Text
-                  style={[styles.sectionContent, { color: COLORS.primary }]}
+                  style={[dynamicStyles.sectionContent, { color: colors.primary }]}
                 >
                   {itemDetails.daysRemaining} days remaining
                 </Text>
               )}
             {itemDetails.isOverdue && itemDetails.daysOverdue !== undefined && (
-              <Text style={[styles.sectionContent, { color: "#FF3B30" }]}>
+              <Text style={[dynamicStyles.sectionContent, { color: "#FF3B30" }]}>
                 Overdue by {itemDetails.daysOverdue} days
               </Text>
             )}
@@ -460,20 +409,20 @@ export default function ItemDetailsScreen() {
 
         {/* Queue Item Specific Info */}
         {itemType === "queued" && itemDetails && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Queue Information</Text>
+          <View style={dynamicStyles.section}>
+            <Text style={dynamicStyles.sectionTitle}>Queue Information</Text>
             {itemDetails.position !== undefined && (
-              <Text style={styles.sectionContent}>
+              <Text style={dynamicStyles.sectionContent}>
                 Your position: {itemDetails.position}
               </Text>
             )}
             {itemDetails.estimatedWaitTime && (
-              <Text style={styles.sectionContent}>
+              <Text style={dynamicStyles.sectionContent}>
                 Estimated wait: {itemDetails.estimatedWaitTime}
               </Text>
             )}
             {itemDetails.totalQueueLength !== undefined && (
-              <Text style={styles.sectionContent}>
+              <Text style={dynamicStyles.sectionContent}>
                 Total in queue: {itemDetails.totalQueueLength}
               </Text>
             )}
@@ -482,47 +431,47 @@ export default function ItemDetailsScreen() {
       </View>
 
       {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
+      <View style={dynamicStyles.actionsContainer}>
         {itemType === "queued" && (
           <TouchableOpacity
-            style={[styles.actionButton, styles.dangerButton]}
+            style={[dynamicStyles.actionButton, dynamicStyles.dangerButton]}
             onPress={handleWithdrawFromQueue}
           >
             <Ionicons name="exit-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>Leave Queue</Text>
+            <Text style={dynamicStyles.actionButtonText}>Leave Queue</Text>
           </TouchableOpacity>
         )}
 
         {(itemType === "issued" || itemType === "overdue") && (
           <>
             <TouchableOpacity
-              style={[styles.actionButton, styles.secondaryButton]}
+              style={[dynamicStyles.actionButton, dynamicStyles.secondaryButton]}
               onPress={handleExtendPeriod}
               disabled={extending}
             >
               <Ionicons name="calendar-outline" size={20} color="#FFF" />
-              <Text style={styles.actionButtonText}>
+              <Text style={dynamicStyles.actionButtonText}>
                 {extending ? "Requesting..." : "Extend Period"}
               </Text>
             </TouchableOpacity>
 
             {/* <TouchableOpacity
-              style={[styles.actionButton, styles.primaryButton]}
+              style={[dynamicStyles.actionButton, dynamicStyles.primaryButton]}
               onPress={handleReturnItem}
             >
               <Ionicons name="return-up-back-outline" size={20} color="#FFF" />
-              <Text style={styles.actionButtonText}>Return Item</Text>
+              <Text style={dynamicStyles.actionButtonText}>Return Item</Text>
             </TouchableOpacity> */}
           </>
         )}
 
         {itemType === "new" && (
           <TouchableOpacity
-            style={[styles.actionButton, styles.primaryButton]}
+            style={[dynamicStyles.actionButton, dynamicStyles.primaryButton]}
             onPress={handleRequestItem}
           >
             <Ionicons name="add-circle-outline" size={20} color="#FFF" />
-            <Text style={styles.actionButtonText}>
+            <Text style={dynamicStyles.actionButtonText}>
               {itemDetails.status === "Available"
                 ? "Request Item"
                 : "Join Queue"}
@@ -534,10 +483,11 @@ export default function ItemDetailsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -554,22 +504,22 @@ const styles = StyleSheet.create({
     height: 300,
   },
   detailsCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
   },
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 16,
   },
   statusRow: {
@@ -591,12 +541,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionContent: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   actionsContainer: {
@@ -612,7 +562,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "#FF9500",
@@ -626,3 +576,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+}

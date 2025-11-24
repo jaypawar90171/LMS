@@ -18,8 +18,9 @@ import { useRouter } from "expo-router";
 import SectionHeader from "@/components/SectionHeader";
 import ItemCard from "@/components/ItemCard";
 import QuickActionButton from "@/components/QuickActionButton";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface DashboardData {
   user?: {
@@ -45,6 +46,8 @@ export default function HomeScreen() {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const router = useRouter();
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const fetchDashboardData = async () => {
     if (!user?.id || !token) {
@@ -242,11 +245,11 @@ export default function HomeScreen() {
 
   if (loading) {
     return (
-      <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-        <View style={[styles.card, { height: 90 }]} />
-        <View style={[styles.card, { height: 40 }]} />
-        <View style={[styles.card, { height: 280 }]} />
-        <View style={[styles.card, { height: 280 }]} />
+      <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
+        <View style={[dynamicStyles.card, { height: 90 }]} />
+        <View style={[dynamicStyles.card, { height: 40 }]} />
+        <View style={[dynamicStyles.card, { height: 280 }]} />
+        <View style={[dynamicStyles.card, { height: 280 }]} />
       </ScrollView>
     );
   }
@@ -264,26 +267,26 @@ export default function HomeScreen() {
   }) => (
     <View
       style={[
-        styles.overviewCard,
+        dynamicStyles.overviewCard,
         { borderColor: color, backgroundColor: `${color}10` },
       ]}
     >
-      <View style={[styles.iconBadge, { backgroundColor: `${color}25` }]}>
+      <View style={[dynamicStyles.iconBadge, { backgroundColor: `${color}25` }]}>
         <Ionicons name={icon} size={24} color={color} />
       </View>
-      <Text style={[styles.overviewValue, { color }]}>{value}</Text>
-      <Text style={styles.overviewLabel}>{label}</Text>
+      <Text style={[dynamicStyles.overviewValue, { color }]}>{value}</Text>
+      <Text style={dynamicStyles.overviewLabel}>{label}</Text>
     </View>
   );
 
   const RoleChip = ({ text }: { text: string }) => (
-    <View style={styles.roleChip}>
+    <View style={dynamicStyles.roleChip}>
       <Ionicons
         name="shield-checkmark-outline"
         size={12}
-        color={COLORS.textSecondary}
+        color={colors.textSecondary}
       />
-      <Text style={styles.roleChipText}>{text}</Text>
+      <Text style={dynamicStyles.roleChipText}>{text}</Text>
     </View>
   );
 
@@ -297,20 +300,20 @@ export default function HomeScreen() {
 
   return (
     <ScrollView
-      style={styles.container}
+      style={dynamicStyles.container}
       refreshControl={
         <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
       }
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.welcomeCard}>
+      <View style={dynamicStyles.welcomeCard}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.welcomeText}>Welcome, {displayName} 👋</Text>
-          <Text style={styles.subtitle}>
+          <Text style={dynamicStyles.welcomeText}>Welcome, {displayName} 👋</Text>
+          <Text style={dynamicStyles.subtitle}>
             Manage your library items efficiently
           </Text>
           {roles.length > 0 && (
-            <View style={styles.rolesRow}>
+            <View style={dynamicStyles.rolesRow}>
               {roles.slice(0, 3).map((r) => (
                 <RoleChip key={r} text={r} />
               ))}
@@ -319,17 +322,17 @@ export default function HomeScreen() {
         </View>
 
         <TouchableOpacity
-          style={styles.notificationIconContainer}
+          style={dynamicStyles.notificationIconContainer}
           onPress={() => router.push("/(tabs)/profile/notifications")}
         >
           <Ionicons
             name="notifications-outline"
             size={24}
-            color={COLORS.primary}
+            color={colors.primary}
           />
           {unreadCount > 0 && (
-            <View style={styles.badge}>
-              <Text style={styles.badgeText}>
+            <View style={dynamicStyles.badge}>
+              <Text style={dynamicStyles.badgeText}>
                 {unreadCount > 99 ? "99+" : unreadCount}
               </Text>
             </View>
@@ -337,12 +340,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      <View style={styles.overviewGrid}>
+      <View style={dynamicStyles.overviewGrid}>
         <OverviewCard
           icon="document-text-outline"
           label="Issued"
           value={getCurrentIssuedItems().length}
-          color={COLORS.primary}
+          color={colors.primary}
         />
         <OverviewCard
           icon="alert-circle-outline"
@@ -374,13 +377,13 @@ export default function HomeScreen() {
       />
 
       {getCurrentIssuedItems().length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="document-text-outline"
             size={32}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateText}>No currently issued items</Text>
+          <Text style={dynamicStyles.emptyStateText}>No currently issued items</Text>
         </View>
       ) : (
         <>
@@ -392,7 +395,7 @@ export default function HomeScreen() {
             imageUrl={getCurrentIssuedItems()[0].itemId?.mediaUrl}
             status={getCurrentIssuedItems()[0].status || "Issued"}
             statusColor={
-              getCurrentIssuedItems()[0].isOverdue ? "#FF3B30" : COLORS.primary
+              getCurrentIssuedItems()[0].isOverdue ? "#FF3B30" : colors.primary
             }
             dueInfo={
               getCurrentIssuedItems()[0].isOverdue
@@ -416,13 +419,13 @@ export default function HomeScreen() {
         onActionPress={handleViewAllIssued}
       />
       {getOverdueItems().length == 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="document-text-outline"
             size={32}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateText}>No currently overdue items</Text>
+          <Text style={dynamicStyles.emptyStateText}>No currently overdue items</Text>
         </View>
       ) : (
         <>
@@ -452,13 +455,13 @@ export default function HomeScreen() {
       />
 
       {getQueuedItems().length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="time-outline"
             size={32}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateText}>No items in queue</Text>
+          <Text style={dynamicStyles.emptyStateText}>No items in queue</Text>
         </View>
       ) : (
         <>
@@ -498,19 +501,19 @@ export default function HomeScreen() {
       />
 
       {getNewArrivals().length === 0 ? (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="sparkles-outline"
             size={32}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateText}>No new arrivals</Text>
+          <Text style={dynamicStyles.emptyStateText}>No new arrivals</Text>
         </View>
       ) : (
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-          <View style={styles.horizontalScroll}>
+          <View style={dynamicStyles.horizontalScroll}>
             {getNewArrivals().map((item: any) => (
-              <View key={item._id} style={styles.newArrivalCard}>
+              <View key={item._id} style={dynamicStyles.newArrivalCard}>
                 <ItemCard
                   title={item.title}
                   subtitle={item.authorOrCreator}
@@ -529,7 +532,7 @@ export default function HomeScreen() {
 
       {/* Quick Actions */}
       <SectionHeader title="Quick Actions" showAction={false} />
-      <View style={styles.quickActionsContainer}>
+      <View style={dynamicStyles.quickActionsContainer}>
         {/* <QuickActionButton
           icon="scan-outline"
           title="Scan to Issue/Return"
@@ -557,21 +560,22 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 16,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   welcomeCard: {
-    backgroundColor: COLORS.cardBackground,
-    borderColor: COLORS.border,
+    backgroundColor: colors.cardBackground,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 20,
@@ -584,7 +588,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${colors.primary}15`,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -592,28 +596,28 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     marginBottom: 20,
     gap: 8,
   },
   moreItemsText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     fontWeight: "600",
   },
   welcomeText: {
     fontSize: 28,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   rolesRow: {
@@ -628,13 +632,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
-    backgroundColor: COLORS.inputBackground,
-    borderColor: COLORS.border,
+    backgroundColor: colors.inputBackground,
+    borderColor: colors.border,
     borderWidth: 1,
   },
   roleChipText: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   overviewGrid: {
@@ -665,7 +669,7 @@ const styles = StyleSheet.create({
   },
   overviewLabel: {
     fontSize: 13,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontWeight: "600",
   },
   notificationIconContainer: {
@@ -673,7 +677,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${colors.primary}15`,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -695,25 +699,25 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   emptyState: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 32,
     borderRadius: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
     marginBottom: 20,
     gap: 12,
   },
   emptyStateText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 16,
     fontWeight: "600",
     textAlign: "center",
   },
   card: {
-    backgroundColor: COLORS.cardBackground,
-    borderColor: COLORS.border,
+    backgroundColor: colors.cardBackground,
+    borderColor: colors.border,
     borderWidth: 1,
     borderRadius: 12,
     marginBottom: 12,
@@ -734,3 +738,5 @@ const styles = StyleSheet.create({
     gap: 12,
   },
 });
+
+}

@@ -1,14 +1,15 @@
 import type React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface SectionHeaderProps {
   title: string;
   showAction?: boolean;
   actionText?: string;
   onActionPress?: () => void;
-  count?: number; // new
+  count?: number; 
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -16,34 +17,40 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   showAction = true,
   actionText = "View All",
   onActionPress,
-  count, // new
+  count, 
 }) => {
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
+
+
   return (
-    <View style={styles.container}>
-      <View style={styles.titleRow}>
-        <Text style={styles.title}>{title}</Text>
+    <View style={dynamicStyles.container}>
+      <View style={dynamicStyles.titleRow}>
+        <Text style={dynamicStyles.title}>{title}</Text>
         {typeof count === "number" && (
-          <View style={styles.countPill}>
-            <Text style={styles.countText}>{count}</Text>
+          <View style={dynamicStyles.countPill}>
+            <Text style={dynamicStyles.countText}>{count}</Text>
           </View>
         )}
       </View>
       {showAction && (
         <TouchableOpacity
-          style={styles.actionButton}
+          style={dynamicStyles.actionButton}
           onPress={onActionPress}
           accessibilityRole="button"
           accessibilityLabel={`${actionText} for ${title}`}
         >
-          <Text style={styles.actionText}>{actionText}</Text>
-          <Ionicons name="chevron-forward" size={16} color={COLORS.primary} />
+          <Text style={dynamicStyles.actionText}>{actionText}</Text>
+          <Ionicons name="chevron-forward" size={16} color={colors.primary} />
         </TouchableOpacity>
       )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -54,7 +61,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   actionButton: {
     flexDirection: "row",
@@ -63,7 +70,7 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.primary,
+    color: colors.primary,
     marginRight: 4,
   },
   titleRow: {
@@ -75,13 +82,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 999,
-    backgroundColor: `${COLORS.textSecondary}15`,
+    backgroundColor: `${colors.textSecondary}15`,
   },
   countText: {
     fontSize: 12,
     fontWeight: "600",
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
 });
 
+}
 export default SectionHeader;

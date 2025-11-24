@@ -15,7 +15,8 @@ import { useAtom } from "jotai";
 import { tokenAtom } from "@/store/authStore";
 import apiClient from "@/constants/api";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';;
 
 type Item = {
   _id: string;
@@ -33,6 +34,9 @@ export default function ItemsListScreen() {
   const [loading, setLoading] = useState(true);
   const [token] = useAtom(tokenAtom);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     const fetchItems = async () => {
@@ -65,7 +69,7 @@ export default function ItemsListScreen() {
       case "Available":
         return "#34C759";
       case "Issued":
-        return COLORS.primary;
+        return colors.primary;
       default:
         return "#FF9500";
     }
@@ -73,8 +77,8 @@ export default function ItemsListScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.loadingText}>Loading items...</Text>
+      <View style={dynamicStyles.centered}>
+        <Text style={dynamicStyles.loadingText}>Loading items...</Text>
       </View>
     );
   }
@@ -83,59 +87,59 @@ export default function ItemsListScreen() {
     return (
       <TouchableOpacity
         activeOpacity={0.85}
-        style={styles.itemCard}
+        style={dynamicStyles.itemCard}
         onPress={() => handleItemPress(item)}
       >
         {item.mediaUrl ? (
           <Image
             source={{ uri: item.mediaUrl }}
-            style={styles.itemImage}
+            style={dynamicStyles.itemImage}
             resizeMode="cover"
           />
         ) : (
-          <View style={[styles.itemImage, styles.placeholderImage]}>
+          <View style={[dynamicStyles.itemImage, dynamicStyles.placeholderImage]}>
             <Ionicons
               name="cube-outline"
               size={32}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
           </View>
         )}
 
-        <View style={styles.itemInfo}>
-          <View style={styles.titleRow}>
-            <Text style={styles.itemTitle} numberOfLines={2}>
+        <View style={dynamicStyles.itemInfo}>
+          <View style={dynamicStyles.titleRow}>
+            <Text style={dynamicStyles.itemTitle} numberOfLines={2}>
               {item.title}
             </Text>
             <Ionicons
               name="chevron-forward"
               size={18}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
           </View>
 
           {item.authorOrCreator ? (
-            <Text style={styles.itemCreator} numberOfLines={1}>
+            <Text style={dynamicStyles.itemCreator} numberOfLines={1}>
               By {item.authorOrCreator}
             </Text>
           ) : null}
 
-          <View style={styles.itemMeta}>
+          <View style={dynamicStyles.itemMeta}>
             <View
               style={[
-                styles.statusBadge,
+                dynamicStyles.statusBadge,
                 { borderColor: getStatusColor(item.status) + "40" },
               ]}
             >
               <View
                 style={[
-                  styles.statusDot,
+                  dynamicStyles.statusDot,
                   { backgroundColor: getStatusColor(item.status) },
                 ]}
               />
               <Text
                 style={[
-                  styles.statusText,
+                  dynamicStyles.statusText,
                   { color: getStatusColor(item.status) },
                 ]}
                 numberOfLines={1}
@@ -144,7 +148,7 @@ export default function ItemsListScreen() {
               </Text>
             </View>
 
-            <Text style={styles.availability}>
+            <Text style={dynamicStyles.availability}>
               {item.availableCopies} of {item.quantity} available
             </Text>
           </View>
@@ -154,10 +158,10 @@ export default function ItemsListScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>{String(categoryName)}</Text>
-        <Text style={styles.subtitle}>
+    <View style={dynamicStyles.container}>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.title}>{String(categoryName)}</Text>
+        <Text style={dynamicStyles.subtitle}>
           {items.length} {items.length === 1 ? "item" : "items"} available
         </Text>
       </View>
@@ -172,14 +176,14 @@ export default function ItemsListScreen() {
           showsVerticalScrollIndicator={false}
         />
       ) : (
-        <View style={styles.emptyState}>
+        <View style={dynamicStyles.emptyState}>
           <Ionicons
             name="cube-outline"
             size={48}
-            color={COLORS.textSecondary}
+            color={colors.textSecondary}
           />
-          <Text style={styles.emptyStateTitle}>No Items Found</Text>
-          <Text style={styles.emptyStateText}>
+          <Text style={dynamicStyles.emptyStateTitle}>No Items Found</Text>
+          <Text style={dynamicStyles.emptyStateText}>
             There are no items available in this category yet.
           </Text>
         </View>
@@ -191,20 +195,21 @@ export default function ItemsListScreen() {
 const CARD_MIN_HEIGHT = 132;
 const IMAGE_SIZE = 104;
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return  StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     padding: 16,
   },
   centered: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   header: {
     marginBottom: 20,
@@ -212,22 +217,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "bold",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 6,
   },
   subtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
 
   itemCard: {
     flexDirection: "row",
     minHeight: CARD_MIN_HEIGHT,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     padding: 14,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     // depth and polish
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 3 },
@@ -241,7 +246,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   placeholderImage: {
-    backgroundColor: COLORS.inputBackground,
+    backgroundColor: colors.inputBackground,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -260,11 +265,11 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 17,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   itemCreator: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginTop: 4,
     marginBottom: 10,
   },
@@ -279,7 +284,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    backgroundColor: `${COLORS.primary}12`,
+    backgroundColor: `${colors.primary}12`,
     borderWidth: 1,
   },
   statusDot: {
@@ -294,31 +299,33 @@ const styles = StyleSheet.create({
   },
   availability: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
 
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
     padding: 40,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
     marginTop: 16,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
 });
+
+}

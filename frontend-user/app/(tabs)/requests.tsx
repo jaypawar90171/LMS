@@ -16,6 +16,9 @@ import axios from "axios";
 import { useRouter } from "expo-router";
 import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
+
 
 interface RequestedItem {
   _id: string;
@@ -69,6 +72,9 @@ export default function RequestsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const fetchRequestedItems = async () => {
     if (!user?.id || !token) return;
@@ -233,7 +239,7 @@ export default function RequestsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
+      <View style={dynamicStyles.loadingContainer}>
         <Text>Loading...</Text>
       </View>
     );
@@ -242,25 +248,25 @@ export default function RequestsScreen() {
   const overdueItems = getOverdueItems();
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Requests</Text>
-        <Text style={styles.headerSubtitle}>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.headerTitle}>Requests</Text>
+        <Text style={dynamicStyles.headerSubtitle}>
           Manage your item requests and overdue items
         </Text>
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
+      <View style={dynamicStyles.tabContainer}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === "requested" && styles.activeTab]}
+          style={[dynamicStyles.tab, activeTab === "requested" && dynamicStyles.activeTab]}
           onPress={() => setActiveTab("requested")}
         >
           <Text
             style={[
-              styles.tabText,
-              activeTab === "requested" && styles.activeTabText,
+              dynamicStyles.tabText,
+              activeTab === "requested" && dynamicStyles.activeTabText,
             ]}
           >
             Requested Items ({requestedItems.length})
@@ -268,13 +274,13 @@ export default function RequestsScreen() {
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.tab, activeTab === "overdue" && styles.activeTab]}
+          style={[dynamicStyles.tab, activeTab === "overdue" && dynamicStyles.activeTab]}
           onPress={() => setActiveTab("overdue")}
         >
           <Text
             style={[
-              styles.tabText,
-              activeTab === "overdue" && styles.activeTabText,
+              dynamicStyles.tabText,
+              activeTab === "overdue" && dynamicStyles.activeTabText,
             ]}
           >
             Overdue Items ({overdueItems.length})
@@ -284,61 +290,61 @@ export default function RequestsScreen() {
 
       {/* Content */}
       <ScrollView
-        style={styles.content}
+        style={dynamicStyles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
         {activeTab === "requested" ? (
-          <View style={styles.section}>
+          <View style={dynamicStyles.section}>
             {requestedItems.length === 0 ? (
-              <View style={styles.emptyState}>
+              <View style={dynamicStyles.emptyState}>
                 <Ionicons
                   name="document-text-outline"
                   size={64}
                   color={COLORS.textSecondary}
                 />
-                <Text style={styles.emptyStateTitle}>No Requested Items</Text>
-                <Text style={styles.emptyStateText}>
+                <Text style={dynamicStyles.emptyStateTitle}>No Requested Items</Text>
+                <Text style={dynamicStyles.emptyStateText}>
                   You haven't requested any items yet. Start by exploring our
                   collection!
                 </Text>
                 <TouchableOpacity
-                  style={styles.exploreButton}
+                  style={dynamicStyles.exploreButton}
                   onPress={() => router.push("/(tabs)/explore")}
                 >
-                  <Text style={styles.exploreButtonText}>Explore Items</Text>
+                  <Text style={dynamicStyles.exploreButtonText}>Explore Items</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               requestedItems.map((item) => (
                 <TouchableOpacity
                   key={item._id}
-                  style={styles.itemCard}
+                  style={dynamicStyles.itemCard}
                   onPress={() => handleItemPress(item, "requested")}
                 >
-                  <View style={styles.itemContent}>
-                    <View style={styles.itemInfo}>
-                      <Text style={styles.itemTitle}>{item.name}</Text>
-                      <Text style={styles.itemSubtitle}>
+                  <View style={dynamicStyles.itemContent}>
+                    <View style={dynamicStyles.itemInfo}>
+                      <Text style={dynamicStyles.itemTitle}>{item.name}</Text>
+                      <Text style={dynamicStyles.itemSubtitle}>
                         Category: {item.category}
                       </Text>
                       {item.description && (
-                        <Text style={styles.itemDescription} numberOfLines={2}>
+                        <Text style={dynamicStyles.itemDescription} numberOfLines={2}>
                           {item.description}
                         </Text>
                       )}
-                      <Text style={styles.itemDate}>
+                      <Text style={dynamicStyles.itemDate}>
                         Requested on{" "}
                         {new Date(item.requestedAt).toLocaleDateString()}
                       </Text>
                     </View>
 
-                    <View style={styles.statusContainer}>
+                    <View style={dynamicStyles.statusContainer}>
                       <View
                         style={[
-                          styles.statusBadge,
+                          dynamicStyles.statusBadge,
                           {
                             backgroundColor: `${getStatusColor(item.status)}15`,
                           },
@@ -351,7 +357,7 @@ export default function RequestsScreen() {
                         />
                         <Text
                           style={[
-                            styles.statusText,
+                            dynamicStyles.statusText,
                             { color: getStatusColor(item.status) },
                           ]}
                         >
@@ -366,16 +372,16 @@ export default function RequestsScreen() {
             )}
           </View>
         ) : (
-          <View style={styles.section}>
+          <View style={dynamicStyles.section}>
             {overdueItems.length === 0 ? (
-              <View style={styles.emptyState}>
+              <View style={dynamicStyles.emptyState}>
                 <Ionicons
                   name="checkmark-done-circle-outline"
                   size={64}
                   color={COLORS.textSecondary}
                 />
-                <Text style={styles.emptyStateTitle}>No Overdue Items</Text>
-                <Text style={styles.emptyStateText}>
+                <Text style={dynamicStyles.emptyStateTitle}>No Overdue Items</Text>
+                <Text style={dynamicStyles.emptyStateText}>
                   Great! You don't have any overdue items. Keep up the good
                   work!
                 </Text>
@@ -389,53 +395,53 @@ export default function RequestsScreen() {
                 return (
                   <TouchableOpacity
                     key={item._id}
-                    style={[styles.itemCard, styles.overdueCard]}
+                    style={[dynamicStyles.itemCard, dynamicStyles.overdueCard]}
                     onPress={() => handleItemPress(item, "overdue")}
                   >
-                    <View style={styles.overdueIndicator} />
+                    <View style={dynamicStyles.overdueIndicator} />
 
-                    <View style={styles.itemContent}>
-                      <View style={styles.itemInfo}>
-                        <Text style={styles.itemTitle}>
+                    <View style={dynamicStyles.itemContent}>
+                      <View style={dynamicStyles.itemInfo}>
+                        <Text style={dynamicStyles.itemTitle}>
                           {item.itemId.title}
                         </Text>
                         {item.itemId.description && (
-                          <Text style={styles.itemSubtitle}>
+                          <Text style={dynamicStyles.itemSubtitle}>
                             {item.itemId.description}
                           </Text>
                         )}
 
-                        <View style={styles.overdueDetails}>
-                          <View style={styles.detailRow}>
+                        <View style={dynamicStyles.overdueDetails}>
+                          <View style={dynamicStyles.detailRow}>
                             <Ionicons
                               name="calendar-outline"
                               size={14}
                               color="#FF3B30"
                             />
-                            <Text style={styles.overdueText}>
+                            <Text style={dynamicStyles.overdueText}>
                               Due: {new Date(item.dueDate).toLocaleDateString()}
                             </Text>
                           </View>
 
-                          <View style={styles.detailRow}>
+                          <View style={dynamicStyles.detailRow}>
                             <Ionicons
                               name="warning-outline"
                               size={14}
                               color="#FF3B30"
                             />
-                            <Text style={styles.overdueText}>
+                            <Text style={dynamicStyles.overdueText}>
                               {item.daysOverdue} days overdue
                             </Text>
                           </View>
 
                           {fineAmount > 0 && (
-                            <View style={styles.detailRow}>
+                            <View style={dynamicStyles.detailRow}>
                               <Ionicons
                                 name="cash-outline"
                                 size={14}
                                 color="#FF3B30"
                               />
-                              <Text style={styles.overdueText}>
+                              <Text style={dynamicStyles.overdueText}>
                                 Fine: ${fineAmount}
                               </Text>
                             </View>
@@ -443,13 +449,13 @@ export default function RequestsScreen() {
                         </View>
                       </View>
 
-                      <View style={styles.urgentBadge}>
+                      <View style={dynamicStyles.urgentBadge}>
                         <Ionicons
                           name="alert-circle"
                           size={20}
                           color="#FF3B30"
                         />
-                        <Text style={styles.urgentText}>Urgent</Text>
+                        <Text style={dynamicStyles.urgentText}>Urgent</Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -463,38 +469,39 @@ export default function RequestsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   header: {
     padding: 15,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   headerSubtitle: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   tabContainer: {
     flexDirection: "row",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   tab: {
     flex: 1,
@@ -504,15 +511,15 @@ const styles = StyleSheet.create({
     borderBottomColor: "transparent",
   },
   activeTab: {
-    borderBottomColor: COLORS.primary,
+    borderBottomColor: colors.primary,
   },
   tabText: {
     fontSize: 14,
     fontWeight: "600",
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   activeTabText: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   content: {
     flex: 1,
@@ -521,12 +528,12 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   itemCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -559,23 +566,23 @@ const styles = StyleSheet.create({
   itemTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   itemSubtitle: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 8,
   },
   itemDescription: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 8,
     lineHeight: 16,
   },
   itemDate: {
     fontSize: 12,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   statusContainer: {
     alignItems: "flex-end",
@@ -624,30 +631,30 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     padding: 40,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 16,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderStyle: "dashed",
     marginTop: 40,
   },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 16,
     marginBottom: 8,
     textAlign: "center",
   },
   emptyStateText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
     marginBottom: 20,
   },
   exploreButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 8,
@@ -658,3 +665,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 });
+
+}

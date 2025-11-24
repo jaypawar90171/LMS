@@ -14,8 +14,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface NotificationPreferences {
   email: boolean;
@@ -37,6 +38,9 @@ export default function NotificationPreferencesScreen() {
   const [saving, setSaving] = useState(false);
   const [fetching, setFetching] = useState(true);
   const router = useRouter();
+
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   const [preferences, setPreferences] = useState<NotificationPreferences>({
     email: true,
@@ -244,74 +248,74 @@ export default function NotificationPreferencesScreen() {
   const getChannelColor = (channel: "email" | "whatsApp") => {
     switch (channel) {
       case "email":
-        return COLORS.primary;
+        return colors.primary;
       case "whatsApp":
-        return "#25D366";
+        return colors.primary;
       default:
-        return COLORS.textSecondary;
+        return colors.textSecondary;
     }
   };
 
   if (fetching) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Loading your preferences...</Text>
+      <View style={dynamicStyles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={dynamicStyles.loadingText}>Loading your preferences...</Text>
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={dynamicStyles.container} showsVerticalScrollIndicator={false}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={dynamicStyles.header}>
         <TouchableOpacity
-          style={styles.backButton}
+          style={dynamicStyles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notification Preferences</Text>
-        <View style={styles.placeholder} />
+        <Text style={dynamicStyles.headerTitle}>Notification Preferences</Text>
+        <View style={dynamicStyles.placeholder} />
       </View>
 
       {/* Changes Indicator */}
       {hasChanges() && (
-        <View style={styles.changesIndicator}>
+        <View style={dynamicStyles.changesIndicator}>
           <Ionicons name="information-circle" size={20} color="#FFA000" />
-          <Text style={styles.changesText}>You have unsaved changes</Text>
+          <Text style={dynamicStyles.changesText}>You have unsaved changes</Text>
         </View>
       )}
 
       {/* Introduction */}
-      <View style={styles.introSection}>
-        <Ionicons name="notifications-outline" size={32} color={COLORS.primary} />
-        <Text style={styles.introTitle}>Stay Informed</Text>
-        <Text style={styles.introText}>
+      <View style={dynamicStyles.introSection}>
+        <Ionicons name="notifications-outline" size={32} color={colors.primary} />
+        <Text style={dynamicStyles.introTitle}>Stay Informed</Text>
+        <Text style={dynamicStyles.introText}>
           Choose how you want to receive notifications from the library. 
           We'll keep you updated about your borrowed items, due dates, and important announcements.
         </Text>
       </View>
 
       {/* Notification Channels */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notification Channels</Text>
-        <Text style={styles.sectionDescription}>
+      <View style={dynamicStyles.section}>
+        <Text style={dynamicStyles.sectionTitle}>Notification Channels</Text>
+        <Text style={dynamicStyles.sectionDescription}>
           Select which channels you'd like to receive notifications through
         </Text>
 
         {/* Email Channel */}
-        <View style={styles.channelCard}>
-          <View style={styles.channelHeader}>
-            <View style={styles.channelInfo}>
+        <View style={dynamicStyles.channelCard}>
+          <View style={dynamicStyles.channelHeader}>
+            <View style={dynamicStyles.channelInfo}>
               <Ionicons 
                 name={getChannelIcon("email")} 
                 size={24} 
                 color={getChannelColor("email")} 
               />
-              <View style={styles.channelText}>
-                <Text style={styles.channelName}>Email Notifications</Text>
-                <Text style={styles.channelDescription}>
+              <View style={dynamicStyles.channelText}>
+                <Text style={dynamicStyles.channelName}>Email Notifications</Text>
+                <Text style={dynamicStyles.channelDescription}>
                   {getChannelDescription("email")}
                 </Text>
               </View>
@@ -319,33 +323,33 @@ export default function NotificationPreferencesScreen() {
             <Switch
               value={preferences.email}
               onValueChange={(value) => handleChannelToggle("email", value)}
-              trackColor={{ false: COLORS.border, true: COLORS.primary }}
+              trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#FFFFFF"
             />
           </View>
           {preferences.email && (
             <TouchableOpacity
-              style={styles.testButton}
+              style={dynamicStyles.testButton}
               onPress={() => handleTestNotification("email")}
             >
-              <Ionicons name="send-outline" size={16} color={COLORS.primary} />
-              <Text style={styles.testButtonText}>Send Test Email</Text>
+              <Ionicons name="send-outline" size={16} color={colors.primary} />
+              <Text style={dynamicStyles.testButtonText}>Send Test Email</Text>
             </TouchableOpacity>
           )}
         </View>
 
         {/* WhatsApp Channel */}
-        <View style={styles.channelCard}>
-          <View style={styles.channelHeader}>
-            <View style={styles.channelInfo}>
+        <View style={dynamicStyles.channelCard}>
+          <View style={dynamicStyles.channelHeader}>
+            <View style={dynamicStyles.channelInfo}>
               <Ionicons 
                 name={getChannelIcon("whatsApp")} 
                 size={24} 
                 color={getChannelColor("whatsApp")} 
               />
-              <View style={styles.channelText}>
-                <Text style={styles.channelName}>WhatsApp Notifications</Text>
-                <Text style={styles.channelDescription}>
+              <View style={dynamicStyles.channelText}>
+                <Text style={dynamicStyles.channelName}>WhatsApp Notifications</Text>
+                <Text style={dynamicStyles.channelDescription}>
                   {getChannelDescription("whatsApp")}
                 </Text>
               </View>
@@ -353,17 +357,17 @@ export default function NotificationPreferencesScreen() {
             <Switch
               value={preferences.whatsApp}
               onValueChange={(value) => handleChannelToggle("whatsApp", value)}
-              trackColor={{ false: COLORS.border, true: "#25D366" }}
+              trackColor={{ false: colors.border, true: colors.primary }}
               thumbColor="#FFFFFF"
             />
           </View>
           {preferences.whatsApp && (
             <TouchableOpacity
-              style={styles.testButton}
+              style={dynamicStyles.testButton}
               onPress={() => handleTestNotification("whatsApp")}
             >
-              <Ionicons name="send-outline" size={16} color="#25D366" />
-              <Text style={[styles.testButtonText, { color: "#25D366" }]}>
+              <Ionicons name="send-outline" size={16} color={colors.primary}/>
+              <Text style={[dynamicStyles.testButtonText, { color: colors.primary}]}>
                 Send Test WhatsApp
               </Text>
             </TouchableOpacity>
@@ -372,34 +376,34 @@ export default function NotificationPreferencesScreen() {
       </View>
 
       {/* Notification Types */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Notification Types</Text>
-        <Text style={styles.sectionDescription}>
+      <View style={dynamicStyles.section}>
+        <Text style={dynamicStyles.sectionTitle}>Notification Types</Text>
+        <Text style={dynamicStyles.sectionDescription}>
           These notifications will be sent through your enabled channels
         </Text>
 
-        <View style={styles.categoriesList}>
+        <View style={dynamicStyles.categoriesList}>
           {notificationCategories.map((category, index) => (
             <View
               key={category.id}
               style={[
-                styles.categoryCard,
-                index === notificationCategories.length - 1 && styles.lastCategoryCard,
+                dynamicStyles.categoryCard,
+                index === notificationCategories.length - 1 && dynamicStyles.lastCategoryCard,
               ]}
             >
-              <View style={styles.categoryInfo}>
-                <Text style={styles.categoryTitle}>{category.title}</Text>
-                <Text style={styles.categoryDescription}>
+              <View style={dynamicStyles.categoryInfo}>
+                <Text style={dynamicStyles.categoryTitle}>{category.title}</Text>
+                <Text style={dynamicStyles.categoryDescription}>
                   {category.description}
                 </Text>
               </View>
-              <View style={styles.channelBadge}>
+              <View style={dynamicStyles.channelBadge}>
                 <Ionicons 
                   name={getChannelIcon(category.channel)} 
                   size={12} 
                   color={getChannelColor(category.channel)} 
                 />
-                <Text style={styles.channelBadgeText}>
+                <Text style={dynamicStyles.channelBadgeText}>
                   {category.channel === 'email' ? 'Email' : 'WhatsApp'}
                 </Text>
               </View>
@@ -409,11 +413,11 @@ export default function NotificationPreferencesScreen() {
       </View>
 
       {/* Important Notes */}
-      <View style={styles.notesSection}>
-        <Ionicons name="information-circle" size={20} color={COLORS.primary} />
-        <View style={styles.notesContent}>
-          <Text style={styles.notesTitle}>Important Information</Text>
-          <Text style={styles.notesText}>
+      <View style={dynamicStyles.notesSection}>
+        <Ionicons name="information-circle" size={20} color={colors.primary} />
+        <View style={dynamicStyles.notesContent}>
+          <Text style={dynamicStyles.notesTitle}>Important Information</Text>
+          <Text style={dynamicStyles.notesText}>
             • Critical alerts (like security notices) will always be sent regardless of your preferences{"\n"}
             • You can update these settings at any time{"\n"}
             • Some notifications may be required for account security
@@ -422,23 +426,23 @@ export default function NotificationPreferencesScreen() {
       </View>
 
       {/* Action Buttons */}
-      <View style={styles.actionsContainer}>
+      <View style={dynamicStyles.actionsContainer}>
         <TouchableOpacity
-          style={[styles.button, styles.secondaryButton]}
+          style={[dynamicStyles.button, dynamicStyles.secondaryButton]}
           onPress={handleReset}
           disabled={saving || !hasChanges()}
         >
-          <Ionicons name="refresh-outline" size={20} color={COLORS.primary} />
-          <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+          <Ionicons name="refresh-outline" size={20} color={colors.primary} />
+          <Text style={[dynamicStyles.buttonText, dynamicStyles.secondaryButtonText]}>
             Reset
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={[
-            styles.button, 
-            styles.primaryButton,
-            (!hasChanges() || saving) && styles.buttonDisabled
+            dynamicStyles.button, 
+            dynamicStyles.primaryButton,
+            (!hasChanges() || saving) && dynamicStyles.buttonDisabled
           ]}
           onPress={handleSave}
           disabled={saving || !hasChanges()}
@@ -448,42 +452,43 @@ export default function NotificationPreferencesScreen() {
           ) : (
             <>
               <Ionicons name="save-outline" size={20} color="#FFF" />
-              <Text style={styles.buttonText}>Save Preferences</Text>
+              <Text style={dynamicStyles.buttonText}>Save Preferences</Text>
             </>
           )}
         </TouchableOpacity>
       </View>
 
       {/* Bottom Spacer */}
-      <View style={styles.bottomSpacer} />
+      <View style={dynamicStyles.bottomSpacer} />
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     gap: 16,
   },
   loadingText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -491,7 +496,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   placeholder: {
@@ -515,20 +520,20 @@ const styles = StyleSheet.create({
   introSection: {
     alignItems: "center",
     padding: 24,
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     margin: 16,
     borderRadius: 16,
   },
   introTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginTop: 12,
     marginBottom: 8,
   },
   introText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     textAlign: "center",
     lineHeight: 20,
   },
@@ -539,17 +544,17 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   sectionDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     marginBottom: 16,
     lineHeight: 20,
   },
   channelCard: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
@@ -576,12 +581,12 @@ const styles = StyleSheet.create({
   channelName: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   channelDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   testButton: {
@@ -592,16 +597,16 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 6,
   },
   testButtonText: {
     fontSize: 12,
     fontWeight: "500",
-    color: COLORS.primary,
+    color: colors.primary,
   },
   categoriesList: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderRadius: 12,
     overflow: "hidden",
   },
@@ -611,7 +616,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   lastCategoryCard: {
     borderBottomWidth: 0,
@@ -622,19 +627,19 @@ const styles = StyleSheet.create({
   categoryTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 4,
   },
   categoryDescription: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 18,
   },
   channelBadge: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
@@ -642,7 +647,7 @@ const styles = StyleSheet.create({
   channelBadgeText: {
     fontSize: 10,
     fontWeight: "500",
-    color: COLORS.primary,
+    color: colors.primary,
     textTransform: "uppercase",
   },
   notesSection: {
@@ -651,10 +656,10 @@ const styles = StyleSheet.create({
     gap: 12,
     margin: 16,
     padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
   },
   notesContent: {
     flex: 1,
@@ -662,12 +667,12 @@ const styles = StyleSheet.create({
   notesTitle: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   notesText: {
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   actionsContainer: {
@@ -686,12 +691,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -702,9 +707,10 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   bottomSpacer: {
     height: 20,
   },
 });
+}

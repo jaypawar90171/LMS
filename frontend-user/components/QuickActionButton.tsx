@@ -1,7 +1,8 @@
 import type React from "react";
 import { TouchableOpacity, Text, StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import COLORS from "@/constants/color";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 interface QuickActionButtonProps {
   icon: string;
@@ -14,24 +15,28 @@ const QuickActionButton: React.FC<QuickActionButtonProps> = ({
   title,
   onPress,
 }) => {
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
+
   return (
     <TouchableOpacity
-      style={styles.container}
+      style={dynamicStyles.container}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={title}
       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
       activeOpacity={0.8}
     >
-      <View style={styles.iconContainer}>
-        <Ionicons name={icon as any} size={24} color={COLORS.primary} />
+      <View style={dynamicStyles.iconContainer}>
+        <Ionicons name={icon as any} size={24} color={colors.primary} />
       </View>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={dynamicStyles.title}>{title}</Text>
     </TouchableOpacity>
   );
 };
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     alignItems: "center",
     width: "33%",
@@ -41,7 +46,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 30,
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${colors.primary}15`,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 8,
@@ -49,9 +54,11 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 12,
     fontWeight: "500",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
 });
 
+
+}
 export default QuickActionButton;

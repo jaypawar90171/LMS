@@ -1,21 +1,25 @@
 import React from "react";
 import { Tabs } from "expo-router";
-import COLORS from "@/constants/color";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, View, Text } from "react-native";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function _layout() {
   const insets = useSafeAreaInsets();
+
+  const { colors } = useTheme();
+  const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: COLORS.primary,
-        tabBarInactiveTintColor: COLORS.textSecondary,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: COLORS.cardBackground,
+          backgroundColor: colors.cardBackground,
           borderTopWidth: 0,
           elevation: 8,
           shadowColor: "#000",
@@ -43,7 +47,7 @@ export default function _layout() {
           tabBarIcon: ({ focused, color, size }) => (
             <View
               style={
-                focused ? styles.iconContainerActive : styles.iconContainer
+                focused ? dynamicStyles.iconContainerActive : dynamicStyles.iconContainer
               }
             >
               <Ionicons
@@ -62,7 +66,7 @@ export default function _layout() {
           tabBarIcon: ({ focused, color, size }) => (
             <View
               style={
-                focused ? styles.iconContainerActive : styles.iconContainer
+                focused ? dynamicStyles.iconContainerActive : dynamicStyles.iconContainer
               }
             >
               <Ionicons
@@ -81,7 +85,7 @@ export default function _layout() {
           tabBarIcon: ({ focused, color, size }) => (
             <View
               style={
-                focused ? styles.iconContainerActive : styles.iconContainer
+                focused ? dynamicStyles.iconContainerActive : dynamicStyles.iconContainer
               }
             >
               <Ionicons
@@ -100,7 +104,7 @@ export default function _layout() {
           tabBarIcon: ({ focused, color, size }) => (
             <View
               style={
-                focused ? styles.iconContainerActive : styles.iconContainer
+                focused ? dynamicStyles.iconContainerActive : dynamicStyles.iconContainer
               }
             >
               <Ionicons
@@ -119,7 +123,7 @@ export default function _layout() {
           tabBarIcon: ({ focused, color, size }) => (
             <View
               style={
-                focused ? styles.iconContainerActive : styles.iconContainer
+                focused ? dynamicStyles.iconContainerActive : dynamicStyles.iconContainer
               }
             >
               <Ionicons
@@ -135,7 +139,8 @@ export default function _layout() {
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   iconContainer: {
     padding: 4,
     borderRadius: 12,
@@ -147,6 +152,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: `${COLORS.primary}15`,
+    backgroundColor: `${colors.primary}15`,
   },
 });
+
+}

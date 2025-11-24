@@ -17,8 +17,9 @@ import { useAtom } from "jotai";
 import { userAtom, tokenAtom } from "@/store/authStore";
 import { API_BASE_URL } from "@/constants/api";
 import axios from "axios";
-import COLORS from "@/constants/color";
 import { Ionicons } from "@expo/vector-icons";
+import { useTheme } from "@/context/ThemeContext";
+import {useMemo} from 'react';
 
 export default function RequestNewItemScreen() {
   const [user] = useAtom(userAtom);
@@ -34,6 +35,8 @@ const [customCategory, setCustomCategory] = useState("");
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const router = useRouter();
+  const { colors } = useTheme();
+    const dynamicStyles = useMemo(() => createDynamicStyles(colors), [colors]);
 
   useEffect(() => {
     fetchCategories();
@@ -206,57 +209,57 @@ const [customCategory, setCustomCategory] = useState("");
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={dynamicStyles.container}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
       <ScrollView
-        style={styles.scrollView}
+        style={dynamicStyles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={dynamicStyles.scrollContent}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={dynamicStyles.header}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={dynamicStyles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={COLORS.primary} />
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Request New Item</Text>
-          <View style={styles.placeholder} />
+          <Text style={dynamicStyles.headerTitle}>Request New Item</Text>
+          <View style={dynamicStyles.placeholder} />
         </View>
 
         {/* Form */}
-        <View style={styles.formContainer}>
+        <View style={dynamicStyles.formContainer}>
           {/* Item Title */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Item Title <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Item Title <Text style={dynamicStyles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.textInput, errors.name && styles.inputError]}
+              style={[dynamicStyles.textInput, errors.name && dynamicStyles.inputError]}
               placeholder="Enter item title (e.g., Introduction to Algorithms)"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.name}
               onChangeText={(value) => handleInputChange("name", value)}
               maxLength={100}
             />
             {errors.name ? (
-              <Text style={styles.errorText}>{errors.name}</Text>
+              <Text style={dynamicStyles.errorText}>{errors.name}</Text>
             ) : (
-              <Text style={styles.helperText}>
+              <Text style={dynamicStyles.helperText}>
                 Be specific about the item you want
               </Text>
             )}
           </View>
 
           {/* Description  */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Description <Text style={styles.required}>*</Text></Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>Description <Text style={dynamicStyles.required}>*</Text></Text>
             <TextInput
-              style={styles.textInput}
+              style={dynamicStyles.textInput}
               placeholder="Provide additional details about the item (features, specifications, edition, etc.)"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.description}
               onChangeText={(value) => handleInputChange("description", value)}
               multiline
@@ -264,27 +267,27 @@ const [customCategory, setCustomCategory] = useState("");
               textAlignVertical="top"
               maxLength={200}
             />
-            <View style={styles.helperRow}>
-              <Text style={styles.helperText}>
+            <View style={dynamicStyles.helperRow}>
+              <Text style={dynamicStyles.helperText}>
                 Include any relevant details that would help identify the item
               </Text>
-              <Text style={styles.charCount}>
+              <Text style={dynamicStyles.charCount}>
                 {formData.description.length}/200
               </Text>
             </View>
           </View>
 
           {/* Category */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Category <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Category <Text style={dynamicStyles.required}>*</Text>
             </Text>
             {showCustomCategory ? (
               <View>
                 <TextInput
-                  style={[styles.textInput, errors.category && styles.inputError]}
+                  style={[dynamicStyles.textInput, errors.category && dynamicStyles.inputError]}
                   placeholder="Enter custom category"
-                  placeholderTextColor={COLORS.textSecondary}
+                  placeholderTextColor={colors.textSecondary}
                   value={customCategory}
                   onChangeText={(value) => {
                     setCustomCategory(value);
@@ -295,22 +298,22 @@ const [customCategory, setCustomCategory] = useState("");
                   maxLength={50}
                 />
                 <TouchableOpacity
-                  style={styles.switchToDropdown}
+                  style={dynamicStyles.switchToDropdown}
                   onPress={() => {
                     setShowCustomCategory(false);
                     setCustomCategory("");
                     setFormData(prev => ({ ...prev, category: "" }));
                   }}
                 >
-                  <Text style={styles.switchText}>Choose from list instead</Text>
+                  <Text style={dynamicStyles.switchText}>Choose from list instead</Text>
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.textInput, errors.category && styles.inputError]}
+                style={[dynamicStyles.textInput, errors.category && dynamicStyles.inputError]}
                 onPress={() => setShowCategoryPicker(true)}
               >
-                <Text style={formData.category ? styles.selectedText : styles.placeholderText}>
+                <Text style={formData.category ? dynamicStyles.selectedText : dynamicStyles.placeholderText}>
                   {formData.category 
                     ? categories.find(c => c._id === formData.category)?.name 
                     : "Select category"}
@@ -318,19 +321,19 @@ const [customCategory, setCustomCategory] = useState("");
               </TouchableOpacity>
             )}
             {errors.category && (
-              <Text style={styles.errorText}>{errors.category}</Text>
+              <Text style={dynamicStyles.errorText}>{errors.category}</Text>
             )}
           </View>
 
           {/* Subcategory */}
           {subcategories.length > 0 && (
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Subcategory (Optional)</Text>
+            <View style={dynamicStyles.inputGroup}>
+              <Text style={dynamicStyles.label}>Subcategory (Optional)</Text>
               <TouchableOpacity
-                style={styles.textInput}
+                style={dynamicStyles.textInput}
                 onPress={() => setShowSubcategoryPicker(true)}
               >
-                <Text style={formData.subCategory ? styles.selectedText : styles.placeholderText}>
+                <Text style={formData.subCategory ? dynamicStyles.selectedText : dynamicStyles.placeholderText}>
                   {formData.subCategory 
                     ? subcategories.find(s => s._id === formData.subCategory)?.name 
                     : "Select subcategory"}
@@ -340,14 +343,14 @@ const [customCategory, setCustomCategory] = useState("");
           )}
 
           {/* Quantity */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Quantity <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Quantity <Text style={dynamicStyles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.textInput, errors.quantity && styles.inputError]}
+              style={[dynamicStyles.textInput, errors.quantity && dynamicStyles.inputError]}
               placeholder="1"
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.quantity}
               onChangeText={(value) =>
                 handleInputChange("quantity", value.replace(/[^0-9]/g, ""))
@@ -356,23 +359,23 @@ const [customCategory, setCustomCategory] = useState("");
               maxLength={3}
             />
             {errors.quantity ? (
-              <Text style={styles.errorText}>{errors.quantity}</Text>
+              <Text style={dynamicStyles.errorText}>{errors.quantity}</Text>
             ) : (
-              <Text style={styles.helperText}>
+              <Text style={dynamicStyles.helperText}>
                 How many copies would you like us to consider
               </Text>
             )}
           </View>
 
           {/* Reason for Request */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>
-              Reason for Request <Text style={styles.required}>*</Text>
+          <View style={dynamicStyles.inputGroup}>
+            <Text style={dynamicStyles.label}>
+              Reason for Request <Text style={dynamicStyles.required}>*</Text>
             </Text>
             <TextInput
-              style={[styles.textArea, errors.reason && styles.inputError]}
+              style={[dynamicStyles.textArea, errors.reason && dynamicStyles.inputError]}
               placeholder="Explain why you need this item and how it would benefit the library community..."
-              placeholderTextColor={COLORS.textSecondary}
+              placeholderTextColor={colors.textSecondary}
               value={formData.reason}
               onChangeText={(value) => handleInputChange("reason", value)}
               multiline
@@ -381,13 +384,13 @@ const [customCategory, setCustomCategory] = useState("");
               maxLength={500}
             />
             {errors.reason ? (
-              <Text style={styles.errorText}>{errors.reason}</Text>
+              <Text style={dynamicStyles.errorText}>{errors.reason}</Text>
             ) : (
-              <View style={styles.helperRow}>
-                <Text style={styles.helperText}>
+              <View style={dynamicStyles.helperRow}>
+                <Text style={dynamicStyles.helperText}>
                   Tell us why this item would be valuable
                 </Text>
-                <Text style={styles.charCount}>
+                <Text style={dynamicStyles.charCount}>
                   {formData.reason.length}/500
                 </Text>
               </View>
@@ -395,24 +398,24 @@ const [customCategory, setCustomCategory] = useState("");
           </View>
 
           {/* Action Buttons */}
-          <View style={styles.actionsContainer}>
+          <View style={dynamicStyles.actionsContainer}>
             <TouchableOpacity
-              style={[styles.button, styles.secondaryButton]}
+              style={[dynamicStyles.button, dynamicStyles.secondaryButton]}
               onPress={clearForm}
               disabled={loading}
             >
               <Ionicons
                 name="refresh-outline"
                 size={20}
-                color={COLORS.primary}
+                color={colors.primary}
               />
-              <Text style={[styles.buttonText, styles.secondaryButtonText]}>
+              <Text style={[dynamicStyles.buttonText, dynamicStyles.secondaryButtonText]}>
                 Clear Form
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.button, styles.primaryButton]}
+              style={[dynamicStyles.button, dynamicStyles.primaryButton]}
               onPress={handleSubmit}
               disabled={loading}
             >
@@ -421,20 +424,20 @@ const [customCategory, setCustomCategory] = useState("");
               ) : (
                 <>
                   <Ionicons name="send-outline" size={20} color="#FFF" />
-                  <Text style={styles.buttonText}>Submit Request</Text>
+                  <Text style={dynamicStyles.buttonText}>Submit Request</Text>
                 </>
               )}
             </TouchableOpacity>
           </View>
 
           {/* Help Text */}
-          <View style={styles.helpContainer}>
+          <View style={dynamicStyles.helpContainer}>
             <Ionicons
               name="information-circle-outline"
               size={16}
-              color={COLORS.textSecondary}
+              color={colors.textSecondary}
             />
-            <Text style={styles.helpText}>
+            <Text style={dynamicStyles.helpText}>
               Your request will be reviewed by our team. We'll notify you once
               it's processed.
             </Text>
@@ -448,31 +451,31 @@ const [customCategory, setCustomCategory] = useState("");
         animationType="slide"
         onRequestClose={() => setShowCategoryPicker(false)}
         >
-        <View style={styles.modalOverlay}>
-          <View style={styles.pickerContainer}>
-            <View style={styles.pickerHeader}>
-              <Text style={styles.pickerTitle}>Select Category</Text>
+        <View style={dynamicStyles.modalOverlay}>
+          <View style={dynamicStyles.pickerContainer}>
+            <View style={dynamicStyles.pickerHeader}>
+              <Text style={dynamicStyles.pickerTitle}>Select Category</Text>
               <TouchableOpacity onPress={() => setShowCategoryPicker(false)}>
-                <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+                <Ionicons name="close" size={24} color={colors.textPrimary} />
               </TouchableOpacity>
             </View>
             <ScrollView>
               {categories.map((cat) => (
                 <TouchableOpacity
                   key={cat._id}
-                  style={styles.pickerItem}
+                  style={dynamicStyles.pickerItem}
                   onPress={() => {
                     handleCategoryChange(cat._id);
                     setShowCategoryPicker(false);
                     setShowCustomCategory(false);
                   }}
                 >
-                  <Text style={styles.pickerItemText}>{cat.name}</Text>
+                  <Text style={dynamicStyles.pickerItemText}>{cat.name}</Text>
                 </TouchableOpacity>
               ))}
               {/* Add Other Option */}
               <TouchableOpacity
-                style={[styles.pickerItem, styles.otherOption]}
+                style={[dynamicStyles.pickerItem, dynamicStyles.otherOption]}
                 onPress={() => {
                   setShowCategoryPicker(false);
                   setShowCustomCategory(true);
@@ -480,8 +483,8 @@ const [customCategory, setCustomCategory] = useState("");
                   setSubcategories([]);
                 }}
               >
-                <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
-                <Text style={[styles.pickerItemText, styles.otherOptionText]}>Other (Custom Category)</Text>
+                <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
+                <Text style={[dynamicStyles.pickerItemText, dynamicStyles.otherOptionText]}>Other (Custom Category)</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -495,25 +498,25 @@ const [customCategory, setCustomCategory] = useState("");
   animationType="slide"
   onRequestClose={() => setShowSubcategoryPicker(false)}
 >
-  <View style={styles.modalOverlay}>
-    <View style={styles.pickerContainer}>
-      <View style={styles.pickerHeader}>
-        <Text style={styles.pickerTitle}>Select Subcategory</Text>
+  <View style={dynamicStyles.modalOverlay}>
+    <View style={dynamicStyles.pickerContainer}>
+      <View style={dynamicStyles.pickerHeader}>
+        <Text style={dynamicStyles.pickerTitle}>Select Subcategory</Text>
         <TouchableOpacity onPress={() => setShowSubcategoryPicker(false)}>
-          <Ionicons name="close" size={24} color={COLORS.textPrimary} />
+          <Ionicons name="close" size={24} color={colors.textPrimary} />
         </TouchableOpacity>
       </View>
       <ScrollView>
         {subcategories.map((subcat) => (
           <TouchableOpacity
             key={subcat._id}
-            style={styles.pickerItem}
+            style={dynamicStyles.pickerItem}
             onPress={() => {
               setFormData(prev => ({ ...prev, subCategory: subcat._id }));
               setShowSubcategoryPicker(false);
             }}
           >
-            <Text style={styles.pickerItemText}>{subcat.name}</Text>
+            <Text style={dynamicStyles.pickerItemText}>{subcat.name}</Text>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -525,10 +528,11 @@ const [customCategory, setCustomCategory] = useState("");
   );
 }
 
-const styles = StyleSheet.create({
+function createDynamicStyles(colors: any) {
+  return StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
   },
   scrollView: {
     flex: 1,
@@ -541,9 +545,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     padding: 16,
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   backButton: {
     padding: 4,
@@ -551,7 +555,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 20,
     fontWeight: "700",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     textAlign: "center",
   },
   placeholder: {
@@ -566,29 +570,29 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: "600",
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     marginBottom: 8,
   },
   required: {
     color: "#FF3B30",
   },
   textInput: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   textArea: {
-    backgroundColor: COLORS.cardBackground,
+    backgroundColor: colors.cardBackground,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
     minHeight: 120,
   },
   inputError: {
@@ -600,7 +604,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   helperText: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 14,
     marginTop: 4,
   },
@@ -610,7 +614,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   charCount: {
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     fontSize: 12,
   },
   actionsContainer: {
@@ -628,12 +632,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   primaryButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: colors.primary,
   },
   secondaryButton: {
     backgroundColor: "transparent",
     borderWidth: 2,
-    borderColor: COLORS.primary,
+    borderColor: colors.primary,
   },
   buttonText: {
     fontSize: 16,
@@ -641,22 +645,22 @@ const styles = StyleSheet.create({
     color: "#FFF",
   },
   secondaryButtonText: {
-    color: COLORS.primary,
+    color: colors.primary,
   },
   helpContainer: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
     padding: 16,
-    backgroundColor: `${COLORS.primary}10`,
+    backgroundColor: `${colors.primary}10`,
     borderRadius: 12,
     borderLeftWidth: 4,
-    borderLeftColor: COLORS.primary,
+    borderLeftColor: colors.primary,
   },
   helpText: {
     flex: 1,
     fontSize: 14,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
     lineHeight: 20,
   },
   modalOverlay: {
@@ -665,7 +669,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   pickerContainer: {
-    backgroundColor: COLORS.background,
+    backgroundColor: colors.background,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     maxHeight: '70%',
@@ -676,40 +680,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   pickerTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   pickerItem: {
     padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: colors.border,
   },
   pickerItemText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   selectedText: {
     fontSize: 16,
-    color: COLORS.textPrimary,
+    color: colors.textPrimary,
   },
   placeholderText: {
     fontSize: 16,
-    color: COLORS.textSecondary,
+    color: colors.textSecondary,
   },
   otherOption: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
     borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: `${COLORS.primary}10`,
+    borderTopColor: colors.border,
+    backgroundColor: `${colors.primary}10`,
   },
   otherOptionText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontWeight: '600',
   },
   switchToDropdown: {
@@ -717,8 +721,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   switchText: {
-    color: COLORS.primary,
+    color: colors.primary,
     fontSize: 14,
     textDecorationLine: 'underline',
   },
 });
+
+}
