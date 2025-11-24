@@ -630,9 +630,9 @@ const Inventory = () => {
                           <p className="font-semibold text-foreground">
                             {item.title}
                           </p>
-                          {item.isbnOrIdentifier && (
+                          {item.barcode && (
                             <p className="text-xs text-muted-foreground">
-                              ISBN: {item.isbnOrIdentifier}
+                              Barcode: {item.barcode}
                             </p>
                           )}
                         </div>

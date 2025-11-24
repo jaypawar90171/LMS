@@ -1,7 +1,6 @@
 import { Router } from "express";
 import {
   downloadBarcodeController,
-  generateBarcodeController,
   getAdminProfileController,
   getAllDonationsController,
   getFinesReportController,
@@ -556,12 +555,12 @@ router.put(
 );
 
 /* ========================= BARCODE ========================= */
-router.get(
-  "/barcode/generate",
-  authUser,
-  authorize(["canPrintBarcode"]),
-  generateBarcodeController
-);
+// router.get(
+//   "/barcode/generate",
+//   authUser,
+//   authorize(["canPrintBarcode"]),
+//   generateBarcodeController
+// );
 
 router.get(
   "/barcode/download/:itemId",

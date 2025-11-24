@@ -815,6 +815,11 @@ export const createInventoryItemsController = async (
     console.log("Received body:", req.body);
     console.log("Received file:", req.file);
 
+    if (req.body.isbnOrIdentifier === "" || req.body.isbnOrIdentifier === undefined) 
+      {
+          delete req.body.isbnOrIdentifier;
+      }
+
     if (typeof req.body.features === "string") {
       try {
         req.body.features = JSON.parse(req.body.features);
@@ -859,7 +864,7 @@ export const createInventoryItemsController = async (
       fs.unlinkSync(file.path);
     }
 
-    const barcode = await generateBarcodeString();
+    const barcode = await generateBarcodeString(validatedData.categoryId);
 
     const dataToSave = {
       ...validatedData,
@@ -941,6 +946,10 @@ export const updateItemController = async (req: Request, res: Response) => {
     ) {
       delete processedData.subcategoryId;
     }
+
+    if (processedData.isbnOrIdentifier === "" || processedData.isbnOrIdentifier === undefined) {
+  delete processedData.isbnOrIdentifier;
+}
 
     if (typeof processedData.features === "string") {
       try {
@@ -2393,21 +2402,21 @@ export const updateAdminPasswordController = async (
   }
 };
 
-export const generateBarcodeController = async (
-  req: Request,
-  res: Response
-) => {
-  try {
-    const barcodeString = await generateBarcodeString();
-    return res.status(200).json({ barcode: barcodeString });
-  } catch (error: any) {
-    console.log("Error in barcode generation");
-    const statusCode = error.statusCode || 500;
-    return res.status(statusCode).json({
-      error: error.message || "Internal server error.",
-    });
-  }
-};
+// export const generateBarcodeController = async (
+//   req: Request,
+//   res: Response
+// ) => {
+//   try {
+//     const barcodeString = await generateBarcodeString();
+//     return res.status(200).json({ barcode: barcodeString });
+//   } catch (error: any) {
+//     console.log("Error in barcode generation");
+//     const statusCode = error.statusCode || 500;
+//     return res.status(statusCode).json({
+//       error: error.message || "Internal server error.",
+//     });
+//   }
+// };
 
 export const downloadBarcodeController = async (
   req: Request,
@@ -2499,6 +2508,7 @@ export const downloadBatchBarcodeController = async (
     }
   }
 };
+
 
 export const getItemByScannedBarcodeController = async (
   req: Request,

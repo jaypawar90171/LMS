@@ -86,13 +86,12 @@ export const InventoryItemsSchema = z.object({
   title: z.string().trim().min(2, "At least 2 characters required"),
   authorOrCreator: z.string().trim().optional(),
   isbnOrIdentifier: z.preprocess(
-    (val) => (val === "" ? undefined : val),
-    z
-      .string()
-      .trim()
-      .min(1, "ISBN/Identifier must not be empty if provided")
-      .optional()
-  ),
+  (val) => {
+    if (val === "" || val === null) return undefined;
+    return val;
+  },
+  z.string().trim().optional()
+),
   description: z.string().trim().optional(),
   publisherOrManufacturer: z.string().trim().optional(),
   publicationYear: z.coerce.number().int().min(0, "Invalid year").optional(),

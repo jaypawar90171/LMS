@@ -693,17 +693,26 @@ export const fetchInventoryItemsService = async (page = 1, limit = 10) => {
 };
 
 export const createInventoryItemsService = async (data: any) => {
+  if (!data.isbnOrIdentifier || data.isbnOrIdentifier === "") {
+    delete data.isbnOrIdentifier;
+  }
+
   if (!data.isbnOrIdentifier && data.categoryId) {
     const category = await Category.findById(data.categoryId);
-    if (category && category.name.toLowerCase() === "books") {
+
+    if (!category) {
+      const err: any = new Error("Category not found");
+      err.statusCode = 404;
+      throw err;
+    }
+
+    if (
+      category.name.toLowerCase() === "books"
+    ) {
       const err: any = new Error("ISBN is required for book items");
       err.statusCode = 400;
       throw err;
-    } else {
-      const timestamp = Date.now().toString();
-      const random = Math.random().toString(36).substring(2, 8);
-      data.isbnOrIdentifier = `ITEM-${timestamp}-${random}`;
-    }
+    } 
   }
 
   if (Array.isArray(data.features) && data.features.length === 0) {
@@ -716,8 +725,9 @@ export const createInventoryItemsService = async (data: any) => {
     return await newItem.save();
   } catch (error: any) {
     if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern)[0];
       const err: any = new Error(
-        "Duplicate ISBN/Barcode. Item already exists."
+        `Duplicate ${duplicateField}. Item with this ${duplicateField} already exists.`
       );
       err.statusCode = 409;
       throw err;
@@ -759,6 +769,10 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
     throw err;
   }
 
+  if (!validatedData.isbnOrIdentifier || validatedData.isbnOrIdentifier === "") {
+    delete validatedData.isbnOrIdentifier;
+  }
+
   const cleanData = Object.fromEntries(
     Object.entries(validatedData).filter(
       ([_, value]) => value !== undefined && value !== null
@@ -788,6 +802,15 @@ export const updateItemService = async ({ itemId, validatedData }: any) => {
     if (error.name === "CastError") {
       const err: any = new Error(`Invalid data format: ${error.message}`);
       err.statusCode = 400;
+      throw err;
+    }
+
+    if (error.code === 11000) {
+      const duplicateField = Object.keys(error.keyPattern)[0];
+      const err: any = new Error(
+        `Duplicate ${duplicateField}. Item with this ${duplicateField} already exists.`
+      );
+      err.statusCode = 409;
       throw err;
     }
 
@@ -1035,9 +1058,9 @@ export const getCategoryByIdService = async (categoryId: string) => {
 export const getAllFinesService = async (page = 1, limit = 10) => {
   const skip = (page - 1) * limit;
 
-   const totalItems = await Fine.countDocuments({});
+  const totalItems = await Fine.countDocuments({});
 
-   if (totalItems === 0) {
+  if (totalItems === 0) {
     return { items: [], totalItems: 0 };
   }
 
@@ -1048,7 +1071,7 @@ export const getAllFinesService = async (page = 1, limit = 10) => {
     .limit(limit)
     .skip(skip);
 
-  return {fines, totalItems};
+  return { fines, totalItems };
 };
 
 export const fetchUserFinesService = async (userId: any) => {
@@ -2789,8 +2812,31 @@ export const updateAdminPasswordServive = async (data: any) => {
   return user;
 };
 
-export const generateBarcodeString = async (): Promise<string> => {
-  return `ITEM-${uuidv4()}`;
+// export const generateBarcodeString = async (): Promise<string> => {
+//   return `ITEM-${uuidv4()}`;
+// };
+
+function generateCategoryCode(name: string): string {
+  return name
+    .toUpperCase()
+    .replace(/[^A-Z]/g, "") 
+    .slice(0, 4) 
+    .padEnd(4, "X"); 
+}
+
+export const generateBarcodeString = async (categoryId: string) => {
+  const category = await Category.findById(categoryId);
+  if (!category) {
+    throw new Error("Category not found");
+  }
+
+  const categoryCode = generateCategoryCode(category.name);
+
+  const count = await InventoryItem.countDocuments({ categoryId });
+
+  const itemNumber = String(count + 1).padStart(3, "0");
+
+  return `${categoryCode}-${itemNumber}`; 
 };
 
 export const generateBarcodePDF = async (itemId: string, res: Response) => {
@@ -2851,7 +2897,7 @@ export const getAllDonationService = async (page = 1, limit = 10) => {
     .limit(limit)
     .skip(skip);
 
-  return {donations , totalDonations};
+  return { donations, totalDonations };
 };
 
 export const updateDonationStatusService = async (

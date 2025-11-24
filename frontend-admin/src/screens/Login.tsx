@@ -126,7 +126,7 @@ const LoginPage: React.FC = () => {
       <div className="flex-1 bg-gray-50 flex items-center justify-center p-8">
         <div className="bg-white p-6 rounded-lg shadow-sm border-4 border-amber-100 max-w-md">
           <img
-            src="src/assets/loginbg.png"
+            src="/loginbg.png"
             alt="Employee Rental Benefits"
             className="w-full h-auto rounded"
           />

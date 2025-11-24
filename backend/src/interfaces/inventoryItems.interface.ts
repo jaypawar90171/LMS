@@ -4,7 +4,7 @@ import { Icategory } from "./category.interface";
 export interface IInventoryItem extends Document {
   title: string;
   authorOrCreator?: string;
-  isbnOrIdentifier: string;
+  isbnOrIdentifier?: string;
   description?: string;
   publisherOrManufacturer?: string;
   publicationYear?: number;
