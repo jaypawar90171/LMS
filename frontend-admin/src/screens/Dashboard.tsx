@@ -22,6 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Eye, Search } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const DashboardPage: React.FC = () => {
   const [dashboardData, setDashboardData] = useState({
@@ -36,6 +37,8 @@ const DashboardPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activityFilter, setActivityFilter] = useState("all");
+
+  const navigate = useNavigate();
 
   const filteredActivities = dashboardData.recentActivity.filter(
     (activity: any) => {
@@ -69,6 +72,13 @@ const DashboardPage: React.FC = () => {
         );
         setDashboardData(result.data);
       } catch (err: any) {
+        if (err.response?.status === 401) {
+          console.log("Unauthorized. Redirecting to login...");
+          localStorage.removeItem("accessToken");
+          navigate("/login");
+          return;
+        }
+
         setError(
           err.response?.data?.message || "Failed to fetch dashboard data."
         );
