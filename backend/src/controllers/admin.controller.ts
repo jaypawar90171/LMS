@@ -815,7 +815,7 @@ export const createInventoryItemsController = async (
     console.log("Received body:", req.body);
     console.log("Received file:", req.file);
 
-    if (req.body.isbnOrIdentifier === "" || req.body.isbnOrIdentifier === undefined) 
+    if (req.body.isbnOrIdentifier === "" || req.body.isbnOrIdentifier === null) 
       {
           delete req.body.isbnOrIdentifier;
       }

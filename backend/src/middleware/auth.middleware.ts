@@ -18,23 +18,16 @@ export const authUser = (req: Request, res: Response, next: NextFunction) => {
       : authHeader;
 
   if (!token) {
-    // res.status(401).send({ err: "Token in not present in the request" });
     console.log("Token is not present in the request");
-    res.redirect("/login");
+    res.status(401).json({ 
+      message: "No token provided. Please log in.",
+      code: "NO_TOKEN"
+    });
     return;
   }
 
   try {
     const decoded = jwt.verify(token, process.env.SECRET_KEY!);
-    // if (typeof decoded === "string") {
-    //   console.log("Token is a string:", decoded);
-    // } else {
-    //   console.log("Token is JwtPayload:", decoded);
-    //   console.log("User ID:", decoded.id);
-    //   console.log("Email:", decoded.email);
-    //   console.log("Issued at:", decoded.iat);
-    //   console.log("Expires at:", decoded.exp);
-    // }
     req.user = decoded;
     console.log(req.user);
     next();

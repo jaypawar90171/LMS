@@ -16,7 +16,6 @@ const itemSchema = new mongoose.Schema<IInventoryItem>(
       type: String,
       unique: true,
       sparse: true, 
-      default: null,
       trim: true,
     },
     description: {
