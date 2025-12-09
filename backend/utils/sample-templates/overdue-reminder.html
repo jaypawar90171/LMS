@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Overdue Item Notice</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      padding: 20px;
+    }
+    .header {
+      background-color: #e74c3c;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      border-radius: 5px 5px 0 0;
+      margin: -20px -20px 20px;
+    }
+    .item-details {
+      background-color: #f8f9fa;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 20px 0;
+    }
+    .warning {
+      color: #e74c3c;
+      font-weight: bold;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #777;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Overdue Item Notice</h2>
+    </div>
+    
+    <p>Hello {userName},</p>
+    
+    <p>Our records indicate that you have an item that is <span class="warning">{daysOverdue} days overdue</span>:</p>
+    
+    <div class="item-details">
+      <p><strong>Item:</strong> {itemTitle}</p>
+      <p><strong>Barcode:</strong> {itemBarcode}</p>
+      <p><strong>Copy Number:</strong> {copyNumber}</p>
+      <p><strong>Due Date:</strong> {dueDate}</p>
+      <p><strong>Days Overdue:</strong> {daysOverdue}</p>
+    </div>
+    
+    <p>Please return this item as soon as possible to avoid additional late fees. If you have already returned this item, please contact the library to resolve this issue.</p>
+    
+    <p>Late fees are currently accruing at a rate of $1.00 per day.</p>
+    
+    <p>Thank you for your prompt attention to this matter.</p>
+    
+    <p>Best regards,<br>Library Management Team</p>
+    
+    <div class="footer">
+      <p>This is an automated notice from the Library Management System. Please do not reply to this email.</p>
+    </div>
+  </div>
+</body>
+</html>
